@@ -12,6 +12,11 @@ import DashboardPage from "@/pages/DashboardPage";
 import ApListPage from "@/pages/ApListPage";
 import ArListPage from "@/pages/ArListPage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
+import UserManagementPage from "@/pages/UserManagementPage";
+import VendorsPage from "@/pages/VendorsPage";
+import CustomersPage from "@/pages/CustomersPage";
+import PaymentTermsPage from "@/pages/PaymentTermsPage";
+import BankAccountsPage from "@/pages/BankAccountsPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -49,11 +54,11 @@ const App = () => (
                 <Route path="/billing-email-logs" element={<PlaceholderPage titleKey="menu.billingEmailLogs" />} />
                 
                 {/* Master Data */}
-                <Route path="/vendors" element={<PlaceholderPage titleKey="menu.vendors" />} />
-                <Route path="/customers" element={<PlaceholderPage titleKey="menu.customers" />} />
+                <Route path="/vendors" element={<VendorsPage />} />
+                <Route path="/customers" element={<CustomersPage />} />
                 <Route path="/sales" element={<PlaceholderPage titleKey="menu.sales" />} />
-                <Route path="/payment-terms" element={<PlaceholderPage titleKey="menu.paymentTerms" />} />
-                <Route path="/bank-accounts" element={<PlaceholderPage titleKey="menu.bankAccounts" />} />
+                <Route path="/payment-terms" element={<PaymentTermsPage />} />
+                <Route path="/bank-accounts" element={<BankAccountsPage />} />
                 <Route path="/company-profile" element={<PlaceholderPage titleKey="menu.companyProfile" />} />
                 
                 {/* Reports */}
@@ -67,7 +72,7 @@ const App = () => (
                 
                 {/* System */}
                 <Route path="/audit-logs" element={<PlaceholderPage titleKey="menu.auditLogs" />} />
-                <Route path="/users" element={<PlaceholderPage titleKey="menu.userManagement" />} />
+                <Route path="/users" element={<UserManagementPage />} />
                 <Route path="/settings" element={<PlaceholderPage titleKey="menu.systemSettings" />} />
               </Route>
 
