@@ -1,4 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
 export type UserRole = 'PURCHASING' | 'FINANCE' | 'ADMIN' | 'SUPER_ADMIN';
 
@@ -15,105 +17,143 @@ interface AuthContextType {
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-// Mock users for demo (in production, this would be from Supabase)
-const MOCK_USERS: { email: string; password: string; user: User }[] = [
-  {
-    email: 'ferry@kemika.co.id',
-    password: 'Ksatria2312',
-    user: {
-      id: '1',
-      email: 'ferry@kemika.co.id',
-      role: 'SUPER_ADMIN',
-      name: 'Ferry Kemika',
-      isActive: true,
-    },
-  },
-  {
-    email: 'finance@kemika.co.id',
-    password: 'finance123',
-    user: {
-      id: '2',
-      email: 'finance@kemika.co.id',
-      role: 'FINANCE',
-      name: 'Finance Team',
-      isActive: true,
-    },
-  },
-  {
-    email: 'purchasing@kemika.co.id',
-    password: 'purchasing123',
-    user: {
-      id: '3',
-      email: 'purchasing@kemika.co.id',
-      role: 'PURCHASING',
-      name: 'Purchasing Team',
-      isActive: true,
-    },
-  },
-  {
-    email: 'admin@kemika.co.id',
-    password: 'admin123',
-    user: {
-      id: '4',
-      email: 'admin@kemika.co.id',
-      role: 'ADMIN',
-      name: 'Admin Team',
-      isActive: true,
-    },
-  },
-];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for existing session on mount
-  useEffect(() => {
-    const storedUser = localStorage.getItem('apar_user');
-    if (storedUser) {
-      try {
-        setUser(JSON.parse(storedUser));
-      } catch {
-        localStorage.removeItem('apar_user');
+  // Fetch user profile and role from database
+  const fetchUserData = async (supabaseUser: SupabaseUser): Promise<User | null> => {
+    try {
+      // Fetch profile
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', supabaseUser.id)
+        .single();
+
+      if (profileError || !profile) {
+        console.error('Error fetching profile:', profileError);
+        return null;
       }
+
+      // Fetch role
+      const { data: roleData, error: roleError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', supabaseUser.id)
+        .single();
+
+      if (roleError || !roleData) {
+        console.error('Error fetching role:', roleError);
+        return null;
+      }
+
+      return {
+        id: supabaseUser.id,
+        email: profile.email,
+        role: roleData.role as UserRole,
+        name: profile.full_name,
+        isActive: profile.is_active,
+      };
+    } catch (error) {
+      console.error('Error in fetchUserData:', error);
+      return null;
     }
-    setIsLoading(false);
+  };
+
+  // Initialize auth state
+  useEffect(() => {
+    let mounted = true;
+
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        console.log('Auth state changed:', event);
+        
+        if (session?.user && mounted) {
+          // Defer Supabase calls with setTimeout to prevent deadlock
+          setTimeout(async () => {
+            const userData = await fetchUserData(session.user);
+            if (mounted) {
+              if (userData) {
+                if (!userData.isActive) {
+                  // User is deactivated, sign them out
+                  await supabase.auth.signOut();
+                  setUser(null);
+                } else {
+                  setUser(userData);
+                }
+              } else {
+                setUser(null);
+              }
+              setIsLoading(false);
+            }
+          }, 0);
+        } else if (mounted) {
+          setUser(null);
+          setIsLoading(false);
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
+      if (session?.user && mounted) {
+        const userData = await fetchUserData(session.user);
+        if (mounted) {
+          if (userData && userData.isActive) {
+            setUser(userData);
+          } else {
+            setUser(null);
+          }
+          setIsLoading(false);
+        }
+      } else if (mounted) {
+        setIsLoading(false);
+      }
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    setIsLoading(true);
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    const foundUser = MOCK_USERS.find(
-      u => u.email.toLowerCase() === email.toLowerCase() && u.password === password
-    );
-
-    if (foundUser) {
-      if (!foundUser.user.isActive) {
-        setIsLoading(false);
-        return { success: false, error: 'Account is deactivated. Please contact Super Admin.' };
-      }
+    try {
+      setIsLoading(true);
       
-      setUser(foundUser.user);
-      localStorage.setItem('apar_user', JSON.stringify(foundUser.user));
-      setIsLoading(false);
-      return { success: true };
-    }
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-    setIsLoading(false);
-    return { success: false, error: 'Invalid email or password' };
+      if (error) {
+        setIsLoading(false);
+        return { success: false, error: error.message };
+      }
+
+      if (!data.user) {
+        setIsLoading(false);
+        return { success: false, error: 'Login failed' };
+      }
+
+      // The onAuthStateChange will handle setting the user
+      return { success: true };
+    } catch (error: any) {
+      setIsLoading(false);
+      return { success: false, error: error.message || 'An error occurred' };
+    }
   }, []);
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
     setUser(null);
-    localStorage.removeItem('apar_user');
   }, []);
 
   return (
