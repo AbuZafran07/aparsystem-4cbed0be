@@ -8,51 +8,51 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import logoKemika from '@/assets/logo-kemika.png';
-
 export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-
-  const { login } = useAuth();
-  const { t, language, toggleLanguage } = useLanguage();
-  const { toast } = useToast();
+  const {
+    login
+  } = useAuth();
+  const {
+    t,
+    language,
+    toggleLanguage
+  } = useLanguage();
+  const {
+    toast
+  } = useToast();
   const navigate = useNavigate();
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!email || !password) {
       toast({
         title: language === 'en' ? 'Error' : 'Error',
         description: language === 'en' ? 'Please fill in all fields' : 'Harap isi semua field',
-        variant: 'destructive',
+        variant: 'destructive'
       });
       return;
     }
-
     setIsLoading(true);
     const result = await login(email, password);
     setIsLoading(false);
-
     if (result.success) {
       toast({
         title: language === 'en' ? 'Success' : 'Berhasil',
-        description: language === 'en' ? 'Login successful' : 'Login berhasil',
+        description: language === 'en' ? 'Login successful' : 'Login berhasil'
       });
       navigate('/dashboard');
     } else {
       toast({
         title: language === 'en' ? 'Login Failed' : 'Login Gagal',
         description: result.error || (language === 'en' ? 'Invalid credentials' : 'Kredensial tidak valid'),
-        variant: 'destructive',
+        variant: 'destructive'
       });
     }
   };
-
-  return (
-    <div className="min-h-screen flex">
+  return <div className="min-h-screen flex">
       {/* Left Panel - Green Brand Section */}
       <div className="hidden lg:flex lg:w-[46%] bg-primary relative flex-col justify-between p-10 overflow-hidden">
         {/* Subtle gradient overlay */}
@@ -66,8 +66,8 @@ export default function LoginPage() {
               <FileText className="w-6 h-6 text-primary-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-primary-foreground">NEMIKA</h1>
-              <p className="text-sm text-primary-foreground/70">PT. Kemika Karya Pratama</p>
+              <h1 className="text-xl font-bold text-primary-foreground">PT KEMIKA KARYA PRATAMA </h1>
+              <p className="text-sm text-primary-foreground/70">SPREADING SOLUTION</p>
             </div>
           </div>
         </div>
@@ -105,10 +105,7 @@ export default function LoginPage() {
       <div className="flex-1 flex flex-col bg-secondary/30">
         {/* Language Toggle */}
         <div className="flex justify-end p-4">
-          <button
-            onClick={toggleLanguage}
-            className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-          >
+          <button onClick={toggleLanguage} className="flex items-center gap-1 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors">
             <span className={language === 'en' ? 'text-foreground font-semibold' : ''}>EN</span>
             <span className="text-muted-foreground/50">|</span>
             <span className={language === 'id' ? 'text-foreground font-semibold' : ''}>ID</span>
@@ -140,14 +137,7 @@ export default function LoginPage() {
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder={t('login.emailPlaceholder')}
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="pl-10 h-11"
-                  />
+                  <Input id="email" type="email" placeholder={t('login.emailPlaceholder')} value={email} onChange={e => setEmail(e.target.value)} className="pl-10 h-11" />
                 </div>
               </div>
 
@@ -158,31 +148,16 @@ export default function LoginPage() {
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    id="password"
-                    type={showPassword ? 'text' : 'password'}
-                    placeholder={t('login.passwordPlaceholder')}
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className="pl-10 pr-10 h-11"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
+                  <Input id="password" type={showPassword ? 'text' : 'password'} placeholder={t('login.passwordPlaceholder')} value={password} onChange={e => setPassword(e.target.value)} className="pl-10 pr-10 h-11" />
+                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
                 </div>
               </div>
 
               {/* Submit Button */}
-              <Button
-                type="submit"
-                className="w-full h-11 text-base font-medium"
-                disabled={isLoading}
-              >
-                {isLoading ? (language === 'en' ? 'Signing in...' : 'Memproses...') : t('btn.signIn')}
+              <Button type="submit" className="w-full h-11 text-base font-medium" disabled={isLoading}>
+                {isLoading ? language === 'en' ? 'Signing in...' : 'Memproses...' : t('btn.signIn')}
               </Button>
             </form>
 
@@ -193,10 +168,7 @@ export default function LoginPage() {
                   {language === 'en' ? "Don't have an account?" : 'Tidak memiliki akun?'}
                 </span>
                 <br />
-                {language === 'en' 
-                  ? 'Please contact the Super Admin to create a new account.'
-                  : 'Hubungi Super Admin untuk pembuatan akun baru.'
-                }
+                {language === 'en' ? 'Please contact the Super Admin to create a new account.' : 'Hubungi Super Admin untuk pembuatan akun baru.'}
               </p>
             </div>
           </Card>
@@ -207,6 +179,5 @@ export default function LoginPage() {
           © {new Date().getFullYear()} PT. Kemika Karya Pratama. All rights reserved.
         </div>
       </div>
-    </div>
-  );
+    </div>;
 }
