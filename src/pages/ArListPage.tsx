@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Eye, Edit, Trash2, Mail, FileText, MoreHorizontal, Loader2, Check, X, Download } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Search, Filter, Eye, Edit, Trash2, Mail, FileText, MoreHorizontal, Loader2, Check, X, Download, Upload, CreditCard, FileDown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -51,7 +51,15 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { exportToCSV, exportToExcel, formatCurrencyForExport, formatDateForExport, ExportColumn } from '@/lib/exportUtils';
+import { parseExcelFile, validateAndMapArData, generateArTemplate, ImportError } from '@/lib/importUtils';
 import type { Database } from '@/integrations/supabase/types';
+
+interface BankAccount {
+  id: string;
+  bank_name: string;
+  account_no: string;
+  account_name: string;
+}
 
 type InvoiceStatus = Database['public']['Enums']['record_status'];
 
@@ -124,13 +132,19 @@ export default function ArListPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [salesList, setSalesList] = useState<Sales[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<ArInvoice | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importErrors, setImportErrors] = useState<ImportError[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     customer_id: '',
@@ -141,6 +155,14 @@ export default function ArListPage() {
     invoice_date: '',
     terms_id: '',
     invoice_amount: '',
+    notes: '',
+  });
+
+  const [receiptData, setReceiptData] = useState({
+    receipt_date: new Date().toISOString().split('T')[0],
+    amount: '',
+    bank_account_id: '',
+    reference_no: '',
     notes: '',
   });
 
@@ -201,6 +223,15 @@ export default function ArListPage() {
         .order('days');
 
       setPaymentTerms(termsData || []);
+
+      // Fetch bank accounts
+      const { data: bankData } = await supabase
+        .from('bank_accounts')
+        .select('id, bank_name, account_no, account_name')
+        .eq('is_active', true)
+        .order('bank_name');
+
+      setBankAccounts(bankData || []);
 
     } catch (error: any) {
       console.error('Error fetching data:', error);
@@ -428,6 +459,145 @@ export default function ArListPage() {
     return isFinance && status !== 'PAID' && outstanding > 0;
   };
 
+  const canRecordReceipt = (status: InvoiceStatus, outstanding: number) => {
+    return isFinance && (status === 'APPROVED' || status === 'PARTIAL') && outstanding > 0;
+  };
+
+  const handleOpenReceipt = (invoice: ArInvoice) => {
+    setSelectedInvoice(invoice);
+    setReceiptData({
+      receipt_date: new Date().toISOString().split('T')[0],
+      amount: invoice.outstanding_amount.toString(),
+      bank_account_id: '',
+      reference_no: '',
+      notes: '',
+    });
+    setIsReceiptDialogOpen(true);
+  };
+
+  const handleRecordReceipt = async () => {
+    if (!selectedInvoice || !receiptData.amount || !receiptData.bank_account_id || !receiptData.receipt_date) {
+      toast.error(language === 'en' ? 'Please fill all required fields' : 'Mohon isi semua field yang wajib');
+      return;
+    }
+
+    const amount = parseFloat(receiptData.amount);
+    if (amount <= 0 || amount > selectedInvoice.outstanding_amount) {
+      toast.error(language === 'en' ? 'Invalid receipt amount' : 'Jumlah penerimaan tidak valid');
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      // Create receipt record
+      const { data: receipt, error: receiptError } = await supabase
+        .from('ar_receipts')
+        .insert([{
+          receipt_date: receiptData.receipt_date,
+          total_amount: amount,
+          bank_account_id: receiptData.bank_account_id,
+          reference_no: receiptData.reference_no || null,
+          notes: receiptData.notes || null,
+          created_by: user?.id || '',
+        }])
+        .select()
+        .single();
+
+      if (receiptError) throw receiptError;
+
+      // Create allocation
+      const { error: allocError } = await supabase
+        .from('ar_receipt_allocations')
+        .insert([{
+          receipt_id: receipt.id,
+          ar_invoice_id: selectedInvoice.id,
+          amount: amount,
+        }]);
+
+      if (allocError) throw allocError;
+
+      // Update invoice
+      const newPaidAmount = selectedInvoice.paid_amount + amount;
+      const newOutstanding = selectedInvoice.invoice_amount - newPaidAmount;
+      const newStatus = newOutstanding <= 0 ? 'PAID' : 'PARTIAL';
+
+      const { error: updateError } = await supabase
+        .from('ar_invoices')
+        .update({
+          paid_amount: newPaidAmount,
+          outstanding_amount: newOutstanding,
+          status: newStatus,
+          paid_date: newStatus === 'PAID' ? receiptData.receipt_date : null,
+        })
+        .eq('id', selectedInvoice.id);
+
+      if (updateError) throw updateError;
+
+      toast.success(language === 'en' ? 'Receipt recorded successfully' : 'Penerimaan berhasil dicatat');
+      setIsReceiptDialogOpen(false);
+      setSelectedInvoice(null);
+      fetchData();
+    } catch (error: any) {
+      console.error('Error recording receipt:', error);
+      toast.error(language === 'en' ? 'Failed to record receipt' : 'Gagal mencatat penerimaan');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setImporting(true);
+      setImportErrors([]);
+
+      const rows = await parseExcelFile(file);
+      const result = validateAndMapArData(rows, customers, salesList, paymentTerms);
+
+      if (result.errors.length > 0) {
+        setImportErrors(result.errors);
+        toast.error(language === 'en' 
+          ? `Import failed with ${result.errors.length} errors` 
+          : `Import gagal dengan ${result.errors.length} kesalahan`);
+        return;
+      }
+
+      if (result.data.length === 0) {
+        toast.error(language === 'en' ? 'No valid data to import' : 'Tidak ada data valid untuk diimpor');
+        return;
+      }
+
+      // Insert all records
+      const dataWithCreatedBy = result.data.map(row => ({
+        ...row,
+        created_by: user?.id || '',
+      }));
+
+      const { error } = await supabase
+        .from('ar_invoices')
+        .insert(dataWithCreatedBy);
+
+      if (error) throw error;
+
+      toast.success(language === 'en' 
+        ? `Successfully imported ${result.data.length} invoices` 
+        : `Berhasil mengimpor ${result.data.length} invoice`);
+      setIsImportDialogOpen(false);
+      fetchData();
+    } catch (error: any) {
+      console.error('Error importing:', error);
+      toast.error(error.message || (language === 'en' ? 'Failed to import' : 'Gagal mengimpor'));
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const handleExport = (format: 'csv' | 'excel') => {
     const columns: ExportColumn[] = [
       { key: 'customer_name', header: language === 'en' ? 'Customer Name' : 'Nama Customer' },
@@ -474,12 +644,20 @@ export default function ArListPage() {
               : 'Kelola invoice dan penerimaan customer'}
           </p>
         </div>
-        {isFinance && (
-          <Button className="gap-2" onClick={handleOpenCreate}>
-            <Plus className="w-4 h-4" />
-            {t('btn.newArInvoice')}
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {isFinance && (
+            <Button variant="outline" className="gap-2" onClick={() => setIsImportDialogOpen(true)}>
+              <Upload className="w-4 h-4" />
+              {language === 'en' ? 'Import' : 'Impor'}
+            </Button>
+          )}
+          {isFinance && (
+            <Button className="gap-2" onClick={handleOpenCreate}>
+              <Plus className="w-4 h-4" />
+              {t('btn.newArInvoice')}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -637,9 +815,9 @@ export default function ArListPage() {
                               </DropdownMenuItem>
                             </>
                           )}
-                          {isFinance && invoice.status === 'APPROVED' && invoice.outstanding_amount > 0 && (
-                            <DropdownMenuItem className="gap-2">
-                              <Plus className="w-4 h-4" />
+                          {canRecordReceipt(invoice.status, invoice.outstanding_amount) && (
+                            <DropdownMenuItem className="gap-2" onClick={() => handleOpenReceipt(invoice)}>
+                              <CreditCard className="w-4 h-4" />
                               {t('btn.recordReceipt')}
                             </DropdownMenuItem>
                           )}
@@ -840,6 +1018,143 @@ export default function ArListPage() {
             </Button>
             <Button variant="destructive" onClick={handleReject}>
               {t('btn.reject')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Receipt Dialog */}
+      <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'en' ? 'Record Receipt' : 'Catat Penerimaan'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'en' 
+                ? `Outstanding: ${formatCurrency(selectedInvoice?.outstanding_amount || 0)}` 
+                : `Sisa: ${formatCurrency(selectedInvoice?.outstanding_amount || 0)}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{language === 'en' ? 'Receipt Date' : 'Tanggal Penerimaan'} *</Label>
+              <Input 
+                type="date"
+                value={receiptData.receipt_date} 
+                onChange={(e) => setReceiptData({...receiptData, receipt_date: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{language === 'en' ? 'Amount' : 'Jumlah'} *</Label>
+              <Input 
+                type="number"
+                value={receiptData.amount} 
+                onChange={(e) => setReceiptData({...receiptData, amount: e.target.value})}
+                max={selectedInvoice?.outstanding_amount}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{language === 'en' ? 'Bank Account' : 'Rekening Bank'} *</Label>
+              <Select value={receiptData.bank_account_id} onValueChange={(v) => setReceiptData({...receiptData, bank_account_id: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder={language === 'en' ? 'Select bank account' : 'Pilih rekening bank'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {bankAccounts.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.bank_name} - {b.account_no} ({b.account_name})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{language === 'en' ? 'Reference No.' : 'No. Referensi'}</Label>
+              <Input 
+                value={receiptData.reference_no} 
+                onChange={(e) => setReceiptData({...receiptData, reference_no: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{language === 'en' ? 'Notes' : 'Catatan'}</Label>
+              <Textarea 
+                value={receiptData.notes} 
+                onChange={(e) => setReceiptData({...receiptData, notes: e.target.value})}
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsReceiptDialogOpen(false)}>
+              {t('btn.cancel')}
+            </Button>
+            <Button onClick={handleRecordReceipt} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {t('btn.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'en' ? 'Import AR Invoices' : 'Impor Invoice AR'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'en' 
+                ? 'Upload Excel file with Indonesian headers format' 
+                : 'Upload file Excel dengan format header Indonesia'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Button variant="outline" className="gap-2 w-full" onClick={generateArTemplate}>
+              <FileDown className="w-4 h-4" />
+              {language === 'en' ? 'Download Template' : 'Unduh Template'}
+            </Button>
+            <div className="border-2 border-dashed rounded-lg p-6 text-center">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="import-ar-file"
+              />
+              <label htmlFor="import-ar-file" className="cursor-pointer">
+                {importing ? (
+                  <Loader2 className="w-8 h-8 mx-auto animate-spin text-primary" />
+                ) : (
+                  <>
+                    <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      {language === 'en' ? 'Click to select Excel file' : 'Klik untuk pilih file Excel'}
+                    </p>
+                  </>
+                )}
+              </label>
+            </div>
+            {importErrors.length > 0 && (
+              <div className="max-h-48 overflow-y-auto border rounded p-3 bg-destructive/10">
+                <p className="font-medium text-destructive mb-2">
+                  {language === 'en' ? 'Errors:' : 'Kesalahan:'}
+                </p>
+                <ul className="text-sm space-y-1">
+                  {importErrors.map((err, idx) => (
+                    <li key={idx} className="text-destructive">
+                      Row {err.row}{err.column ? ` (${err.column})` : ''}: {err.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
+              {t('btn.cancel')}
             </Button>
           </DialogFooter>
         </DialogContent>

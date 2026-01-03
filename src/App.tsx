@@ -12,6 +12,7 @@ import DashboardPage from "@/pages/DashboardPage";
 import ApListPage from "@/pages/ApListPage";
 import ArListPage from "@/pages/ArListPage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
+import SalesPage from "@/pages/SalesPage";
 import UserManagementPage from "@/pages/UserManagementPage";
 import VendorsPage from "@/pages/VendorsPage";
 import CustomersPage from "@/pages/CustomersPage";
@@ -56,7 +57,7 @@ const App = () => (
                 {/* Master Data */}
                 <Route path="/vendors" element={<VendorsPage />} />
                 <Route path="/customers" element={<CustomersPage />} />
-                <Route path="/sales" element={<PlaceholderPage titleKey="menu.sales" />} />
+                <Route path="/sales" element={<SalesPage />} />
                 <Route path="/payment-terms" element={<PaymentTermsPage />} />
                 <Route path="/bank-accounts" element={<BankAccountsPage />} />
                 <Route path="/company-profile" element={<PlaceholderPage titleKey="menu.companyProfile" />} />
