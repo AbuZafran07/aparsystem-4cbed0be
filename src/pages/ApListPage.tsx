@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Eye, Edit, Trash2, Check, X, MoreHorizontal, Loader2, Download } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { Plus, Search, Filter, Eye, Edit, Trash2, Check, X, MoreHorizontal, Loader2, Download, Upload, CreditCard, FileDown } from 'lucide-react';
 import { exportToCSV, exportToExcel, formatCurrencyForExport, formatDateForExport, ExportColumn } from '@/lib/exportUtils';
+import { parseExcelFile, validateAndMapApData, generateApTemplate, ImportError } from '@/lib/importUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,6 +53,13 @@ import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
+
+interface BankAccount {
+  id: string;
+  bank_name: string;
+  account_no: string;
+  account_name: string;
+}
 
 type InvoiceStatus = Database['public']['Enums']['record_status'];
 
@@ -117,13 +125,19 @@ export default function ApListPage() {
   const [invoices, setInvoices] = useState<ApInvoice[]>([]);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms[]>([]);
+  const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
+  const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<ApInvoice | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
+  const [importErrors, setImportErrors] = useState<ImportError[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     vendor_id: '',
@@ -134,6 +148,14 @@ export default function ApListPage() {
     invoice_date: '',
     terms_id: '',
     invoice_amount: '',
+    notes: '',
+  });
+
+  const [paymentData, setPaymentData] = useState({
+    payment_date: new Date().toISOString().split('T')[0],
+    amount: '',
+    bank_account_id: '',
+    reference_no: '',
     notes: '',
   });
 
@@ -184,6 +206,15 @@ export default function ApListPage() {
         .order('days');
 
       setPaymentTerms(termsData || []);
+
+      // Fetch bank accounts for payment
+      const { data: bankData } = await supabase
+        .from('bank_accounts')
+        .select('id, bank_name, account_no, account_name')
+        .eq('is_active', true)
+        .order('bank_name');
+
+      setBankAccounts(bankData || []);
 
     } catch (error: any) {
       console.error('Error fetching data:', error);
@@ -384,6 +415,141 @@ export default function ApListPage() {
     }
   };
 
+  const handleOpenPayment = (invoice: ApInvoice) => {
+    setSelectedInvoice(invoice);
+    setPaymentData({
+      payment_date: new Date().toISOString().split('T')[0],
+      amount: invoice.outstanding_amount.toString(),
+      bank_account_id: '',
+      reference_no: '',
+      notes: '',
+    });
+    setIsPaymentDialogOpen(true);
+  };
+
+  const handleRecordPayment = async () => {
+    if (!selectedInvoice || !paymentData.amount || !paymentData.bank_account_id || !paymentData.payment_date) {
+      toast.error(language === 'en' ? 'Please fill all required fields' : 'Mohon isi semua field yang wajib');
+      return;
+    }
+
+    const amount = parseFloat(paymentData.amount);
+    if (amount <= 0 || amount > selectedInvoice.outstanding_amount) {
+      toast.error(language === 'en' ? 'Invalid payment amount' : 'Jumlah pembayaran tidak valid');
+      return;
+    }
+
+    try {
+      setSaving(true);
+
+      // Create payment record
+      const { data: payment, error: paymentError } = await supabase
+        .from('ap_payments')
+        .insert([{
+          payment_date: paymentData.payment_date,
+          total_amount: amount,
+          bank_account_id: paymentData.bank_account_id,
+          reference_no: paymentData.reference_no || null,
+          notes: paymentData.notes || null,
+          created_by: user?.id || '',
+        }])
+        .select()
+        .single();
+
+      if (paymentError) throw paymentError;
+
+      // Create allocation
+      const { error: allocError } = await supabase
+        .from('ap_payment_allocations')
+        .insert([{
+          payment_id: payment.id,
+          ap_invoice_id: selectedInvoice.id,
+          amount: amount,
+        }]);
+
+      if (allocError) throw allocError;
+
+      // Update invoice
+      const newPaidAmount = selectedInvoice.paid_amount + amount;
+      const newOutstanding = selectedInvoice.invoice_amount - newPaidAmount;
+      const newStatus = newOutstanding <= 0 ? 'PAID' : 'PARTIAL';
+
+      const { error: updateError } = await supabase
+        .from('ap_invoices')
+        .update({
+          paid_amount: newPaidAmount,
+          outstanding_amount: newOutstanding,
+          status: newStatus,
+          paid_date: newStatus === 'PAID' ? paymentData.payment_date : null,
+        })
+        .eq('id', selectedInvoice.id);
+
+      if (updateError) throw updateError;
+
+      toast.success(language === 'en' ? 'Payment recorded successfully' : 'Pembayaran berhasil dicatat');
+      setIsPaymentDialogOpen(false);
+      setSelectedInvoice(null);
+      fetchData();
+    } catch (error: any) {
+      console.error('Error recording payment:', error);
+      toast.error(language === 'en' ? 'Failed to record payment' : 'Gagal mencatat pembayaran');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setImporting(true);
+      setImportErrors([]);
+
+      const rows = await parseExcelFile(file);
+      const result = validateAndMapApData(rows, vendors, paymentTerms);
+
+      if (result.errors.length > 0) {
+        setImportErrors(result.errors);
+        toast.error(language === 'en' 
+          ? `Import failed with ${result.errors.length} errors` 
+          : `Import gagal dengan ${result.errors.length} kesalahan`);
+        return;
+      }
+
+      if (result.data.length === 0) {
+        toast.error(language === 'en' ? 'No valid data to import' : 'Tidak ada data valid untuk diimpor');
+        return;
+      }
+
+      // Insert all records
+      const dataWithCreatedBy = result.data.map(row => ({
+        ...row,
+        created_by: user?.id || '',
+      }));
+
+      const { error } = await supabase
+        .from('ap_invoices')
+        .insert(dataWithCreatedBy);
+
+      if (error) throw error;
+
+      toast.success(language === 'en' 
+        ? `Successfully imported ${result.data.length} invoices` 
+        : `Berhasil mengimpor ${result.data.length} invoice`);
+      setIsImportDialogOpen(false);
+      fetchData();
+    } catch (error: any) {
+      console.error('Error importing:', error);
+      toast.error(error.message || (language === 'en' ? 'Failed to import' : 'Gagal mengimpor'));
+    } finally {
+      setImporting(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
   const filteredInvoices = invoices.filter(
     (inv) =>
       inv.vendor_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -408,6 +574,10 @@ export default function ApListPage() {
 
   const canDelete = (status: InvoiceStatus) => {
     return isSuperAdmin || (isPurchasing && (status === 'DRAFT' || status === 'REJECTED'));
+  };
+
+  const canRecordPayment = (status: InvoiceStatus, outstanding: number) => {
+    return isFinance && (status === 'APPROVED' || status === 'PARTIAL') && outstanding > 0;
   };
 
   const handleExport = (format: 'csv' | 'excel') => {
@@ -455,12 +625,20 @@ export default function ApListPage() {
               : 'Kelola invoice dan pembayaran vendor'}
           </p>
         </div>
-        {isPurchasing && (
-          <Button className="gap-2" onClick={handleOpenCreate}>
-            <Plus className="w-4 h-4" />
-            {t('btn.newApInvoice')}
-          </Button>
-        )}
+        <div className="flex gap-2">
+          {isPurchasing && (
+            <Button variant="outline" className="gap-2" onClick={() => setIsImportDialogOpen(true)}>
+              <Upload className="w-4 h-4" />
+              {language === 'en' ? 'Import' : 'Impor'}
+            </Button>
+          )}
+          {isPurchasing && (
+            <Button className="gap-2" onClick={handleOpenCreate}>
+              <Plus className="w-4 h-4" />
+              {t('btn.newApInvoice')}
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Filters */}
@@ -599,9 +777,9 @@ export default function ApListPage() {
                               </DropdownMenuItem>
                             </>
                           )}
-                          {isFinance && invoice.status === 'APPROVED' && (
-                            <DropdownMenuItem className="gap-2">
-                              <Plus className="w-4 h-4" />
+                          {canRecordPayment(invoice.status, invoice.outstanding_amount) && (
+                            <DropdownMenuItem className="gap-2" onClick={() => handleOpenPayment(invoice)}>
+                              <CreditCard className="w-4 h-4" />
                               {t('btn.recordPayment')}
                             </DropdownMenuItem>
                           )}
@@ -796,6 +974,143 @@ export default function ApListPage() {
             </Button>
             <Button variant="destructive" onClick={handleReject}>
               {t('btn.reject')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Dialog */}
+      <Dialog open={isPaymentDialogOpen} onOpenChange={setIsPaymentDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'en' ? 'Record Payment' : 'Catat Pembayaran'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'en' 
+                ? `Outstanding: ${formatCurrency(selectedInvoice?.outstanding_amount || 0)}` 
+                : `Sisa: ${formatCurrency(selectedInvoice?.outstanding_amount || 0)}`}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{language === 'en' ? 'Payment Date' : 'Tanggal Pembayaran'} *</Label>
+              <Input 
+                type="date"
+                value={paymentData.payment_date} 
+                onChange={(e) => setPaymentData({...paymentData, payment_date: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{language === 'en' ? 'Amount' : 'Jumlah'} *</Label>
+              <Input 
+                type="number"
+                value={paymentData.amount} 
+                onChange={(e) => setPaymentData({...paymentData, amount: e.target.value})}
+                max={selectedInvoice?.outstanding_amount}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{language === 'en' ? 'Bank Account' : 'Rekening Bank'} *</Label>
+              <Select value={paymentData.bank_account_id} onValueChange={(v) => setPaymentData({...paymentData, bank_account_id: v})}>
+                <SelectTrigger>
+                  <SelectValue placeholder={language === 'en' ? 'Select bank account' : 'Pilih rekening bank'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {bankAccounts.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.bank_name} - {b.account_no} ({b.account_name})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{language === 'en' ? 'Reference No.' : 'No. Referensi'}</Label>
+              <Input 
+                value={paymentData.reference_no} 
+                onChange={(e) => setPaymentData({...paymentData, reference_no: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{language === 'en' ? 'Notes' : 'Catatan'}</Label>
+              <Textarea 
+                value={paymentData.notes} 
+                onChange={(e) => setPaymentData({...paymentData, notes: e.target.value})}
+                rows={2}
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPaymentDialogOpen(false)}>
+              {t('btn.cancel')}
+            </Button>
+            <Button onClick={handleRecordPayment} disabled={saving}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {t('btn.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Import Dialog */}
+      <Dialog open={isImportDialogOpen} onOpenChange={setIsImportDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'en' ? 'Import AP Invoices' : 'Impor Invoice AP'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'en' 
+                ? 'Upload Excel file with Indonesian headers format' 
+                : 'Upload file Excel dengan format header Indonesia'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Button variant="outline" className="gap-2 w-full" onClick={generateApTemplate}>
+              <FileDown className="w-4 h-4" />
+              {language === 'en' ? 'Download Template' : 'Unduh Template'}
+            </Button>
+            <div className="border-2 border-dashed rounded-lg p-6 text-center">
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".xlsx,.xls"
+                onChange={handleFileUpload}
+                className="hidden"
+                id="import-file"
+              />
+              <label htmlFor="import-file" className="cursor-pointer">
+                {importing ? (
+                  <Loader2 className="w-8 h-8 mx-auto animate-spin text-primary" />
+                ) : (
+                  <>
+                    <Upload className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground">
+                      {language === 'en' ? 'Click to select Excel file' : 'Klik untuk pilih file Excel'}
+                    </p>
+                  </>
+                )}
+              </label>
+            </div>
+            {importErrors.length > 0 && (
+              <div className="max-h-48 overflow-y-auto border rounded p-3 bg-destructive/10">
+                <p className="font-medium text-destructive mb-2">
+                  {language === 'en' ? 'Errors:' : 'Kesalahan:'}
+                </p>
+                <ul className="text-sm space-y-1">
+                  {importErrors.map((err, idx) => (
+                    <li key={idx} className="text-destructive">
+                      Row {err.row}{err.column ? ` (${err.column})` : ''}: {err.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
+              {t('btn.cancel')}
             </Button>
           </DialogFooter>
         </DialogContent>
