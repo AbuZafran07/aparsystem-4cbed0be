@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Eye, Edit, Trash2, Check, X, MoreHorizontal, Loader2 } from 'lucide-react';
+import { Plus, Search, Filter, Eye, Edit, Trash2, Check, X, MoreHorizontal, Loader2, Download } from 'lucide-react';
+import { exportToCSV, exportToExcel, formatCurrencyForExport, formatDateForExport, ExportColumn } from '@/lib/exportUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -409,6 +410,31 @@ export default function ApListPage() {
     return isSuperAdmin || (isPurchasing && (status === 'DRAFT' || status === 'REJECTED'));
   };
 
+  const handleExport = (format: 'csv' | 'excel') => {
+    const columns: ExportColumn[] = [
+      { key: 'vendor_name', header: language === 'en' ? 'Vendor Name' : 'Nama Vendor' },
+      { key: 'vendor_invoice_number', header: language === 'en' ? 'Invoice Number' : 'No. Invoice' },
+      { key: 'po_number', header: language === 'en' ? 'PO Number' : 'No. PO' },
+      { key: 'invoice_date', header: language === 'en' ? 'Invoice Date' : 'Tanggal Invoice', format: formatDateForExport },
+      { key: 'due_date', header: language === 'en' ? 'Due Date' : 'Jatuh Tempo', format: formatDateForExport },
+      { key: 'invoice_amount', header: language === 'en' ? 'Invoice Amount' : 'Jumlah Invoice', format: formatCurrencyForExport },
+      { key: 'paid_amount', header: language === 'en' ? 'Paid Amount' : 'Jumlah Dibayar', format: formatCurrencyForExport },
+      { key: 'outstanding_amount', header: language === 'en' ? 'Outstanding' : 'Sisa', format: formatCurrencyForExport },
+      { key: 'overdue_days', header: language === 'en' ? 'Overdue Days' : 'Hari Terlambat' },
+      { key: 'status', header: 'Status' },
+    ];
+
+    const filename = `AP_Invoices_${new Date().toISOString().split('T')[0]}`;
+    
+    if (format === 'csv') {
+      exportToCSV(filteredInvoices, columns, filename);
+      toast.success(language === 'en' ? 'CSV exported successfully' : 'CSV berhasil diekspor');
+    } else {
+      exportToExcel(filteredInvoices, columns, filename);
+      toast.success(language === 'en' ? 'Excel exported successfully' : 'Excel berhasil diekspor');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -454,6 +480,22 @@ export default function ApListPage() {
               <Filter className="w-4 h-4" />
               {t('common.filter')}
             </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="gap-2">
+                  <Download className="w-4 h-4" />
+                  Export
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem onClick={() => handleExport('csv')}>
+                  Export CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleExport('excel')}>
+                  Export Excel
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </CardContent>
       </Card>
