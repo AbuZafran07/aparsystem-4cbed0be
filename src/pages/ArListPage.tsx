@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Filter, Eye, Edit, Trash2, Mail, FileText, MoreHorizontal, Loader2, Check, X, Download, Upload, CreditCard, FileDown } from 'lucide-react';
+import { Plus, Search, Filter, Eye, Edit, Trash2, Mail, FileText, MoreHorizontal, Loader2, Check, X, Download, Upload, CreditCard, FileDown, MessageCircle, Phone } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,6 +52,14 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { exportToCSV, exportToExcel, formatCurrencyForExport, formatDateForExport, ExportColumn } from '@/lib/exportUtils';
 import { parseExcelFile, validateAndMapArData, generateArTemplate, ImportError } from '@/lib/importUtils';
+import { 
+  generateLetterNumber, 
+  generateBillingLetterHTML, 
+  generateWhatsAppMessage, 
+  openWhatsApp, 
+  printBillingLetter,
+  BillingLetterData 
+} from '@/lib/billingUtils';
 import type { Database } from '@/integrations/supabase/types';
 
 interface BankAccount {
@@ -139,11 +147,13 @@ export default function ArListPage() {
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isBillingDialogOpen, setIsBillingDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<ArInvoice | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importErrors, setImportErrors] = useState<ImportError[]>([]);
+  const [companyProfile, setCompanyProfile] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
@@ -232,6 +242,15 @@ export default function ArListPage() {
         .order('bank_name');
 
       setBankAccounts(bankData || []);
+
+      // Fetch company profile for billing letters
+      const { data: profileData } = await supabase
+        .from('company_profile')
+        .select('*')
+        .limit(1)
+        .single();
+
+      setCompanyProfile(profileData);
 
     } catch (error: any) {
       console.error('Error fetching data:', error);
@@ -624,6 +643,58 @@ export default function ArListPage() {
     }
   };
 
+  const handleOpenBilling = (invoice: ArInvoice) => {
+    setSelectedInvoice(invoice);
+    setIsBillingDialogOpen(true);
+  };
+
+  const getBillingLetterData = (): BillingLetterData | null => {
+    if (!selectedInvoice) return null;
+    
+    const customer = customers.find(c => c.id === selectedInvoice.customer_id);
+    
+    return {
+      letterNo: generateLetterNumber(),
+      letterDate: new Date().toISOString().split('T')[0],
+      customerName: selectedInvoice.customer_name,
+      customerAddress: undefined,
+      invoiceNumber: selectedInvoice.invoice_number,
+      invoiceDate: selectedInvoice.invoice_date,
+      dueDate: selectedInvoice.due_date,
+      invoiceAmount: selectedInvoice.invoice_amount,
+      outstandingAmount: selectedInvoice.outstanding_amount,
+      overdueDays: selectedInvoice.overdue_days,
+      companyName: companyProfile?.company_name || 'PT. Kemika Karya Pratama',
+      companyAddress: companyProfile?.address,
+      companyPhone: companyProfile?.phone,
+      companyEmail: companyProfile?.email,
+    };
+  };
+
+  const handlePrintBillingLetter = () => {
+    const data = getBillingLetterData();
+    if (!data) return;
+    
+    const html = generateBillingLetterHTML(data);
+    printBillingLetter(html);
+    toast.success(language === 'en' ? 'Billing letter opened for printing' : 'Surat tagihan dibuka untuk cetak');
+  };
+
+  const handleSendWhatsApp = (phone?: string) => {
+    const data = getBillingLetterData();
+    if (!data) return;
+    
+    const message = generateWhatsAppMessage(data);
+    
+    if (phone) {
+      openWhatsApp(phone, message);
+    } else {
+      // Copy message to clipboard if no phone
+      navigator.clipboard.writeText(message);
+      toast.success(language === 'en' ? 'Message copied to clipboard' : 'Pesan disalin ke clipboard');
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -804,16 +875,10 @@ export default function ArListPage() {
                             </>
                           )}
                           {canSendBilling(invoice.status, invoice.outstanding_amount) && (
-                            <>
-                              <DropdownMenuItem className="gap-2">
-                                <FileText className="w-4 h-4" />
-                                {t('btn.generateBillingLetter')}
-                              </DropdownMenuItem>
-                              <DropdownMenuItem className="gap-2">
-                                <Mail className="w-4 h-4" />
-                                {t('btn.sendBillingEmail')}
-                              </DropdownMenuItem>
-                            </>
+                            <DropdownMenuItem className="gap-2" onClick={() => handleOpenBilling(invoice)}>
+                              <FileText className="w-4 h-4" />
+                              {t('btn.generateBillingLetter')}
+                            </DropdownMenuItem>
                           )}
                           {canRecordReceipt(invoice.status, invoice.outstanding_amount) && (
                             <DropdownMenuItem className="gap-2" onClick={() => handleOpenReceipt(invoice)}>
@@ -1155,6 +1220,61 @@ export default function ArListPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsImportDialogOpen(false)}>
               {t('btn.cancel')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Billing Letter Dialog */}
+      <Dialog open={isBillingDialogOpen} onOpenChange={setIsBillingDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'en' ? 'Billing Letter' : 'Surat Penagihan'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedInvoice && (
+                <>
+                  {selectedInvoice.customer_name} - {selectedInvoice.invoice_number}
+                  <br />
+                  <span className="font-medium">
+                    {formatCurrency(selectedInvoice.outstanding_amount)}
+                  </span>
+                  {selectedInvoice.overdue_days > 0 && (
+                    <span className="text-destructive ml-2">
+                      ({selectedInvoice.overdue_days} {language === 'en' ? 'days overdue' : 'hari terlambat'})
+                    </span>
+                  )}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Button 
+              variant="outline" 
+              className="w-full gap-2 justify-start" 
+              onClick={handlePrintBillingLetter}
+            >
+              <FileText className="w-4 h-4" />
+              {language === 'en' ? 'Print / Download PDF' : 'Cetak / Unduh PDF'}
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full gap-2 justify-start" 
+              onClick={() => handleSendWhatsApp()}
+            >
+              <MessageCircle className="w-4 h-4" />
+              {language === 'en' ? 'Copy WhatsApp Message' : 'Salin Pesan WhatsApp'}
+            </Button>
+            <p className="text-xs text-muted-foreground text-center pt-2">
+              {language === 'en' 
+                ? 'Use Print to PDF to save as PDF file, or copy the WhatsApp message to send manually.' 
+                : 'Gunakan Print to PDF untuk menyimpan sebagai file PDF, atau salin pesan WhatsApp untuk dikirim manual.'}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBillingDialogOpen(false)}>
+              {t('btn.close')}
             </Button>
           </DialogFooter>
         </DialogContent>

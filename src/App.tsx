@@ -18,6 +18,7 @@ import VendorsPage from "@/pages/VendorsPage";
 import CustomersPage from "@/pages/CustomersPage";
 import PaymentTermsPage from "@/pages/PaymentTermsPage";
 import BankAccountsPage from "@/pages/BankAccountsPage";
+import AgingReportPage from "@/pages/AgingReportPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -63,8 +64,9 @@ const App = () => (
                 <Route path="/company-profile" element={<PlaceholderPage titleKey="menu.companyProfile" />} />
                 
                 {/* Reports */}
-                <Route path="/ap-aging" element={<PlaceholderPage titleKey="menu.apAging" />} />
-                <Route path="/ar-aging" element={<PlaceholderPage titleKey="menu.arAging" />} />
+                <Route path="/aging-report" element={<AgingReportPage />} />
+                <Route path="/ap-aging" element={<AgingReportPage />} />
+                <Route path="/ar-aging" element={<AgingReportPage />} />
                 <Route path="/ap-report" element={<PlaceholderPage titleKey="menu.apReport" />} />
                 <Route path="/ar-report" element={<PlaceholderPage titleKey="menu.arReport" />} />
                 <Route path="/cashflow" element={<PlaceholderPage titleKey="menu.cashflow" />} />
