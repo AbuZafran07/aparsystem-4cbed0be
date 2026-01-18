@@ -272,28 +272,96 @@ export const openWhatsApp = (phoneNumber: string, message: string): void => {
   window.open(whatsappUrl, '_blank');
 };
 
-export const printBillingLetter = (html: string): void => {
-  const printWindow = window.open('', '_blank');
-  if (printWindow) {
-    printWindow.document.write(html);
-    printWindow.document.close();
-    printWindow.print();
+const sanitizePrintableHtml = (html: string): string => {
+  try {
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+
+    // Remove high-risk elements entirely
+    doc.querySelectorAll('script, iframe, object, embed').forEach((el) => el.remove());
+
+    // Remove inline event handlers and javascript: URLs
+    const root = doc.documentElement;
+    if (root) {
+      const walker = doc.createTreeWalker(root, NodeFilter.SHOW_ELEMENT);
+      let current = walker.currentNode as Element | null;
+
+      while (current) {
+        for (const attr of Array.from(current.attributes)) {
+          const name = attr.name.toLowerCase();
+          const value = attr.value;
+
+          if (name.startsWith('on')) {
+            current.removeAttribute(attr.name);
+            continue;
+          }
+
+          if ((name === 'href' || name === 'src') && /^\s*javascript:/i.test(value)) {
+            current.removeAttribute(attr.name);
+          }
+        }
+
+        current = walker.nextNode() as Element | null;
+      }
+    }
+
+    return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
+  } catch {
+    // Fallback: remove script tags only
+    return html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
   }
+};
+
+const safeWindowOpen = (): Window | null => {
+  // noopener/noreferrer prevents reverse-tabnabbing and reduces cross-window attacks
+  const w = window.open('', '_blank', 'noopener,noreferrer');
+  if (w) w.opener = null;
+  return w;
+};
+
+export const printBillingLetter = (html: string): void => {
+  const printWindow = safeWindowOpen();
+  if (!printWindow) return;
+
+  const sanitizedHtml = sanitizePrintableHtml(html);
+  printWindow.document.open();
+  printWindow.document.write(sanitizedHtml);
+  printWindow.document.close();
+
+  // Print after a short delay to allow rendering
+  setTimeout(() => {
+    try {
+      printWindow.print();
+    } catch {
+      // ignore
+    }
+  }, 250);
 };
 
 export const downloadBillingLetterPDF = async (html: string, filename: string): Promise<void> => {
   // Open in new window for manual PDF save (print to PDF)
-  const printWindow = window.open('', '_blank');
-  if (printWindow) {
-    printWindow.document.write(`
-      ${html}
-      <script>
-        window.onload = function() {
-          document.title = "${filename}";
-          alert("Untuk menyimpan sebagai PDF, gunakan Ctrl+P atau Cmd+P, lalu pilih 'Save as PDF'");
-        }
-      </script>
-    `);
-    printWindow.document.close();
+  const printWindow = safeWindowOpen();
+  if (!printWindow) return;
+
+  const sanitizedHtml = sanitizePrintableHtml(html);
+  const safeTitle = String(filename).replace(/[\r\n\t]/g, ' ').slice(0, 200);
+
+  printWindow.document.open();
+  printWindow.document.write(sanitizedHtml);
+  printWindow.document.close();
+
+  // Set title and show instructions without injecting script into the document
+  try {
+    printWindow.document.title = safeTitle;
+  } catch {
+    // ignore
   }
+
+  setTimeout(() => {
+    try {
+      printWindow.alert("Untuk menyimpan sebagai PDF, gunakan Ctrl+P atau Cmd+P, lalu pilih 'Save as PDF'");
+    } catch {
+      // ignore
+    }
+  }, 250);
 };
