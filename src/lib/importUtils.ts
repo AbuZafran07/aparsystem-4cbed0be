@@ -1,4 +1,5 @@
-import * as XLSX from 'xlsx';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 // Indonesian headers mapping for AP Invoice
 export const AP_HEADERS_MAP: Record<string, string> = {
@@ -41,12 +42,23 @@ export interface ImportError {
 const parseDate = (value: any): string | null => {
   if (!value) return null;
   
-  // If it's already a Date object or number (Excel serial date)
+  // If it's a Date object
+  if (value instanceof Date) {
+    const year = value.getFullYear();
+    const month = String(value.getMonth() + 1).padStart(2, '0');
+    const day = String(value.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  
+  // If it's a number (Excel serial date)
   if (typeof value === 'number') {
-    const date = XLSX.SSF.parse_date_code(value);
-    if (date) {
-      return `${date.y}-${String(date.m).padStart(2, '0')}-${String(date.d).padStart(2, '0')}`;
-    }
+    // Excel serial date conversion (days since 1900-01-01, with leap year bug)
+    const excelEpoch = new Date(1899, 11, 30);
+    const date = new Date(excelEpoch.getTime() + value * 24 * 60 * 60 * 1000);
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
   }
   
   // If it's a string, try to parse it
@@ -82,16 +94,58 @@ const parseAmount = (value: any): number | null => {
   return null;
 };
 
+const getCellValue = (cell: ExcelJS.Cell): any => {
+  if (!cell || cell.value === null || cell.value === undefined) return null;
+  
+  const value = cell.value;
+  
+  // Handle rich text
+  if (typeof value === 'object' && 'richText' in value) {
+    return (value as ExcelJS.CellRichTextValue).richText.map(rt => rt.text).join('');
+  }
+  
+  // Handle formula results
+  if (typeof value === 'object' && 'result' in value) {
+    return (value as ExcelJS.CellFormulaValue).result;
+  }
+  
+  // Handle hyperlinks
+  if (typeof value === 'object' && 'text' in value) {
+    return (value as ExcelJS.CellHyperlinkValue).text;
+  }
+  
+  return value;
+};
+
 export const parseExcelFile = async (file: File): Promise<any[][]> => {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = (e) => {
+    reader.onload = async (e) => {
       try {
-        const data = new Uint8Array(e.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: 'array', cellDates: true });
-        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
-        const jsonData = XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
-        resolve(jsonData as any[][]);
+        const buffer = e.target?.result as ArrayBuffer;
+        const workbook = new ExcelJS.Workbook();
+        await workbook.xlsx.load(buffer);
+        
+        const worksheet = workbook.worksheets[0];
+        if (!worksheet) {
+          reject(new Error('No worksheet found'));
+          return;
+        }
+        
+        const jsonData: any[][] = [];
+        worksheet.eachRow((row, rowNumber) => {
+          const rowData: any[] = [];
+          row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
+            // Ensure we fill in any gaps
+            while (rowData.length < colNumber - 1) {
+              rowData.push(null);
+            }
+            rowData.push(getCellValue(cell));
+          });
+          jsonData.push(rowData);
+        });
+        
+        resolve(jsonData);
       } catch (error) {
         reject(error);
       }
@@ -401,7 +455,11 @@ export const validateAndMapArData = (
   return { success: errors.length === 0, data, errors };
 };
 
-export const generateApTemplate = (): void => {
+export const generateApTemplate = async (): Promise<void> => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Template AP');
+  
+  // Add headers
   const headers = [
     'Nama Vendor',
     'No Invoice Vendor',
@@ -414,17 +472,36 @@ export const generateApTemplate = (): void => {
     'Catatan',
   ];
   
-  const sampleData = [
-    ['PT Supplier ABC', 'INV-001', 'PO-2024-001', 'Material A', '01/01/2024', '05/01/2024', 'NET 30', '10000000', ''],
-  ];
+  worksheet.addRow(headers);
   
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
-  XLSX.utils.book_append_sheet(wb, ws, 'Template AP');
-  XLSX.writeFile(wb, 'Template_Import_AP_Invoice.xlsx');
+  // Style header row
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFCCCCCC' }
+  };
+  
+  // Add sample data
+  worksheet.addRow(['PT Supplier ABC', 'INV-001', 'PO-2024-001', 'Material A', '01/01/2024', '05/01/2024', 'NET 30', 10000000, '']);
+  
+  // Auto-fit columns
+  worksheet.columns.forEach(column => {
+    column.width = 20;
+  });
+  
+  // Generate and download
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, 'Template_Import_AP_Invoice.xlsx');
 };
 
-export const generateArTemplate = (): void => {
+export const generateArTemplate = async (): Promise<void> => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Template AR');
+  
+  // Add headers
   const headers = [
     'Nama Customer',
     'Nama Sales',
@@ -437,12 +514,27 @@ export const generateArTemplate = (): void => {
     'Catatan',
   ];
   
-  const sampleData = [
-    ['PT Customer XYZ', 'John Doe', 'INV-AR-001', 'ORD-2024-001', '01/01/2024', '05/01/2024', 'NET 30', '15000000', ''],
-  ];
+  worksheet.addRow(headers);
   
-  const wb = XLSX.utils.book_new();
-  const ws = XLSX.utils.aoa_to_sheet([headers, ...sampleData]);
-  XLSX.utils.book_append_sheet(wb, ws, 'Template AR');
-  XLSX.writeFile(wb, 'Template_Import_AR_Invoice.xlsx');
+  // Style header row
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFCCCCCC' }
+  };
+  
+  // Add sample data
+  worksheet.addRow(['PT Customer XYZ', 'John Doe', 'INV-AR-001', 'ORD-2024-001', '01/01/2024', '05/01/2024', 'NET 30', 15000000, '']);
+  
+  // Auto-fit columns
+  worksheet.columns.forEach(column => {
+    column.width = 20;
+  });
+  
+  // Generate and download
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, 'Template_Import_AR_Invoice.xlsx');
 };
