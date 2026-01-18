@@ -11,6 +11,8 @@ import LoginPage from "@/pages/LoginPage";
 import DashboardPage from "@/pages/DashboardPage";
 import ApListPage from "@/pages/ApListPage";
 import ArListPage from "@/pages/ArListPage";
+import ApPaymentsPage from "@/pages/ApPaymentsPage";
+import ArReceiptsPage from "@/pages/ArReceiptsPage";
 import PlaceholderPage from "@/pages/PlaceholderPage";
 import SalesPage from "@/pages/SalesPage";
 import UserManagementPage from "@/pages/UserManagementPage";
@@ -48,8 +50,8 @@ const App = () => (
                 {/* Transactions */}
                 <Route path="/ap" element={<ApListPage />} />
                 <Route path="/ar" element={<ArListPage />} />
-                <Route path="/ap-payments" element={<PlaceholderPage titleKey="menu.apPayments" />} />
-                <Route path="/ar-receipts" element={<PlaceholderPage titleKey="menu.arReceipts" />} />
+                <Route path="/ap-payments" element={<ApPaymentsPage />} />
+                <Route path="/ar-receipts" element={<ArReceiptsPage />} />
                 
                 {/* Billing */}
                 <Route path="/billing-letters" element={<PlaceholderPage titleKey="menu.billingLetters" />} />
