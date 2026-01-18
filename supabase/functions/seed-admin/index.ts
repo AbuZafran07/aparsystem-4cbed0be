@@ -5,8 +5,9 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const SUPER_ADMIN_EMAIL = 'ferry@kemika.co.id';
-const SUPER_ADMIN_PASSWORD = 'Ksatria2312';
+// Read credentials from environment variables (set via Lovable Cloud secrets)
+const SUPER_ADMIN_EMAIL = Deno.env.get('SUPER_ADMIN_EMAIL');
+const SUPER_ADMIN_PASSWORD = Deno.env.get('SUPER_ADMIN_PASSWORD');
 const SUPER_ADMIN_NAME = 'Ferry Kemika';
 
 Deno.serve(async (req) => {
@@ -17,6 +18,11 @@ Deno.serve(async (req) => {
 
   try {
     console.log('Starting seed-admin function...');
+    
+    // Validate required environment variables
+    if (!SUPER_ADMIN_EMAIL || !SUPER_ADMIN_PASSWORD) {
+      throw new Error('SUPER_ADMIN_EMAIL and SUPER_ADMIN_PASSWORD environment variables must be configured');
+    }
     
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
