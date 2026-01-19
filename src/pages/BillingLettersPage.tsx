@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Eye, Printer, Trash2, MoreHorizontal, Loader2, FileText, Calendar } from 'lucide-react';
+import { Search, Eye, Printer, Trash2, Loader2, FileText, Plus } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import {
   Table,
   TableBody,
@@ -13,18 +14,20 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,6 +47,7 @@ import {
   printBillingLetter,
   formatCurrencyIDR,
   formatDateID,
+  generateLetterNumber,
   BillingLetterData 
 } from '@/lib/billingUtils';
 import type { Database } from '@/integrations/supabase/types';
@@ -67,6 +71,14 @@ interface BillingLetter {
   notes: string | null;
   created_at: string;
   created_by: string;
+}
+
+interface ArInvoice {
+  id: string;
+  invoice_number: string;
+  customer_name: string;
+  outstanding_amount: number;
+  overdue_days: number;
 }
 
 interface CompanyProfile {
@@ -95,11 +107,15 @@ export default function BillingLettersPage() {
   const { t, language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
   const [letters, setLetters] = useState<BillingLetter[]>([]);
+  const [arInvoices, setArInvoices] = useState<ArInvoice[]>([]);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedLetter, setSelectedLetter] = useState<BillingLetter | null>(null);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState('');
 
   const isFinance = user?.role === 'FINANCE' || user?.role === 'SUPER_ADMIN';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
@@ -155,6 +171,28 @@ export default function BillingLettersPage() {
 
       setLetters(formattedLetters);
 
+      // Fetch AR invoices with outstanding for create dialog
+      const { data: invoicesData } = await supabase
+        .from('ar_invoices')
+        .select(`
+          id,
+          invoice_number,
+          outstanding_amount,
+          overdue_days,
+          customers (customer_name)
+        `)
+        .gt('outstanding_amount', 0)
+        .in('status', ['APPROVED', 'PARTIAL'])
+        .order('invoice_number');
+
+      setArInvoices((invoicesData || []).map((inv: any) => ({
+        id: inv.id,
+        invoice_number: inv.invoice_number,
+        customer_name: inv.customers?.customer_name || 'Unknown',
+        outstanding_amount: inv.outstanding_amount,
+        overdue_days: inv.overdue_days,
+      })));
+
       // Fetch company profile
       const { data: profileData } = await supabase
         .from('company_profile')
@@ -202,6 +240,40 @@ export default function BillingLettersPage() {
 
     const html = generateBillingLetterHTML(billingData);
     printBillingLetter(html);
+  };
+
+  const handleCreate = async () => {
+    if (!selectedInvoiceId || !user) {
+      toast.error(language === 'en' ? 'Please select an invoice' : 'Pilih invoice terlebih dahulu');
+      return;
+    }
+
+    setSaving(true);
+    try {
+      const letterNo = generateLetterNumber();
+
+      const { error } = await supabase
+        .from('billing_letters')
+        .insert({
+          ar_invoice_id: selectedInvoiceId,
+          letter_no: letterNo,
+          letter_date: new Date().toISOString().split('T')[0],
+          created_by: user.id,
+          status: 'DRAFT',
+        });
+
+      if (error) throw error;
+
+      toast.success(language === 'en' ? 'Billing letter created' : 'Surat tagihan dibuat');
+      setIsCreateDialogOpen(false);
+      setSelectedInvoiceId('');
+      fetchData();
+    } catch (error: any) {
+      console.error('Error creating letter:', error);
+      toast.error(language === 'en' ? 'Failed to create letter' : 'Gagal membuat surat tagihan');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleDelete = async () => {
@@ -253,6 +325,12 @@ export default function BillingLettersPage() {
             {language === 'en' ? 'Manage billing letters for AR invoices' : 'Kelola surat tagihan untuk invoice AR'}
           </p>
         </div>
+        {isFinance && (
+          <Button className="gap-2" onClick={() => setIsCreateDialogOpen(true)}>
+            <Plus className="w-4 h-4" />
+            {language === 'en' ? 'New Billing Letter' : 'Surat Tagihan Baru'}
+          </Button>
+        )}
       </div>
 
       {/* Search */}
@@ -356,6 +434,67 @@ export default function BillingLettersPage() {
           </Table>
         </CardContent>
       </Card>
+
+      {/* Create Dialog */}
+      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              {language === 'en' ? 'Create Billing Letter' : 'Buat Surat Tagihan'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'en' 
+                ? 'Select an AR invoice to create a billing letter'
+                : 'Pilih invoice AR untuk membuat surat tagihan'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{language === 'en' ? 'Select Invoice' : 'Pilih Invoice'} *</Label>
+              <Select value={selectedInvoiceId} onValueChange={setSelectedInvoiceId}>
+                <SelectTrigger>
+                  <SelectValue placeholder={language === 'en' ? 'Select an invoice...' : 'Pilih invoice...'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {arInvoices.length === 0 ? (
+                    <div className="p-2 text-sm text-muted-foreground text-center">
+                      {language === 'en' ? 'No invoices with outstanding balance' : 'Tidak ada invoice dengan saldo outstanding'}
+                    </div>
+                  ) : (
+                    arInvoices.map((inv) => (
+                      <SelectItem key={inv.id} value={inv.id}>
+                        <div className="flex flex-col">
+                          <span>{inv.invoice_number} - {inv.customer_name}</span>
+                          <span className="text-xs text-muted-foreground">
+                            {formatCurrencyIDR(inv.outstanding_amount)}
+                            {inv.overdue_days > 0 && (
+                              <span className="text-destructive ml-1">
+                                ({inv.overdue_days} {language === 'en' ? 'days overdue' : 'hari terlambat'})
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                      </SelectItem>
+                    ))
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
+              {t('btn.cancel')}
+            </Button>
+            <Button onClick={handleCreate} disabled={saving || !selectedInvoiceId}>
+              {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              {t('btn.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* View Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
