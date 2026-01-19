@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Filter, Eye, Edit, Trash2, Mail, FileText, MoreHorizontal, Loader2, Check, X, Download, Upload, CreditCard, FileDown, MessageCircle, Phone } from 'lucide-react';
+import { Plus, Search, Filter, Eye, Edit, Trash2, Mail, FileText, MoreHorizontal, Loader2, Check, X, Download, Upload, CreditCard, FileDown, MessageCircle, Phone, Send } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -69,6 +69,13 @@ interface BankAccount {
   account_name: string;
 }
 
+interface Customer {
+  id: string;
+  customer_name: string;
+  billing_email: string | null;
+  address: string | null;
+}
+
 type InvoiceStatus = Database['public']['Enums']['record_status'];
 
 interface ArInvoice {
@@ -96,6 +103,8 @@ interface ArInvoice {
 interface Customer {
   id: string;
   customer_name: string;
+  billing_email: string | null;
+  address: string | null;
 }
 
 interface Sales {
@@ -148,13 +157,21 @@ export default function ArListPage() {
   const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isBillingDialogOpen, setIsBillingDialogOpen] = useState(false);
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<ArInvoice | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [saving, setSaving] = useState(false);
+  const [sendingEmail, setSendingEmail] = useState(false);
   const [importing, setImporting] = useState(false);
   const [importErrors, setImportErrors] = useState<ImportError[]>([]);
   const [companyProfile, setCompanyProfile] = useState<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [emailData, setEmailData] = useState({
+    to_email: '',
+    cc_email: '',
+    subject: '',
+  });
 
   const [formData, setFormData] = useState({
     customer_id: '',
@@ -210,7 +227,7 @@ export default function ArListPage() {
       // Fetch customers for dropdown
       const { data: customersData } = await supabase
         .from('customers')
-        .select('id, customer_name')
+        .select('id, customer_name, billing_email, address')
         .eq('is_active', true)
         .order('customer_name');
 
@@ -657,7 +674,7 @@ export default function ArListPage() {
       letterNo: generateLetterNumber(),
       letterDate: new Date().toISOString().split('T')[0],
       customerName: selectedInvoice.customer_name,
-      customerAddress: undefined,
+      customerAddress: customer?.address || undefined,
       invoiceNumber: selectedInvoice.invoice_number,
       invoiceDate: selectedInvoice.invoice_date,
       dueDate: selectedInvoice.due_date,
@@ -669,6 +686,87 @@ export default function ArListPage() {
       companyPhone: companyProfile?.phone,
       companyEmail: companyProfile?.email,
     };
+  };
+
+  const handleSaveBillingLetter = async () => {
+    if (!selectedInvoice || !user) return;
+    
+    const letterNo = generateLetterNumber();
+    
+    try {
+      const { error } = await supabase
+        .from('billing_letters')
+        .insert({
+          ar_invoice_id: selectedInvoice.id,
+          letter_no: letterNo,
+          letter_date: new Date().toISOString().split('T')[0],
+          created_by: user.id,
+          status: 'DRAFT',
+        });
+      
+      if (error) throw error;
+      
+      toast.success(language === 'en' ? 'Billing letter created' : 'Surat tagihan dibuat');
+      return letterNo;
+    } catch (error: any) {
+      console.error('Error saving billing letter:', error);
+      toast.error(language === 'en' ? 'Failed to save billing letter' : 'Gagal menyimpan surat tagihan');
+      return null;
+    }
+  };
+
+  const handleOpenEmailDialog = (invoice: ArInvoice) => {
+    setSelectedInvoice(invoice);
+    const customer = customers.find(c => c.id === invoice.customer_id);
+    setEmailData({
+      to_email: customer?.billing_email || '',
+      cc_email: '',
+      subject: `Surat Penagihan - Invoice ${invoice.invoice_number}`,
+    });
+    setIsEmailDialogOpen(true);
+  };
+
+  const handleSendEmail = async () => {
+    if (!selectedInvoice || !emailData.to_email) {
+      toast.error(language === 'en' ? 'Please enter recipient email' : 'Mohon isi email tujuan');
+      return;
+    }
+
+    setSendingEmail(true);
+    
+    try {
+      const data = getBillingLetterData();
+      if (!data) throw new Error('No billing data');
+
+      const htmlContent = generateBillingLetterHTML(data);
+      const bodyPreview = `Surat Penagihan untuk ${selectedInvoice.customer_name} - Invoice ${selectedInvoice.invoice_number}`;
+
+      const { data: result, error } = await supabase.functions.invoke('send-billing-email', {
+        body: {
+          ar_invoice_id: selectedInvoice.id,
+          to_email: emailData.to_email,
+          cc_email: emailData.cc_email || undefined,
+          subject: emailData.subject,
+          html_content: htmlContent,
+          body_preview: bodyPreview,
+        },
+      });
+
+      if (error) throw error;
+
+      if (result?.success) {
+        toast.success(language === 'en' ? 'Email sent successfully' : 'Email berhasil dikirim');
+        setIsEmailDialogOpen(false);
+        setIsBillingDialogOpen(false);
+      } else {
+        throw new Error(result?.error || 'Failed to send email');
+      }
+    } catch (error: any) {
+      console.error('Error sending email:', error);
+      toast.error(error.message || (language === 'en' ? 'Failed to send email' : 'Gagal mengirim email'));
+    } finally {
+      setSendingEmail(false);
+    }
   };
 
   const handlePrintBillingLetter = () => {
@@ -1266,15 +1364,96 @@ export default function ArListPage() {
               <MessageCircle className="w-4 h-4" />
               {language === 'en' ? 'Copy WhatsApp Message' : 'Salin Pesan WhatsApp'}
             </Button>
-            <p className="text-xs text-muted-foreground text-center pt-2">
-              {language === 'en' 
-                ? 'Use Print to PDF to save as PDF file, or copy the WhatsApp message to send manually.' 
-                : 'Gunakan Print to PDF untuk menyimpan sebagai file PDF, atau salin pesan WhatsApp untuk dikirim manual.'}
-            </p>
+            <Button 
+              variant="outline" 
+              className="w-full gap-2 justify-start text-primary" 
+              onClick={() => {
+                setIsBillingDialogOpen(false);
+                if (selectedInvoice) {
+                  handleOpenEmailDialog(selectedInvoice);
+                }
+              }}
+            >
+              <Send className="w-4 h-4" />
+              {language === 'en' ? 'Send via Email' : 'Kirim via Email'}
+            </Button>
+            <Button 
+              className="w-full gap-2 justify-start" 
+              onClick={async () => {
+                const letterNo = await handleSaveBillingLetter();
+                if (letterNo) {
+                  setIsBillingDialogOpen(false);
+                }
+              }}
+            >
+              <FileText className="w-4 h-4" />
+              {language === 'en' ? 'Save Billing Letter' : 'Simpan Surat Tagihan'}
+            </Button>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsBillingDialogOpen(false)}>
               {t('btn.close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Email Dialog */}
+      <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5" />
+              {language === 'en' ? 'Send Billing Email' : 'Kirim Email Tagihan'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedInvoice && (
+                <>
+                  {selectedInvoice.customer_name} - {selectedInvoice.invoice_number}
+                </>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>{language === 'en' ? 'To Email' : 'Email Tujuan'} *</Label>
+              <Input 
+                type="email"
+                value={emailData.to_email}
+                onChange={(e) => setEmailData({...emailData, to_email: e.target.value})}
+                placeholder="customer@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>CC</Label>
+              <Input 
+                type="email"
+                value={emailData.cc_email}
+                onChange={(e) => setEmailData({...emailData, cc_email: e.target.value})}
+                placeholder="cc@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>{language === 'en' ? 'Subject' : 'Subjek'} *</Label>
+              <Input 
+                value={emailData.subject}
+                onChange={(e) => setEmailData({...emailData, subject: e.target.value})}
+              />
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {language === 'en' 
+                ? 'The billing letter will be sent as the email body in HTML format.'
+                : 'Surat tagihan akan dikirim sebagai isi email dalam format HTML.'}
+            </p>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsEmailDialogOpen(false)}>
+              {t('btn.cancel')}
+            </Button>
+            <Button onClick={handleSendEmail} disabled={sendingEmail || !emailData.to_email}>
+              {sendingEmail && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              <Send className="w-4 h-4 mr-2" />
+              {language === 'en' ? 'Send' : 'Kirim'}
             </Button>
           </DialogFooter>
         </DialogContent>
