@@ -58,6 +58,7 @@ import {
   generateWhatsAppMessage, 
   openWhatsApp, 
   printBillingLetter,
+  downloadBillingLetterPDF,
   BillingLetterData 
 } from '@/lib/billingUtils';
 import type { Database } from '@/integrations/supabase/types';
@@ -163,11 +164,13 @@ export default function ArListPage() {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [isReceiptDialogOpen, setIsReceiptDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isBillingDialogOpen, setIsBillingDialogOpen] = useState(false);
+  const [isBillingPreviewOpen, setIsBillingPreviewOpen] = useState(false);
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<ArInvoice | null>(null);
   const [rejectReason, setRejectReason] = useState('');
@@ -311,6 +314,11 @@ export default function ArListPage() {
       notes: '',
     });
     setIsDialogOpen(true);
+  };
+
+  const handleOpenView = (invoice: ArInvoice) => {
+    setSelectedInvoice(invoice);
+    setIsViewDialogOpen(true);
   };
 
   const handleOpenEdit = (invoice: ArInvoice) => {
@@ -788,6 +796,13 @@ export default function ArListPage() {
     }
   };
 
+  const handlePreviewBillingLetter = () => {
+    const data = getBillingLetterData();
+    if (!data) return;
+    
+    setIsBillingPreviewOpen(true);
+  };
+
   const handlePrintBillingLetter = () => {
     const data = getBillingLetterData();
     if (!data) return;
@@ -795,6 +810,16 @@ export default function ArListPage() {
     const html = generateBillingLetterHTML(data);
     printBillingLetter(html);
     toast.success(language === 'en' ? 'Billing letter opened for printing' : 'Surat tagihan dibuka untuk cetak');
+  };
+
+  const handleDownloadBillingPDF = async () => {
+    const data = getBillingLetterData();
+    if (!data) return;
+    
+    const html = generateBillingLetterHTML(data);
+    const filename = `Billing_Letter_${data.invoiceNumber}_${data.letterDate}`;
+    await downloadBillingLetterPDF(html, filename);
+    toast.success(language === 'en' ? 'PDF download initiated' : 'Unduhan PDF dimulai');
   };
 
   const handleSendWhatsApp = (phone?: string) => {
@@ -988,7 +1013,7 @@ export default function ArListPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem className="gap-2">
+                          <DropdownMenuItem className="gap-2" onClick={() => handleOpenView(invoice)}>
                             <Eye className="w-4 h-4" />
                             {t('btn.view')}
                           </DropdownMenuItem>
@@ -1176,6 +1201,91 @@ export default function ArListPage() {
             <Button onClick={handleSave} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {t('btn.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Invoice Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'en' ? 'Invoice Details' : 'Detail Invoice'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedInvoice?.customer_name} - {selectedInvoice?.invoice_number}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedInvoice && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Customer' : 'Customer'}</p>
+                <p className="font-medium">{selectedInvoice.customer_name}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Sales' : 'Sales'}</p>
+                <p className="font-medium">{selectedInvoice.sales_name || '-'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Invoice Number' : 'No. Invoice'}</p>
+                <p className="font-medium">{selectedInvoice.invoice_number}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Order Number' : 'No. Order'}</p>
+                <p className="font-medium">{selectedInvoice.order_number}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'SP/PO Date' : 'Tanggal SP/PO'}</p>
+                <p className="font-medium">{formatDate(selectedInvoice.sp_po_date)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Invoice Date' : 'Tanggal Invoice'}</p>
+                <p className="font-medium">{formatDate(selectedInvoice.invoice_date)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Due Date' : 'Jatuh Tempo'}</p>
+                <p className="font-medium">{formatDate(selectedInvoice.due_date)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Status</p>
+                <Badge className={cn('text-xs', statusConfig[selectedInvoice.status]?.className)}>
+                  {statusConfig[selectedInvoice.status]?.label[language] || selectedInvoice.status}
+                </Badge>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Invoice Amount' : 'Jumlah Invoice'}</p>
+                <p className="font-medium text-lg">{formatCurrency(selectedInvoice.invoice_amount)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Paid Amount' : 'Jumlah Dibayar'}</p>
+                <p className="font-medium text-lg text-success">{formatCurrency(selectedInvoice.paid_amount)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Outstanding' : 'Sisa'}</p>
+                <p className={cn('font-medium text-lg', selectedInvoice.outstanding_amount > 0 && 'text-warning')}>
+                  {formatCurrency(selectedInvoice.outstanding_amount)}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Overdue Days' : 'Hari Terlambat'}</p>
+                <p className={cn('font-medium', selectedInvoice.overdue_days > 0 && 'text-destructive')}>
+                  {selectedInvoice.overdue_days > 0 ? `${selectedInvoice.overdue_days} ${language === 'en' ? 'days' : 'hari'}` : '-'}
+                </p>
+              </div>
+              {selectedInvoice.notes && (
+                <div className="col-span-2 space-y-1">
+                  <p className="text-sm text-muted-foreground">{language === 'en' ? 'Notes' : 'Catatan'}</p>
+                  <p className="text-sm">{selectedInvoice.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+              {t('btn.close')}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1401,10 +1511,26 @@ export default function ArListPage() {
             <Button 
               variant="outline" 
               className="w-full gap-2 justify-start" 
+              onClick={handlePreviewBillingLetter}
+            >
+              <Eye className="w-4 h-4" />
+              {language === 'en' ? 'Preview Letter' : 'Lihat Surat'}
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full gap-2 justify-start" 
               onClick={handlePrintBillingLetter}
             >
               <FileText className="w-4 h-4" />
-              {language === 'en' ? 'Print / Download PDF' : 'Cetak / Unduh PDF'}
+              {language === 'en' ? 'Print' : 'Cetak'}
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full gap-2 justify-start" 
+              onClick={handleDownloadBillingPDF}
+            >
+              <FileDown className="w-4 h-4" />
+              {language === 'en' ? 'Download PDF' : 'Unduh PDF'}
             </Button>
             <Button 
               variant="outline" 
@@ -1443,6 +1569,41 @@ export default function ArListPage() {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsBillingDialogOpen(false)}>
               {t('btn.close')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Billing Letter Preview Dialog */}
+      <Dialog open={isBillingPreviewOpen} onOpenChange={setIsBillingPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'en' ? 'Billing Letter Preview' : 'Preview Surat Tagihan'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedInvoice?.customer_name} - {selectedInvoice?.invoice_number}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedInvoice && (
+            <div 
+              className="bg-white text-black p-8 rounded border"
+              dangerouslySetInnerHTML={{ __html: generateBillingLetterHTML(getBillingLetterData()!) }}
+            />
+          )}
+          
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setIsBillingPreviewOpen(false)}>
+              {t('btn.close')}
+            </Button>
+            <Button variant="outline" onClick={handlePrintBillingLetter}>
+              <FileText className="w-4 h-4 mr-2" />
+              {language === 'en' ? 'Print' : 'Cetak'}
+            </Button>
+            <Button onClick={handleDownloadBillingPDF}>
+              <FileDown className="w-4 h-4 mr-2" />
+              {language === 'en' ? 'Download PDF' : 'Unduh PDF'}
             </Button>
           </DialogFooter>
         </DialogContent>

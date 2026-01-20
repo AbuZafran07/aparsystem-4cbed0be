@@ -139,6 +139,7 @@ export default function ApListPage() {
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
@@ -258,6 +259,11 @@ export default function ApListPage() {
       notes: '',
     });
     setIsDialogOpen(true);
+  };
+
+  const handleOpenView = (invoice: ApInvoice) => {
+    setSelectedInvoice(invoice);
+    setIsViewDialogOpen(true);
   };
 
   const handleOpenEdit = (invoice: ApInvoice) => {
@@ -793,7 +799,7 @@ export default function ApListPage() {
                           </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                          <DropdownMenuItem className="gap-2">
+                          <DropdownMenuItem className="gap-2" onClick={() => handleOpenView(invoice)}>
                             <Eye className="w-4 h-4" />
                             {t('btn.view')}
                           </DropdownMenuItem>
@@ -969,6 +975,91 @@ export default function ApListPage() {
             <Button onClick={handleSave} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {t('btn.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* View Invoice Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'en' ? 'Invoice Details' : 'Detail Invoice'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedInvoice?.vendor_name} - {selectedInvoice?.vendor_invoice_number}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedInvoice && (
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Vendor' : 'Vendor'}</p>
+                <p className="font-medium">{selectedInvoice.vendor_name}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Vendor Invoice No.' : 'No. Invoice Vendor'}</p>
+                <p className="font-medium">{selectedInvoice.vendor_invoice_number}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'PO Number' : 'No. PO'}</p>
+                <p className="font-medium">{selectedInvoice.po_number}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Product Name' : 'Nama Produk'}</p>
+                <p className="font-medium">{selectedInvoice.product_name || '-'}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'SP/PO Date' : 'Tanggal SP/PO'}</p>
+                <p className="font-medium">{formatDate(selectedInvoice.sp_po_date)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Invoice Date' : 'Tanggal Invoice'}</p>
+                <p className="font-medium">{formatDate(selectedInvoice.invoice_date)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Due Date' : 'Jatuh Tempo'}</p>
+                <p className="font-medium">{formatDate(selectedInvoice.due_date)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">Status</p>
+                <Badge className={cn('text-xs', statusConfig[selectedInvoice.status]?.className)}>
+                  {statusConfig[selectedInvoice.status]?.label[language] || selectedInvoice.status}
+                </Badge>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Invoice Amount' : 'Jumlah Invoice'}</p>
+                <p className="font-medium text-lg">{formatCurrency(selectedInvoice.invoice_amount)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Paid Amount' : 'Jumlah Dibayar'}</p>
+                <p className="font-medium text-lg text-success">{formatCurrency(selectedInvoice.paid_amount)}</p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Outstanding' : 'Sisa'}</p>
+                <p className={cn('font-medium text-lg', selectedInvoice.outstanding_amount > 0 && 'text-warning')}>
+                  {formatCurrency(selectedInvoice.outstanding_amount)}
+                </p>
+              </div>
+              <div className="space-y-1">
+                <p className="text-sm text-muted-foreground">{language === 'en' ? 'Overdue Days' : 'Hari Terlambat'}</p>
+                <p className={cn('font-medium', selectedInvoice.overdue_days > 0 && 'text-destructive')}>
+                  {selectedInvoice.overdue_days > 0 ? `${selectedInvoice.overdue_days} ${language === 'en' ? 'days' : 'hari'}` : '-'}
+                </p>
+              </div>
+              {selectedInvoice.notes && (
+                <div className="col-span-2 space-y-1">
+                  <p className="text-sm text-muted-foreground">{language === 'en' ? 'Notes' : 'Catatan'}</p>
+                  <p className="text-sm">{selectedInvoice.notes}</p>
+                </div>
+              )}
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
+              {t('btn.close')}
             </Button>
           </DialogFooter>
         </DialogContent>
