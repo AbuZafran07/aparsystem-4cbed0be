@@ -15,7 +15,6 @@ import ApPaymentsPage from "@/pages/ApPaymentsPage";
 import ArReceiptsPage from "@/pages/ArReceiptsPage";
 import BillingLettersPage from "@/pages/BillingLettersPage";
 import BillingEmailLogsPage from "@/pages/BillingEmailLogsPage";
-import PlaceholderPage from "@/pages/PlaceholderPage";
 import SalesPage from "@/pages/SalesPage";
 import UserManagementPage from "@/pages/UserManagementPage";
 import VendorsPage from "@/pages/VendorsPage";
@@ -23,6 +22,13 @@ import CustomersPage from "@/pages/CustomersPage";
 import PaymentTermsPage from "@/pages/PaymentTermsPage";
 import BankAccountsPage from "@/pages/BankAccountsPage";
 import AgingReportPage from "@/pages/AgingReportPage";
+import ApReportPage from "@/pages/ApReportPage";
+import ArReportPage from "@/pages/ArReportPage";
+import CashflowPage from "@/pages/CashflowPage";
+import CompanyProfilePage from "@/pages/CompanyProfilePage";
+import AuditLogsPage from "@/pages/AuditLogsPage";
+import SystemSettingsPage from "@/pages/SystemSettingsPage";
+import ImportExportPage from "@/pages/ImportExportPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -65,22 +71,21 @@ const App = () => (
                 <Route path="/sales" element={<SalesPage />} />
                 <Route path="/payment-terms" element={<PaymentTermsPage />} />
                 <Route path="/bank-accounts" element={<BankAccountsPage />} />
-                <Route path="/company-profile" element={<PlaceholderPage titleKey="menu.companyProfile" />} />
+                <Route path="/company-profile" element={<CompanyProfilePage />} />
                 
                 {/* Reports */}
                 <Route path="/aging-report" element={<AgingReportPage />} />
                 <Route path="/ap-aging" element={<AgingReportPage />} />
                 <Route path="/ar-aging" element={<AgingReportPage />} />
-                <Route path="/ap-report" element={<PlaceholderPage titleKey="menu.apReport" />} />
-                <Route path="/ar-report" element={<PlaceholderPage titleKey="menu.arReport" />} />
-                <Route path="/cashflow" element={<PlaceholderPage titleKey="menu.cashflow" />} />
-                <Route path="/export-center" element={<PlaceholderPage titleKey="menu.exportCenter" />} />
-                <Route path="/import-export" element={<PlaceholderPage titleKey="menu.importExportCenter" />} />
+                <Route path="/ap-report" element={<ApReportPage />} />
+                <Route path="/ar-report" element={<ArReportPage />} />
+                <Route path="/cashflow" element={<CashflowPage />} />
+                <Route path="/import-export" element={<ImportExportPage />} />
                 
                 {/* System */}
-                <Route path="/audit-logs" element={<PlaceholderPage titleKey="menu.auditLogs" />} />
+                <Route path="/audit-logs" element={<AuditLogsPage />} />
                 <Route path="/users" element={<UserManagementPage />} />
-                <Route path="/settings" element={<PlaceholderPage titleKey="menu.systemSettings" />} />
+                <Route path="/settings" element={<SystemSettingsPage />} />
               </Route>
 
               {/* Redirects */}
