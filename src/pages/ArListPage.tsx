@@ -141,10 +141,21 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('id-ID');
 };
 
+type StatusTab = 'ALL' | 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'PAID';
+
+const statusTabs: { value: StatusTab; label: { en: string; id: string }; statuses: InvoiceStatus[] }[] = [
+  { value: 'ALL', label: { en: 'All', id: 'Semua' }, statuses: ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'PARTIAL', 'PAID', 'CANCELLED'] },
+  { value: 'DRAFT', label: { en: 'Draft', id: 'Draft' }, statuses: ['DRAFT', 'REJECTED'] },
+  { value: 'SUBMITTED', label: { en: 'Submitted', id: 'Diajukan' }, statuses: ['SUBMITTED'] },
+  { value: 'APPROVED', label: { en: 'Approved', id: 'Disetujui' }, statuses: ['APPROVED', 'PARTIAL'] },
+  { value: 'PAID', label: { en: 'Paid', id: 'Lunas' }, statuses: ['PAID'] },
+];
+
 export default function ArListPage() {
   const { user } = useAuth();
   const { t, language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
+  const [activeTab, setActiveTab] = useState<StatusTab>('ALL');
   const [invoices, setInvoices] = useState<ArInvoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [salesList, setSalesList] = useState<Sales[]>([]);
@@ -468,12 +479,20 @@ export default function ArListPage() {
     }
   };
 
-  const filteredInvoices = invoices.filter(
-    (inv) =>
+  const activeTabStatuses = statusTabs.find(tab => tab.value === activeTab)?.statuses || [];
+  
+  const filteredInvoices = invoices.filter((inv) => {
+    const matchesSearch = 
       inv.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       inv.invoice_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      inv.order_number.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+      inv.order_number.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesStatus = activeTabStatuses.includes(inv.status);
+    return matchesSearch && matchesStatus;
+  });
+
+  const getTabCount = (statuses: InvoiceStatus[]) => {
+    return invoices.filter(inv => statuses.includes(inv.status)).length;
+  };
 
   const canEdit = (status: InvoiceStatus) => {
     return isFinance && (status === 'DRAFT' || status === 'REJECTED');
@@ -827,6 +846,37 @@ export default function ArListPage() {
             </Button>
           )}
         </div>
+      </div>
+
+      {/* Status Tabs */}
+      <div className="flex flex-wrap gap-2">
+        {statusTabs.map((tab) => {
+          const count = getTabCount(tab.statuses);
+          const isActive = activeTab === tab.value;
+          return (
+            <Button
+              key={tab.value}
+              variant={isActive ? "default" : "outline"}
+              size="sm"
+              onClick={() => setActiveTab(tab.value)}
+              className={cn(
+                "gap-2",
+                isActive && "bg-primary text-primary-foreground"
+              )}
+            >
+              {tab.label[language]}
+              <Badge 
+                variant="secondary" 
+                className={cn(
+                  "ml-1 h-5 px-1.5 text-xs",
+                  isActive ? "bg-primary-foreground/20 text-primary-foreground" : "bg-muted"
+                )}
+              >
+                {count}
+              </Badge>
+            </Button>
+          );
+        })}
       </div>
 
       {/* Filters */}
