@@ -35,6 +35,34 @@ interface DeleteUserPayload {
   userId: string;
 }
 
+// Validation helpers
+const VALID_ROLES = ['PURCHASING', 'FINANCE', 'ADMIN'] as const;
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const MAX_NAME_LENGTH = 100;
+const MIN_NAME_LENGTH = 1;
+const MIN_PASSWORD_LENGTH = 8;
+
+function isValidEmail(email: string): boolean {
+  return typeof email === 'string' && EMAIL_REGEX.test(email.trim());
+}
+
+function isValidUUID(uuid: string): boolean {
+  return typeof uuid === 'string' && UUID_REGEX.test(uuid);
+}
+
+function isValidRole(role: string): role is typeof VALID_ROLES[number] {
+  return VALID_ROLES.includes(role as typeof VALID_ROLES[number]);
+}
+
+function isValidName(name: string): boolean {
+  return typeof name === 'string' && name.length >= MIN_NAME_LENGTH && name.length <= MAX_NAME_LENGTH;
+}
+
+function isValidPassword(password: string): boolean {
+  return typeof password === 'string' && password.length >= MIN_PASSWORD_LENGTH;
+}
+
 Deno.serve(async (req) => {
   const corsHeaders = getCorsHeaders(req);
   
@@ -94,12 +122,44 @@ Deno.serve(async (req) => {
       case 'create': {
         const { email, password, fullName, role } = payload as CreateUserPayload;
         
+        // Validate email format
+        if (!isValidEmail(email)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid email format' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Validate password
+        if (!isValidPassword(password)) {
+          return new Response(
+            JSON.stringify({ error: `Password must be at least ${MIN_PASSWORD_LENGTH} characters` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Validate name
+        if (!isValidName(fullName)) {
+          return new Response(
+            JSON.stringify({ error: `Name must be between ${MIN_NAME_LENGTH} and ${MAX_NAME_LENGTH} characters` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Validate role
+        if (!isValidRole(role)) {
+          return new Response(
+            JSON.stringify({ error: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+        
         // Create auth user
         const { data: authData, error: createError } = await supabaseAdmin.auth.admin.createUser({
-          email,
+          email: email.trim(),
           password,
           email_confirm: true,
-          user_metadata: { full_name: fullName },
+          user_metadata: { full_name: fullName.trim() },
         });
 
         if (createError) {
@@ -132,7 +192,7 @@ Deno.serve(async (req) => {
           entity_type: 'USER',
           entity_id: userId,
           is_super_admin_action: true,
-          after_data: { email, fullName, role },
+          after_data: { email: email.trim(), fullName: fullName.trim(), role },
         });
 
         return new Response(
@@ -143,6 +203,30 @@ Deno.serve(async (req) => {
 
       case 'update': {
         const { userId, fullName, role, isActive } = payload as UpdateUserPayload;
+
+        // Validate userId
+        if (!isValidUUID(userId)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid user ID format' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Validate name if provided
+        if (fullName !== undefined && !isValidName(fullName)) {
+          return new Response(
+            JSON.stringify({ error: `Name must be between ${MIN_NAME_LENGTH} and ${MAX_NAME_LENGTH} characters` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+
+        // Validate role if provided
+        if (role !== undefined && !isValidRole(role)) {
+          return new Response(
+            JSON.stringify({ error: `Invalid role. Must be one of: ${VALID_ROLES.join(', ')}` }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
 
         // Get before data
         const { data: beforeProfile } = await supabaseAdmin
@@ -160,7 +244,7 @@ Deno.serve(async (req) => {
         // Update profile if needed
         if (fullName !== undefined || isActive !== undefined) {
           const updates: Record<string, unknown> = {};
-          if (fullName !== undefined) updates.full_name = fullName;
+          if (fullName !== undefined) updates.full_name = fullName.trim();
           if (isActive !== undefined) updates.is_active = isActive;
 
           await supabaseAdmin
@@ -186,7 +270,7 @@ Deno.serve(async (req) => {
           entity_id: userId,
           is_super_admin_action: true,
           before_data: { ...beforeProfile, role: beforeRole?.role },
-          after_data: { fullName, role, isActive },
+          after_data: { fullName: fullName?.trim(), role, isActive },
         });
 
         return new Response(
@@ -197,6 +281,14 @@ Deno.serve(async (req) => {
 
       case 'delete': {
         const { userId } = payload as DeleteUserPayload;
+
+        // Validate userId
+        if (!isValidUUID(userId)) {
+          return new Response(
+            JSON.stringify({ error: 'Invalid user ID format' }),
+            { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
 
         // Get before data for audit
         const { data: beforeProfile } = await supabaseAdmin
