@@ -27,6 +27,20 @@ interface ResendEmailPayload {
   html: string;
 }
 
+// Validation helpers
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const MAX_SUBJECT_LENGTH = 200;
+const MAX_HTML_CONTENT_LENGTH = 500000; // 500KB limit
+
+function isValidEmail(email: string): boolean {
+  return typeof email === 'string' && EMAIL_REGEX.test(email.trim());
+}
+
+function isValidUUID(uuid: string): boolean {
+  const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  return typeof uuid === 'string' && UUID_REGEX.test(uuid);
+}
+
 async function sendEmailWithResend(payload: ResendEmailPayload) {
   const response = await fetch("https://api.resend.com/emails", {
     method: "POST",
@@ -95,6 +109,54 @@ const handler = async (req: Request): Promise<Response> => {
     if (!requestData.ar_invoice_id || !requestData.to_email || !requestData.subject || !requestData.html_content) {
       return new Response(
         JSON.stringify({ error: "Missing required fields" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate UUID format for ar_invoice_id
+    if (!isValidUUID(requestData.ar_invoice_id)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid invoice ID format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate billing_letter_id if provided
+    if (requestData.billing_letter_id && !isValidUUID(requestData.billing_letter_id)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid billing letter ID format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate email format
+    if (!isValidEmail(requestData.to_email)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid recipient email format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate CC email if provided
+    if (requestData.cc_email && !isValidEmail(requestData.cc_email)) {
+      return new Response(
+        JSON.stringify({ error: "Invalid CC email format" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate subject length
+    if (requestData.subject.length > MAX_SUBJECT_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: `Subject must be ${MAX_SUBJECT_LENGTH} characters or less` }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Validate HTML content length
+    if (requestData.html_content.length > MAX_HTML_CONTENT_LENGTH) {
+      return new Response(
+        JSON.stringify({ error: "Email content too large" }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
