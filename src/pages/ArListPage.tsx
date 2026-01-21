@@ -59,6 +59,7 @@ import {
   openWhatsApp, 
   printBillingLetter,
   downloadBillingLetterPDF,
+  sanitizePrintableHtml,
   BillingLetterData 
 } from '@/lib/billingUtils';
 import type { Database } from '@/integrations/supabase/types';
@@ -1589,7 +1590,7 @@ export default function ArListPage() {
           {selectedInvoice && (
             <div 
               className="bg-white text-black p-8 rounded border"
-              dangerouslySetInnerHTML={{ __html: generateBillingLetterHTML(getBillingLetterData()!) }}
+              dangerouslySetInnerHTML={{ __html: sanitizePrintableHtml(generateBillingLetterHTML(getBillingLetterData()!)) }}
             />
           )}
           
