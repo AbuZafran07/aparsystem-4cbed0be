@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useRoleAccess } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { Building, Save, Upload, Loader2 } from 'lucide-react';
+import { Building, Save, Upload, Loader2, Image as ImageIcon } from 'lucide-react';
 
 interface CompanyProfile {
   id: string;
@@ -31,6 +31,8 @@ export default function CompanyProfilePage() {
   const [profile, setProfile] = useState<CompanyProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formData, setFormData] = useState({
     company_name: '',
@@ -85,6 +87,73 @@ export default function CompanyProfilePage() {
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: t('common.error'),
+        description: t('companyProfile.invalidFileType') || 'Please upload an image file',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: t('common.error'),
+        description: t('companyProfile.fileTooLarge') || 'File size must be less than 2MB',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    setIsUploading(true);
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `company-logo-${Date.now()}.${fileExt}`;
+
+      // Upload to storage
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('company-logos')
+        .upload(fileName, file, {
+          cacheControl: '3600',
+          upsert: true,
+        });
+
+      if (uploadError) throw uploadError;
+
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('company-logos')
+        .getPublicUrl(fileName);
+
+      if (urlData?.publicUrl) {
+        setFormData(prev => ({ ...prev, logo_url: urlData.publicUrl }));
+        toast({
+          title: t('common.success'),
+          description: t('companyProfile.logoUploaded') || 'Logo uploaded successfully',
+        });
+      }
+    } catch (error: any) {
+      console.error('Error uploading logo:', error);
+      toast({
+        title: t('common.error'),
+        description: error.message || (t('companyProfile.uploadFailed') || 'Failed to upload logo'),
+        variant: 'destructive',
+      });
+    } finally {
+      setIsUploading(false);
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
   };
 
   const handleSave = async () => {
@@ -281,8 +350,16 @@ export default function CompanyProfilePage() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden border-2 border-dashed border-border">
-              {formData.logo_url ? (
+            <div 
+              className="aspect-square bg-muted rounded-lg flex items-center justify-center overflow-hidden border-2 border-dashed border-border cursor-pointer hover:bg-muted/80 transition-colors"
+              onClick={() => isSuperAdmin && fileInputRef.current?.click()}
+            >
+              {isUploading ? (
+                <div className="text-center text-muted-foreground">
+                  <Loader2 className="w-10 h-10 mx-auto mb-2 animate-spin" />
+                  <p className="text-sm">{t('companyProfile.uploading') || 'Uploading...'}</p>
+                </div>
+              ) : formData.logo_url ? (
                 <img 
                   src={formData.logo_url} 
                   alt="Company Logo" 
@@ -290,11 +367,39 @@ export default function CompanyProfilePage() {
                 />
               ) : (
                 <div className="text-center text-muted-foreground">
-                  <Upload className="w-10 h-10 mx-auto mb-2" />
+                  <ImageIcon className="w-10 h-10 mx-auto mb-2" />
                   <p className="text-sm">{t('companyProfile.noLogo') || 'No logo uploaded'}</p>
+                  {isSuperAdmin && (
+                    <p className="text-xs mt-1">{t('companyProfile.clickToUpload') || 'Click to upload'}</p>
+                  )}
                 </div>
               )}
             </div>
+            
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleLogoUpload}
+              className="hidden"
+              disabled={!isSuperAdmin || isUploading}
+            />
+            
+            {isSuperAdmin && (
+              <Button 
+                variant="outline" 
+                className="w-full gap-2" 
+                onClick={() => fileInputRef.current?.click()}
+                disabled={isUploading}
+              >
+                {isUploading ? (
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                ) : (
+                  <Upload className="w-4 h-4" />
+                )}
+                {t('companyProfile.uploadLogo') || 'Upload Logo'}
+              </Button>
+            )}
             
             <div className="space-y-2">
               <Label htmlFor="logo_url">{t('companyProfile.logoUrl') || 'Logo URL'}</Label>
@@ -307,7 +412,7 @@ export default function CompanyProfilePage() {
                 disabled={!isSuperAdmin}
               />
               <p className="text-xs text-muted-foreground">
-                {t('companyProfile.logoUrlHint') || 'Enter the URL of your company logo image'}
+                {t('companyProfile.logoUrlHint') || 'Or enter the URL of your company logo image'}
               </p>
             </div>
           </CardContent>

@@ -81,6 +81,7 @@ const App = () => (
                 <Route path="/ar-report" element={<ArReportPage />} />
                 <Route path="/cashflow" element={<CashflowPage />} />
                 <Route path="/import-export" element={<ImportExportPage />} />
+                <Route path="/export-center" element={<Navigate to="/import-export" replace />} />
                 
                 {/* System */}
                 <Route path="/audit-logs" element={<AuditLogsPage />} />

@@ -1587,10 +1587,12 @@ export default function ArListPage() {
             </DialogDescription>
           </DialogHeader>
           
-          {selectedInvoice && (
-            <div 
-              className="bg-white text-black p-8 rounded border"
-              dangerouslySetInnerHTML={{ __html: sanitizePrintableHtml(generateBillingLetterHTML(getBillingLetterData()!)) }}
+          {selectedInvoice && getBillingLetterData() && (
+            <iframe
+              srcDoc={sanitizePrintableHtml(generateBillingLetterHTML(getBillingLetterData()!))}
+              className="w-full min-h-[600px] bg-white rounded border"
+              title="Billing Letter Preview"
+              sandbox="allow-same-origin"
             />
           )}
           
