@@ -17,6 +17,17 @@ export interface BillingLetterData {
   companyEmail?: string;
 }
 
+// HTML escape function to prevent XSS attacks
+export const escapeHtml = (str: string | undefined | null): string => {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+};
+
 export const generateLetterNumber = (): string => {
   const now = new Date();
   const year = now.getFullYear();
@@ -44,13 +55,31 @@ export const formatDateID = (dateString: string): string => {
 };
 
 export const generateBillingLetterHTML = (data: BillingLetterData): string => {
+  // Escape all user-provided data to prevent XSS
+  const safeData = {
+    letterNo: escapeHtml(data.letterNo),
+    letterDate: data.letterDate, // Date strings are safe
+    customerName: escapeHtml(data.customerName),
+    customerAddress: escapeHtml(data.customerAddress),
+    invoiceNumber: escapeHtml(data.invoiceNumber),
+    invoiceDate: data.invoiceDate,
+    dueDate: data.dueDate,
+    invoiceAmount: data.invoiceAmount,
+    outstandingAmount: data.outstandingAmount,
+    overdueDays: data.overdueDays,
+    companyName: escapeHtml(data.companyName),
+    companyAddress: escapeHtml(data.companyAddress),
+    companyPhone: escapeHtml(data.companyPhone),
+    companyEmail: escapeHtml(data.companyEmail),
+  };
+
   return `
 <!DOCTYPE html>
 <html lang="id">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Billing Letter - ${data.letterNo}</title>
+  <title>Billing Letter - ${safeData.letterNo}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
@@ -142,27 +171,27 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
 </head>
 <body>
   <div class="header">
-    <div class="company-name">${data.companyName}</div>
+    <div class="company-name">${safeData.companyName}</div>
     <div class="company-info">
-      ${data.companyAddress || ''}<br>
-      ${data.companyPhone ? `Telp: ${data.companyPhone}` : ''} ${data.companyEmail ? `| Email: ${data.companyEmail}` : ''}
+      ${safeData.companyAddress || ''}<br>
+      ${safeData.companyPhone ? `Telp: ${safeData.companyPhone}` : ''} ${safeData.companyEmail ? `| Email: ${safeData.companyEmail}` : ''}
     </div>
   </div>
 
   <div class="letter-info">
     <div>
-      <div class="letter-no">No: ${data.letterNo}</div>
+      <div class="letter-no">No: ${safeData.letterNo}</div>
       <div>Perihal: <strong>Surat Penagihan</strong></div>
     </div>
     <div style="text-align: right;">
-      <div>Jakarta, ${formatDateID(data.letterDate)}</div>
+      <div>Jakarta, ${formatDateID(safeData.letterDate)}</div>
     </div>
   </div>
 
   <div class="recipient">
     <div class="recipient-label">Kepada Yth:</div>
-    <div><strong>${data.customerName}</strong></div>
-    ${data.customerAddress ? `<div>${data.customerAddress}</div>` : ''}
+    <div><strong>${safeData.customerName}</strong></div>
+    ${safeData.customerAddress ? `<div>${safeData.customerAddress}</div>` : ''}
     <div>Di Tempat</div>
   </div>
 
@@ -185,22 +214,22 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
     <tbody>
       <tr>
         <td>
-          <strong>No. Invoice:</strong> ${data.invoiceNumber}<br>
-          <strong>Tanggal Invoice:</strong> ${formatDateID(data.invoiceDate)}<br>
-          <strong>Jatuh Tempo:</strong> ${formatDateID(data.dueDate)}
+          <strong>No. Invoice:</strong> ${safeData.invoiceNumber}<br>
+          <strong>Tanggal Invoice:</strong> ${formatDateID(safeData.invoiceDate)}<br>
+          <strong>Jatuh Tempo:</strong> ${formatDateID(safeData.dueDate)}
         </td>
-        <td class="amount">${formatCurrencyIDR(data.invoiceAmount)}</td>
+        <td class="amount">${formatCurrencyIDR(safeData.invoiceAmount)}</td>
       </tr>
       <tr class="total-row">
         <td><strong>Total Tagihan Belum Terbayar</strong></td>
-        <td class="amount"><strong>${formatCurrencyIDR(data.outstandingAmount)}</strong></td>
+        <td class="amount"><strong>${formatCurrencyIDR(safeData.outstandingAmount)}</strong></td>
       </tr>
     </tbody>
   </table>
 
-  ${data.overdueDays > 0 ? `
+  ${safeData.overdueDays > 0 ? `
   <div class="overdue-notice">
-    <strong>⚠️ PERHATIAN:</strong> Tagihan ini telah melewati jatuh tempo selama <strong>${data.overdueDays} hari</strong>. 
+    <strong>⚠️ PERHATIAN:</strong> Tagihan ini telah melewati jatuh tempo selama <strong>${safeData.overdueDays} hari</strong>. 
     Mohon segera lakukan pembayaran untuk menghindari tindakan penagihan lebih lanjut.
   </div>
   ` : ''}
@@ -218,7 +247,7 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
     <div class="signature">
       <div class="signature-line">
         <strong>Finance Department</strong><br>
-        ${data.companyName}
+        ${safeData.companyName}
       </div>
     </div>
   </div>
@@ -228,10 +257,14 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
 };
 
 export const generateWhatsAppMessage = (data: BillingLetterData): string => {
+  // WhatsApp messages are plain text, but we still sanitize to prevent injection
+  const safeName = String(data.companyName || '').replace(/[*_~`]/g, '');
+  const safeCustomerName = String(data.customerName || '').replace(/[*_~`]/g, '');
+  
   const message = `
-*SURAT PENAGIHAN - ${data.companyName}*
+*SURAT PENAGIHAN - ${safeName}*
 
-Kepada Yth: *${data.customerName}*
+Kepada Yth: *${safeCustomerName}*
 
 Dengan hormat,
 
@@ -250,7 +283,7 @@ Mohon segera lakukan pembayaran. Jika sudah dibayar, mohon konfirmasi dengan buk
 Terima kasih atas kerjasamanya.
 
 Hormat kami,
-*${data.companyName}*
+*${safeName}*
 Finance Department
 `.trim();
 
@@ -272,13 +305,13 @@ export const openWhatsApp = (phoneNumber: string, message: string): void => {
   window.open(whatsappUrl, '_blank');
 };
 
-const sanitizePrintableHtml = (html: string): string => {
+export const sanitizePrintableHtml = (html: string): string => {
   try {
     const parser = new DOMParser();
     const doc = parser.parseFromString(html, 'text/html');
 
     // Remove high-risk elements entirely
-    doc.querySelectorAll('script, iframe, object, embed').forEach((el) => el.remove());
+    doc.querySelectorAll('script, iframe, object, embed, form, input, button, textarea, select').forEach((el) => el.remove());
 
     // Remove inline event handlers and javascript: URLs
     const root = doc.documentElement;
@@ -291,12 +324,19 @@ const sanitizePrintableHtml = (html: string): string => {
           const name = attr.name.toLowerCase();
           const value = attr.value;
 
+          // Remove all event handlers
           if (name.startsWith('on')) {
             current.removeAttribute(attr.name);
             continue;
           }
 
-          if ((name === 'href' || name === 'src') && /^\s*javascript:/i.test(value)) {
+          // Remove javascript: URLs
+          if ((name === 'href' || name === 'src' || name === 'action') && /^\s*javascript:/i.test(value)) {
+            current.removeAttribute(attr.name);
+          }
+          
+          // Remove data: URLs in src attributes (potential XSS vector)
+          if (name === 'src' && /^\s*data:/i.test(value) && !/^\s*data:image\/(png|jpeg|gif|webp|svg\+xml)/i.test(value)) {
             current.removeAttribute(attr.name);
           }
         }
@@ -307,8 +347,11 @@ const sanitizePrintableHtml = (html: string): string => {
 
     return '<!DOCTYPE html>\n' + doc.documentElement.outerHTML;
   } catch {
-    // Fallback: remove script tags only
-    return html.replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '');
+    // Fallback: remove script tags and event handlers via regex
+    return html
+      .replace(/<script[\s\S]*?>[\s\S]*?<\/script>/gi, '')
+      .replace(/\s+on\w+\s*=\s*["'][^"']*["']/gi, '')
+      .replace(/\s+on\w+\s*=\s*[^\s>]+/gi, '');
   }
 };
 
