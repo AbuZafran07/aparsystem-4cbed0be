@@ -24,6 +24,7 @@ import {
   ScrollText,
   Settings,
   UserCog,
+  ClipboardList,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useRoleAccess } from '@/contexts/AuthContext';
@@ -83,6 +84,7 @@ const menuStructure: MenuSection[] = [
       { key: 'apReport', translationKey: 'menu.apReport', icon: FileBarChart, path: '/ap-report' },
       { key: 'arReport', translationKey: 'menu.arReport', icon: FileBarChart2, path: '/ar-report' },
       { key: 'cashflow', translationKey: 'menu.cashflow', icon: DollarSign, path: '/cashflow' },
+      { key: 'paymentRequests', translationKey: 'menu.paymentRequests', icon: ClipboardList, path: '/payment-requests' },
       { key: 'exportCenter', translationKey: 'menu.exportCenter', icon: Download, path: '/export-center' },
       { key: 'importExportCenter', translationKey: 'menu.importExportCenter', icon: ArrowUpDown, path: '/import-export' },
     ],

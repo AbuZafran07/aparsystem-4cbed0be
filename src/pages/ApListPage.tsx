@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Search, Filter, Eye, Edit, Trash2, Check, X, MoreHorizontal, Loader2, Download, Upload, CreditCard, FileDown, Printer } from 'lucide-react';
 import { exportToCSV, exportToExcel, formatCurrencyForExport, formatDateForExport, ExportColumn } from '@/lib/exportUtils';
 import { parseExcelFile, validateAndMapApData, generateApTemplate, ImportError } from '@/lib/importUtils';
-import { generatePaymentRequestHTML, generatePaymentRequestNumber, printPaymentRequest, PaymentRequestData } from '@/lib/paymentRequestUtils';
+import { generatePaymentRequestHTML, printPaymentRequest, PaymentRequestData } from '@/lib/paymentRequestUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -629,34 +629,85 @@ export default function ApListPage() {
     return status === 'SUBMITTED' || status === 'APPROVED';
   };
 
-  const handlePrintPaymentRequest = (invoice: ApInvoice) => {
+  const handlePrintPaymentRequest = async (invoice: ApInvoice) => {
     const vendor = vendors.find(v => v.id === invoice.vendor_id);
     
-    const requestData: PaymentRequestData = {
-      requestNo: generatePaymentRequestNumber(),
-      requestDate: new Date().toISOString(),
-      vendorName: invoice.vendor_name,
-      vendorAddress: vendor?.address || undefined,
-      vendorInvoiceNumber: invoice.vendor_invoice_number,
-      poNumber: invoice.po_number,
-      productName: invoice.product_name || undefined,
-      spPoDate: invoice.sp_po_date,
-      invoiceDate: invoice.invoice_date,
-      dueDate: invoice.due_date,
-      invoiceAmount: invoice.invoice_amount,
-      outstandingAmount: invoice.outstanding_amount,
-      overdueDays: invoice.overdue_days,
-      notes: invoice.notes || undefined,
-      companyName: companyProfile?.company_name || companyProfile?.brand_name || 'Company',
-      companyAddress: companyProfile?.address || undefined,
-      companyPhone: companyProfile?.phone || undefined,
-      companyEmail: companyProfile?.email || undefined,
-      requestedBy: user?.name || 'User',
-      status: invoice.status,
-    };
+    try {
+      // Generate request number - format: PR-YYYYMM-XXXX
+      const now = new Date();
+      const prefix = `PR-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-`;
+      
+      // Get last number for current month
+      const { data: existingRequests, error: fetchError } = await supabase
+        .from('payment_requests')
+        .select('request_no')
+        .like('request_no', `${prefix}%`)
+        .order('request_no', { ascending: false })
+        .limit(1);
 
-    const html = generatePaymentRequestHTML(requestData);
-    printPaymentRequest(html);
+      if (fetchError) throw fetchError;
+
+      let nextNum = 1;
+      if (existingRequests && existingRequests.length > 0) {
+        const lastNo = existingRequests[0].request_no;
+        const lastNum = parseInt(lastNo.replace(prefix, ''), 10);
+        if (!isNaN(lastNum)) {
+          nextNum = lastNum + 1;
+        }
+      }
+
+      const requestNo = `${prefix}${String(nextNum).padStart(4, '0')}`;
+
+      // Save to database
+      const { error: insertError } = await supabase
+        .from('payment_requests')
+        .insert({
+          request_no: requestNo,
+          ap_invoice_id: invoice.id,
+          request_date: new Date().toISOString().split('T')[0],
+          requested_by: user?.id || '',
+          status: 'PENDING',
+          notes: invoice.notes,
+        });
+
+      if (insertError) throw insertError;
+
+      // Generate and print PDF
+      const requestData: PaymentRequestData = {
+        requestNo: requestNo,
+        requestDate: new Date().toISOString(),
+        vendorName: invoice.vendor_name,
+        vendorAddress: vendor?.address || undefined,
+        vendorInvoiceNumber: invoice.vendor_invoice_number,
+        poNumber: invoice.po_number,
+        productName: invoice.product_name || undefined,
+        spPoDate: invoice.sp_po_date,
+        invoiceDate: invoice.invoice_date,
+        dueDate: invoice.due_date,
+        invoiceAmount: invoice.invoice_amount,
+        outstandingAmount: invoice.outstanding_amount,
+        overdueDays: invoice.overdue_days,
+        notes: invoice.notes || undefined,
+        companyName: companyProfile?.company_name || companyProfile?.brand_name || 'Company',
+        companyAddress: companyProfile?.address || undefined,
+        companyPhone: companyProfile?.phone || undefined,
+        companyEmail: companyProfile?.email || undefined,
+        requestedBy: user?.name || 'User',
+        status: invoice.status,
+      };
+
+      const html = generatePaymentRequestHTML(requestData);
+      printPaymentRequest(html);
+
+      toast.success(language === 'en' 
+        ? `Payment request ${requestNo} created and printed` 
+        : `Pengajuan pembayaran ${requestNo} dibuat dan dicetak`);
+    } catch (error: any) {
+      console.error('Error creating payment request:', error);
+      toast.error(language === 'en' 
+        ? 'Failed to create payment request' 
+        : 'Gagal membuat pengajuan pembayaran');
+    }
   };
 
   const handleExport = (format: 'csv' | 'excel') => {

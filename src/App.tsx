@@ -29,6 +29,7 @@ import CompanyProfilePage from "@/pages/CompanyProfilePage";
 import AuditLogsPage from "@/pages/AuditLogsPage";
 import SystemSettingsPage from "@/pages/SystemSettingsPage";
 import ImportExportPage from "@/pages/ImportExportPage";
+import PaymentRequestsPage from "@/pages/PaymentRequestsPage";
 import NotFound from "@/pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -80,6 +81,7 @@ const App = () => (
                 <Route path="/ap-report" element={<ApReportPage />} />
                 <Route path="/ar-report" element={<ArReportPage />} />
                 <Route path="/cashflow" element={<CashflowPage />} />
+                <Route path="/payment-requests" element={<PaymentRequestsPage />} />
                 <Route path="/import-export" element={<ImportExportPage />} />
                 <Route path="/export-center" element={<Navigate to="/import-export" replace />} />
                 
