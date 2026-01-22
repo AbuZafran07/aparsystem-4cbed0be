@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Search, Filter, Eye, Edit, Trash2, Check, X, MoreHorizontal, Loader2, Download, Upload, CreditCard, FileDown } from 'lucide-react';
+import { Plus, Search, Filter, Eye, Edit, Trash2, Check, X, MoreHorizontal, Loader2, Download, Upload, CreditCard, FileDown, Printer } from 'lucide-react';
 import { exportToCSV, exportToExcel, formatCurrencyForExport, formatDateForExport, ExportColumn } from '@/lib/exportUtils';
 import { parseExcelFile, validateAndMapApData, generateApTemplate, ImportError } from '@/lib/importUtils';
+import { generatePaymentRequestHTML, generatePaymentRequestNumber, printPaymentRequest, PaymentRequestData } from '@/lib/paymentRequestUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -87,12 +88,21 @@ interface ApInvoice {
 interface Vendor {
   id: string;
   vendor_name: string;
+  address?: string | null;
 }
 
 interface PaymentTerms {
   id: string;
   terms_name: string;
   days: number;
+}
+
+interface CompanyProfile {
+  company_name: string;
+  brand_name: string;
+  address: string | null;
+  phone: string | null;
+  email: string | null;
 }
 
 const statusConfig: Record<InvoiceStatus, { label: { en: string; id: string }; className: string }> = {
@@ -137,6 +147,7 @@ export default function ApListPage() {
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -201,10 +212,10 @@ export default function ApListPage() {
 
       setInvoices(formattedInvoices);
 
-      // Fetch vendors for dropdown
+      // Fetch vendors for dropdown (include address for payment request)
       const { data: vendorsData } = await supabase
         .from('vendors')
-        .select('id, vendor_name')
+        .select('id, vendor_name, address')
         .eq('is_active', true)
         .order('vendor_name');
 
@@ -227,6 +238,15 @@ export default function ApListPage() {
         .order('bank_name');
 
       setBankAccounts(bankData || []);
+
+      // Fetch company profile for payment request PDF
+      const { data: companyData } = await supabase
+        .from('company_profile')
+        .select('company_name, brand_name, address, phone, email')
+        .limit(1)
+        .maybeSingle();
+
+      setCompanyProfile(companyData);
 
     } catch (error: any) {
       console.error('Error fetching data:', error);
@@ -605,6 +625,40 @@ export default function ApListPage() {
     return isFinance && (status === 'APPROVED' || status === 'PARTIAL') && outstanding > 0;
   };
 
+  const canPrintPaymentRequest = (status: InvoiceStatus) => {
+    return status === 'SUBMITTED' || status === 'APPROVED';
+  };
+
+  const handlePrintPaymentRequest = (invoice: ApInvoice) => {
+    const vendor = vendors.find(v => v.id === invoice.vendor_id);
+    
+    const requestData: PaymentRequestData = {
+      requestNo: generatePaymentRequestNumber(),
+      requestDate: new Date().toISOString(),
+      vendorName: invoice.vendor_name,
+      vendorAddress: vendor?.address || undefined,
+      vendorInvoiceNumber: invoice.vendor_invoice_number,
+      poNumber: invoice.po_number,
+      productName: invoice.product_name || undefined,
+      spPoDate: invoice.sp_po_date,
+      invoiceDate: invoice.invoice_date,
+      dueDate: invoice.due_date,
+      invoiceAmount: invoice.invoice_amount,
+      outstandingAmount: invoice.outstanding_amount,
+      overdueDays: invoice.overdue_days,
+      notes: invoice.notes || undefined,
+      companyName: companyProfile?.company_name || companyProfile?.brand_name || 'Company',
+      companyAddress: companyProfile?.address || undefined,
+      companyPhone: companyProfile?.phone || undefined,
+      companyEmail: companyProfile?.email || undefined,
+      requestedBy: user?.name || 'User',
+      status: invoice.status,
+    };
+
+    const html = generatePaymentRequestHTML(requestData);
+    printPaymentRequest(html);
+  };
+
   const handleExport = (format: 'csv' | 'excel') => {
     const columns: ExportColumn[] = [
       { key: 'vendor_name', header: language === 'en' ? 'Vendor Name' : 'Nama Vendor' },
@@ -832,6 +886,12 @@ export default function ApListPage() {
                                 {t('btn.reject')}
                               </DropdownMenuItem>
                             </>
+                          )}
+                          {canPrintPaymentRequest(invoice.status) && (
+                            <DropdownMenuItem className="gap-2" onClick={() => handlePrintPaymentRequest(invoice)}>
+                              <Printer className="w-4 h-4" />
+                              {language === 'en' ? 'Print Payment Request' : 'Cetak Pengajuan Pembayaran'}
+                            </DropdownMenuItem>
                           )}
                           {canRecordPayment(invoice.status, invoice.outstanding_amount) && (
                             <DropdownMenuItem className="gap-2" onClick={() => handleOpenPayment(invoice)}>
