@@ -710,6 +710,59 @@ export type Database = {
           },
         ]
       }
+      payment_requests: {
+        Row: {
+          ap_invoice_id: string
+          approved_at: string | null
+          approved_by: string | null
+          created_at: string
+          id: string
+          notes: string | null
+          paid_at: string | null
+          request_date: string
+          request_no: string
+          requested_by: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          ap_invoice_id: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          request_date?: string
+          request_no: string
+          requested_by: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          ap_invoice_id?: string
+          approved_at?: string | null
+          approved_by?: string | null
+          created_at?: string
+          id?: string
+          notes?: string | null
+          paid_at?: string | null
+          request_date?: string
+          request_no?: string
+          requested_by?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_requests_ap_invoice_id_fkey"
+            columns: ["ap_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "ap_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       payment_terms: {
         Row: {
           created_at: string
@@ -856,6 +909,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      generate_payment_request_no: { Args: never; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]

@@ -193,6 +193,7 @@ export function useRoleAccess() {
       PURCHASING: [
         'dashboard',
         'accountsPayable',
+        'paymentRequests',
       ],
       FINANCE: [
         'dashboard',
@@ -207,6 +208,7 @@ export function useRoleAccess() {
         'apReport',
         'arReport',
         'cashflow',
+        'paymentRequests',
         'exportCenter',
         'importExportCenter',
         'auditLogs',
@@ -241,6 +243,7 @@ export function useRoleAccess() {
         'apReport',
         'arReport',
         'cashflow',
+        'paymentRequests',
         'exportCenter',
         'importExportCenter',
         'auditLogs',
