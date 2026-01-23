@@ -615,3 +615,39 @@ export const previewPaymentRequest = (html: string): void => {
   previewWindow.document.write(sanitizedHtml);
   previewWindow.document.close();
 };
+
+export const downloadPaymentRequestPDF = async (html: string, filename: string): Promise<void> => {
+  const printWindow = safeWindowOpen();
+  if (!printWindow) return;
+
+  const sanitizedHtml = sanitizePrintableHtml(html);
+  
+  // Add CSS to help with PDF styling
+  const pdfHtml = sanitizedHtml.replace(
+    '</head>',
+    `<style>
+      @page {
+        size: A4;
+        margin: 15mm;
+      }
+      body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    </style>
+    </head>`
+  );
+
+  printWindow.document.open();
+  printWindow.document.write(pdfHtml);
+  printWindow.document.close();
+
+  // Wait for content to load then trigger print dialog (user can save as PDF)
+  setTimeout(() => {
+    try {
+      printWindow.print();
+    } catch {
+      // ignore
+    }
+  }, 300);
+};
