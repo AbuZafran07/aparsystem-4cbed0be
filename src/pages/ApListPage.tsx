@@ -103,6 +103,7 @@ interface CompanyProfile {
   address: string | null;
   phone: string | null;
   email: string | null;
+  logo_url: string | null;
 }
 
 const statusConfig: Record<InvoiceStatus, { label: { en: string; id: string }; className: string }> = {
@@ -242,7 +243,7 @@ export default function ApListPage() {
       // Fetch company profile for payment request PDF
       const { data: companyData } = await supabase
         .from('company_profile')
-        .select('company_name, brand_name, address, phone, email')
+        .select('company_name, brand_name, address, phone, email, logo_url')
         .limit(1)
         .maybeSingle();
 
@@ -692,8 +693,13 @@ export default function ApListPage() {
         companyAddress: companyProfile?.address || undefined,
         companyPhone: companyProfile?.phone || undefined,
         companyEmail: companyProfile?.email || undefined,
+        companyLogoUrl: companyProfile?.logo_url || undefined,
         requestedBy: user?.name || 'User',
         status: invoice.status,
+        paymentMethod: 'transfer',
+        bankName: bankAccounts.length > 0 ? bankAccounts[0].bank_name : undefined,
+        bankAccountNo: bankAccounts.length > 0 ? bankAccounts[0].account_no : undefined,
+        transferAmount: invoice.outstanding_amount,
       };
 
       const html = generatePaymentRequestHTML(requestData);

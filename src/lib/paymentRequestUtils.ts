@@ -19,8 +19,14 @@ export interface PaymentRequestData {
   companyAddress?: string;
   companyPhone?: string;
   companyEmail?: string;
+  companyLogoUrl?: string;
   requestedBy: string;
   status: string;
+  paymentMethod?: 'transfer' | 'cash';
+  bankName?: string;
+  bankAccountNo?: string;
+  transferAmount?: number;
+  cashAmount?: number;
 }
 
 // HTML escape function to prevent XSS attacks
@@ -81,16 +87,27 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
     companyAddress: escapeHtml(data.companyAddress),
     companyPhone: escapeHtml(data.companyPhone),
     companyEmail: escapeHtml(data.companyEmail),
+    companyLogoUrl: data.companyLogoUrl,
     requestedBy: escapeHtml(data.requestedBy),
     status: escapeHtml(data.status),
+    paymentMethod: data.paymentMethod || 'transfer',
+    bankName: escapeHtml(data.bankName),
+    bankAccountNo: escapeHtml(data.bankAccountNo),
+    transferAmount: data.transferAmount || data.outstandingAmount,
+    cashAmount: data.cashAmount || 0,
   };
 
-  const statusLabel = {
-    'SUBMITTED': 'Diajukan / Submitted',
-    'APPROVED': 'Disetujui / Approved',
-  }[data.status] || data.status;
+  const printDateTime = new Date().toLocaleString('id-ID', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 
-  const statusColor = data.status === 'APPROVED' ? '#166534' : '#c2410c';
+  const formatRupiah = (amount: number): string => {
+    return 'Rp. ' + new Intl.NumberFormat('id-ID').format(amount);
+  };
 
   return `
 <!DOCTYPE html>
@@ -103,314 +120,411 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
       font-family: 'Arial', sans-serif; 
-      font-size: 11pt; 
-      line-height: 1.5;
+      font-size: 10pt; 
+      line-height: 1.4;
       color: #333;
-      padding: 40px;
-      max-width: 800px;
+      padding: 30px;
+      max-width: 850px;
       margin: 0 auto;
+      background: white;
     }
-    .header { 
-      text-align: center; 
-      margin-bottom: 25px;
-      border-bottom: 3px solid #1a5c3a;
-      padding-bottom: 15px;
-    }
-    .company-name { 
-      font-size: 20pt; 
-      font-weight: bold; 
-      color: #1a5c3a;
-      margin-bottom: 5px;
-    }
-    .company-info { 
-      font-size: 9pt; 
-      color: #666; 
-    }
-    .document-title {
-      text-align: center;
-      font-size: 16pt;
-      font-weight: bold;
-      margin: 20px 0;
-      text-transform: uppercase;
-      color: #1a5c3a;
-    }
-    .document-subtitle {
-      text-align: center;
-      font-size: 12pt;
-      color: #666;
-      margin-bottom: 25px;
-    }
-    .info-row {
+    
+    .header {
       display: flex;
       justify-content: space-between;
+      align-items: flex-start;
       margin-bottom: 20px;
-      background-color: #f8f9fa;
-      padding: 12px 15px;
-      border-radius: 5px;
     }
-    .info-item {
-      text-align: center;
+    
+    .logo-container {
+      width: 150px;
     }
-    .info-label {
-      font-size: 9pt;
-      color: #666;
+    
+    .logo-container img {
+      max-width: 150px;
+      max-height: 60px;
+      object-fit: contain;
+    }
+    
+    .logo-text {
+      font-size: 18pt;
+      font-weight: bold;
+      color: #1a5c3a;
+    }
+    
+    .title-section {
+      text-align: right;
+    }
+    
+    .document-title {
+      font-size: 20pt;
+      font-weight: bold;
+      color: #1a5c3a;
+      margin-bottom: 8px;
+    }
+    
+    .doc-info-box {
+      border: 2px solid #1a5c3a;
+      padding: 8px 12px;
+      display: inline-block;
+    }
+    
+    .doc-info-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 15px;
+      font-size: 10pt;
+    }
+    
+    .doc-info-label {
+      font-weight: bold;
+    }
+    
+    .category-section {
+      margin-bottom: 15px;
+    }
+    
+    .category-row {
+      display: flex;
       margin-bottom: 3px;
     }
-    .info-value {
+    
+    .category-label {
+      width: 130px;
       font-weight: bold;
-      font-size: 11pt;
-    }
-    .status-badge {
-      display: inline-block;
-      padding: 4px 12px;
-      border-radius: 20px;
-      font-weight: bold;
-      font-size: 10pt;
-      color: white;
-    }
-    .section {
-      margin-bottom: 20px;
-    }
-    .section-title {
-      font-weight: bold;
-      font-size: 11pt;
-      color: #1a5c3a;
-      border-bottom: 1px solid #ddd;
-      padding-bottom: 5px;
-      margin-bottom: 10px;
-    }
-    .detail-table {
-      width: 100%;
-      border-collapse: collapse;
-    }
-    .detail-table td {
-      padding: 8px 0;
-      border-bottom: 1px solid #eee;
-    }
-    .detail-table td:first-child {
-      width: 40%;
-      color: #666;
-    }
-    .detail-table td:last-child {
-      font-weight: 500;
-    }
-    .amount-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 15px 0;
-    }
-    .amount-table th, .amount-table td {
-      padding: 12px;
-      text-align: left;
-      border: 1px solid #ddd;
-    }
-    .amount-table th {
-      background-color: #1a5c3a;
-      color: white;
-      font-weight: 600;
-    }
-    .amount-table .amount {
-      text-align: right;
-      font-weight: bold;
-    }
-    .total-row {
-      background-color: #fff3cd;
-      font-weight: bold;
-    }
-    .total-row .amount {
-      font-size: 14pt;
-      color: #1a5c3a;
-    }
-    .notes-box {
-      background-color: #f8f9fa;
-      border: 1px solid #ddd;
-      border-radius: 5px;
-      padding: 12px;
-      margin-top: 10px;
       font-style: italic;
     }
-    .overdue-notice {
-      background-color: #fee2e2;
-      border: 1px solid #fecaca;
-      padding: 12px;
-      border-radius: 5px;
-      margin: 15px 0;
-      color: #991b1b;
-      font-weight: 500;
+    
+    .category-value {
+      flex: 1;
     }
-    .signature-section {
-      margin-top: 40px;
+    
+    .info-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      border: 1px solid #333;
+      margin-bottom: 15px;
+    }
+    
+    .info-left, .info-right {
+      padding: 10px 12px;
+    }
+    
+    .info-left {
+      border-right: 1px solid #333;
+    }
+    
+    .info-row {
       display: flex;
-      justify-content: space-between;
+      margin-bottom: 4px;
     }
+    
+    .info-label {
+      width: 150px;
+      font-weight: bold;
+    }
+    
+    .info-value {
+      flex: 1;
+    }
+    
+    .items-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 15px;
+    }
+    
+    .items-table th {
+      background-color: #1a5c3a;
+      color: white;
+      padding: 10px 8px;
+      text-align: center;
+      font-weight: bold;
+      border: 1px solid #1a5c3a;
+    }
+    
+    .items-table td {
+      padding: 10px 8px;
+      border: 1px solid #ddd;
+    }
+    
+    .items-table .col-no { width: 40px; text-align: center; }
+    .items-table .col-desc { text-align: left; }
+    .items-table .col-amount { text-align: right; width: 150px; }
+    
+    .payment-section {
+      display: grid;
+      grid-template-columns: 3fr 1fr;
+      margin-bottom: 20px;
+    }
+    
+    .transfer-section {
+      background-color: #1a5c3a;
+      color: white;
+    }
+    
+    .transfer-header {
+      text-align: center;
+      font-weight: bold;
+      padding: 8px;
+      border-bottom: 1px solid rgba(255,255,255,0.3);
+    }
+    
+    .transfer-body {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .transfer-item {
+      padding: 10px;
+      text-align: center;
+      border-right: 1px solid rgba(255,255,255,0.3);
+    }
+    
+    .transfer-item:last-child {
+      border-right: none;
+    }
+    
+    .transfer-label {
+      font-size: 9pt;
+      margin-bottom: 4px;
+    }
+    
+    .transfer-value {
+      font-weight: bold;
+    }
+    
+    .cash-section {
+      background-color: #f5f5f5;
+      border: 1px solid #ddd;
+    }
+    
+    .cash-header {
+      text-align: center;
+      font-weight: bold;
+      padding: 8px;
+      background-color: #e0e0e0;
+      border-bottom: 1px solid #ddd;
+    }
+    
+    .cash-body {
+      padding: 10px;
+      text-align: center;
+    }
+    
+    .cash-label {
+      font-size: 9pt;
+      margin-bottom: 4px;
+    }
+    
+    .cash-value {
+      font-weight: bold;
+    }
+    
+    .signature-section {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      margin-bottom: 20px;
+    }
+    
     .signature-box {
       text-align: center;
-      width: 30%;
+      padding: 10px;
     }
+    
+    .signature-box.pemohon {
+      background-color: #1a5c3a;
+      color: white;
+    }
+    
+    .signature-box.mengetahui {
+      background-color: #2d7a4e;
+      color: white;
+    }
+    
+    .signature-box.menyetujui {
+      background-color: #3d8a5e;
+      color: white;
+    }
+    
+    .signature-title {
+      font-weight: bold;
+      font-size: 11pt;
+      margin-bottom: 5px;
+    }
+    
+    .signature-content {
+      background: white;
+      min-height: 80px;
+      margin: 5px;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+    }
+    
     .signature-line {
       border-top: 1px solid #333;
-      margin-top: 70px;
-      padding-top: 8px;
+      padding-top: 5px;
+      margin-top: 10px;
     }
-    .signature-title {
+    
+    .signature-date {
+      color: #666;
+      font-size: 9pt;
+    }
+    
+    .footer {
+      text-align: center;
       font-size: 9pt;
       color: #666;
+      border-top: 1px solid #ddd;
+      padding-top: 10px;
     }
-    .footer {
-      margin-top: 30px;
-      text-align: center;
-      font-size: 8pt;
-      color: #999;
-      border-top: 1px solid #eee;
-      padding-top: 15px;
-    }
+    
     @media print {
-      body { padding: 20px; }
+      body { padding: 15px; }
       .no-print { display: none; }
     }
   </style>
 </head>
 <body>
   <div class="header">
-    <div class="company-name">${safeData.companyName}</div>
-    <div class="company-info">
-      ${safeData.companyAddress || ''}<br>
-      ${safeData.companyPhone ? `Telp: ${safeData.companyPhone}` : ''} ${safeData.companyEmail ? `| Email: ${safeData.companyEmail}` : ''}
+    <div class="logo-container">
+      ${safeData.companyLogoUrl ? 
+        `<img src="${safeData.companyLogoUrl}" alt="Company Logo" />` : 
+        `<div class="logo-text">${safeData.companyName}</div>`
+      }
     </div>
-  </div>
-
-  <div class="document-title">PENGAJUAN PEMBAYARAN</div>
-  <div class="document-subtitle">Payment Request Form</div>
-
-  <div class="info-row">
-    <div class="info-item">
-      <div class="info-label">No. Dokumen</div>
-      <div class="info-value">${safeData.requestNo}</div>
-    </div>
-    <div class="info-item">
-      <div class="info-label">Tanggal</div>
-      <div class="info-value">${formatDateID(safeData.requestDate)}</div>
-    </div>
-    <div class="info-item">
-      <div class="info-label">Status</div>
-      <div class="info-value">
-        <span class="status-badge" style="background-color: ${statusColor};">
-          ${statusLabel}
-        </span>
+    <div class="title-section">
+      <div class="document-title">PENGAJUAN PEMBAYARAN</div>
+      <div class="doc-info-box">
+        <div class="doc-info-row">
+          <span class="doc-info-label">No.</span>
+          <span>: ${safeData.requestNo}</span>
+        </div>
+        <div class="doc-info-row">
+          <span class="doc-info-label">Date</span>
+          <span>: ${formatDateID(safeData.requestDate)}</span>
+        </div>
       </div>
     </div>
   </div>
 
-  <div class="section">
-    <div class="section-title">Informasi Vendor / Vendor Information</div>
-    <table class="detail-table">
-      <tr>
-        <td>Nama Vendor / Vendor Name</td>
-        <td>${safeData.vendorName}</td>
-      </tr>
-      ${safeData.vendorAddress ? `
-      <tr>
-        <td>Alamat / Address</td>
-        <td>${safeData.vendorAddress}</td>
-      </tr>
-      ` : ''}
-    </table>
+  <div class="category-section">
+    <div class="category-row">
+      <span class="category-label">Kategori Pembayaran</span>
+      <span class="category-value">: Hutang Vendor (AP)</span>
+    </div>
+    <div class="category-row">
+      <span class="category-label">Division</span>
+      <span class="category-value">: Purchasing / Finance</span>
+    </div>
   </div>
 
-  <div class="section">
-    <div class="section-title">Detail Invoice / Invoice Details</div>
-    <table class="detail-table">
-      <tr>
-        <td>No. Invoice Vendor</td>
-        <td>${safeData.vendorInvoiceNumber}</td>
-      </tr>
-      <tr>
-        <td>No. PO</td>
-        <td>${safeData.poNumber}</td>
-      </tr>
-      ${safeData.productName ? `
-      <tr>
-        <td>Nama Produk / Product Name</td>
-        <td>${safeData.productName}</td>
-      </tr>
-      ` : ''}
-      <tr>
-        <td>Tanggal SP PO</td>
-        <td>${formatDateID(safeData.spPoDate)}</td>
-      </tr>
-      <tr>
-        <td>Tanggal Invoice</td>
-        <td>${formatDateID(safeData.invoiceDate)}</td>
-      </tr>
-      <tr>
-        <td>Jatuh Tempo / Due Date</td>
-        <td>${formatDateID(safeData.dueDate)}</td>
-      </tr>
-    </table>
+  <div class="info-grid">
+    <div class="info-left">
+      <div class="info-row">
+        <span class="info-label">Pemohon</span>
+        <span class="info-value">: ${safeData.requestedBy}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Vendor/Penerima</span>
+        <span class="info-value">: ${safeData.vendorName}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Reff No (INV/Nota/Resi)</span>
+        <span class="info-value">: ${safeData.vendorInvoiceNumber || '-'}</span>
+      </div>
+    </div>
+    <div class="info-right">
+      <div class="info-row">
+        <span class="info-label">Payment Due Date</span>
+        <span class="info-value">: ${formatDateID(safeData.dueDate)}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">No. PO</span>
+        <span class="info-value">: ${safeData.poNumber}</span>
+      </div>
+      <div class="info-row">
+        <span class="info-label">Metode Pembayaran</span>
+        <span class="info-value">: ${safeData.paymentMethod === 'cash' ? 'Tunai' : 'Transfer'}</span>
+      </div>
+    </div>
   </div>
 
-  <div class="section">
-    <div class="section-title">Rincian Pembayaran / Payment Details</div>
-    <table class="amount-table">
-      <thead>
-        <tr>
-          <th>Keterangan / Description</th>
-          <th style="text-align: right;">Jumlah / Amount</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>Nilai Invoice / Invoice Amount</td>
-          <td class="amount">${formatCurrencyIDR(safeData.invoiceAmount)}</td>
-        </tr>
-        <tr class="total-row">
-          <td><strong>Total Yang Harus Dibayar / Total Amount Due</strong></td>
-          <td class="amount">${formatCurrencyIDR(safeData.outstandingAmount)}</td>
-        </tr>
-      </tbody>
-    </table>
-  </div>
+  <table class="items-table">
+    <thead>
+      <tr>
+        <th class="col-no">No.</th>
+        <th class="col-desc">Keterangan Biaya</th>
+        <th class="col-amount">Nilai Pengajuan</th>
+        <th class="col-amount">Nilai Approved</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="col-no">1</td>
+        <td class="col-desc">${safeData.productName || `Pembayaran Invoice ${safeData.vendorInvoiceNumber}`}</td>
+        <td class="col-amount">${formatRupiah(safeData.outstandingAmount)}</td>
+        <td class="col-amount">${formatRupiah(safeData.outstandingAmount)}</td>
+      </tr>
+    </tbody>
+  </table>
 
-  ${safeData.overdueDays > 0 ? `
-  <div class="overdue-notice">
-    ⚠️ <strong>PERHATIAN:</strong> Invoice ini telah melewati jatuh tempo selama <strong>${safeData.overdueDays} hari</strong>. 
-    Mohon segera diproses untuk menghindari keterlambatan lebih lanjut.
+  <div class="payment-section">
+    <div class="transfer-section">
+      <div class="transfer-header">Transfer Bank</div>
+      <div class="transfer-body">
+        <div class="transfer-item">
+          <div class="transfer-label">Nama Bank</div>
+          <div class="transfer-value">${safeData.bankName || '-'}</div>
+        </div>
+        <div class="transfer-item">
+          <div class="transfer-label">No. Rekening</div>
+          <div class="transfer-value">${safeData.bankAccountNo || '-'}</div>
+        </div>
+        <div class="transfer-item">
+          <div class="transfer-label">Nilai Transfer</div>
+          <div class="transfer-value">${safeData.paymentMethod === 'transfer' ? formatRupiah(safeData.transferAmount) : '-'}</div>
+        </div>
+      </div>
+    </div>
+    <div class="cash-section">
+      <div class="cash-header">Tunai</div>
+      <div class="cash-body">
+        <div class="cash-label">Nilai Cash</div>
+        <div class="cash-value">${safeData.paymentMethod === 'cash' ? formatRupiah(safeData.cashAmount || safeData.outstandingAmount) : '-'}</div>
+      </div>
+    </div>
   </div>
-  ` : ''}
-
-  ${safeData.notes ? `
-  <div class="section">
-    <div class="section-title">Catatan / Notes</div>
-    <div class="notes-box">${safeData.notes}</div>
-  </div>
-  ` : ''}
 
   <div class="signature-section">
-    <div class="signature-box">
-      <div class="signature-title">Diajukan oleh / Requested by</div>
-      <div class="signature-line">
-        <strong>${safeData.requestedBy}</strong><br>
-        <span style="font-size: 9pt; color: #666;">Purchasing</span>
+    <div class="signature-box pemohon">
+      <div class="signature-title">Pemohon</div>
+      <div class="signature-content">
+        <div class="signature-line"></div>
+        <div class="signature-date">Date: ___________</div>
       </div>
     </div>
-    <div class="signature-box">
-      <div class="signature-title">Disetujui oleh / Approved by</div>
-      <div class="signature-line">
-        <strong>________________</strong><br>
-        <span style="font-size: 9pt; color: #666;">Finance Manager</span>
+    <div class="signature-box mengetahui">
+      <div class="signature-title">Mengetahui</div>
+      <div class="signature-content">
+        <div class="signature-line"></div>
+        <div class="signature-date">Date: ___________</div>
       </div>
     </div>
-    <div class="signature-box">
-      <div class="signature-title">Diketahui oleh / Acknowledged by</div>
-      <div class="signature-line">
-        <strong>________________</strong><br>
-        <span style="font-size: 9pt; color: #666;">Director</span>
+    <div class="signature-box menyetujui">
+      <div class="signature-title">Menyetujui</div>
+      <div class="signature-content">
+        <div class="signature-line"></div>
+        <div class="signature-date">Date: ___________</div>
       </div>
     </div>
   </div>
 
   <div class="footer">
-    Dokumen ini dicetak pada ${formatDateID(new Date().toISOString())} | ${safeData.companyName}
+    Dokumen ini dicetak pada ${printDateTime} | ${safeData.companyName} - Expense Budget & Approval System
   </div>
 </body>
 </html>
