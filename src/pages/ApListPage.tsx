@@ -156,6 +156,7 @@ export default function ApListPage() {
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
+  const [isPaymentRequestDialogOpen, setIsPaymentRequestDialogOpen] = useState(false);
   const [selectedInvoice, setSelectedInvoice] = useState<ApInvoice | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [saving, setSaving] = useState(false);
@@ -180,6 +181,14 @@ export default function ApListPage() {
     amount: '',
     bank_account_id: '',
     reference_no: '',
+    notes: '',
+  });
+
+  const [paymentRequestData, setPaymentRequestData] = useState({
+    payment_method: 'transfer' as 'transfer' | 'cash',
+    bank_account_id: '',
+    transfer_amount: '',
+    cash_amount: '',
     notes: '',
   });
 
@@ -630,10 +639,40 @@ export default function ApListPage() {
     return status === 'SUBMITTED' || status === 'APPROVED';
   };
 
-  const handlePrintPaymentRequest = async (invoice: ApInvoice) => {
-    const vendor = vendors.find(v => v.id === invoice.vendor_id);
+  const handleOpenPaymentRequest = (invoice: ApInvoice) => {
+    setSelectedInvoice(invoice);
+    setPaymentRequestData({
+      payment_method: 'transfer',
+      bank_account_id: bankAccounts.length > 0 ? bankAccounts[0].id : '',
+      transfer_amount: invoice.outstanding_amount.toString(),
+      cash_amount: '',
+      notes: invoice.notes || '',
+    });
+    setIsPaymentRequestDialogOpen(true);
+  };
+
+  const handleSubmitPaymentRequest = async () => {
+    if (!selectedInvoice) return;
+
+    if (paymentRequestData.payment_method === 'transfer' && !paymentRequestData.bank_account_id) {
+      toast.error(language === 'en' ? 'Please select a bank account' : 'Mohon pilih rekening bank');
+      return;
+    }
+
+    const transferAmount = parseFloat(paymentRequestData.transfer_amount) || 0;
+    const cashAmount = parseFloat(paymentRequestData.cash_amount) || 0;
+
+    if (transferAmount <= 0 && cashAmount <= 0) {
+      toast.error(language === 'en' ? 'Please enter payment amount' : 'Mohon masukkan jumlah pembayaran');
+      return;
+    }
+
+    const vendor = vendors.find(v => v.id === selectedInvoice.vendor_id);
+    const selectedBank = bankAccounts.find(b => b.id === paymentRequestData.bank_account_id);
     
     try {
+      setSaving(true);
+      
       // Generate request number - format: PR-YYYYMM-XXXX
       const now = new Date();
       const prefix = `PR-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-`;
@@ -664,11 +703,11 @@ export default function ApListPage() {
         .from('payment_requests')
         .insert({
           request_no: requestNo,
-          ap_invoice_id: invoice.id,
+          ap_invoice_id: selectedInvoice.id,
           request_date: new Date().toISOString().split('T')[0],
           requested_by: user?.id || '',
           status: 'PENDING',
-          notes: invoice.notes,
+          notes: paymentRequestData.notes,
         });
 
       if (insertError) throw insertError;
@@ -677,34 +716,36 @@ export default function ApListPage() {
       const requestData: PaymentRequestData = {
         requestNo: requestNo,
         requestDate: new Date().toISOString(),
-        vendorName: invoice.vendor_name,
+        vendorName: selectedInvoice.vendor_name,
         vendorAddress: vendor?.address || undefined,
-        vendorInvoiceNumber: invoice.vendor_invoice_number,
-        poNumber: invoice.po_number,
-        productName: invoice.product_name || undefined,
-        spPoDate: invoice.sp_po_date,
-        invoiceDate: invoice.invoice_date,
-        dueDate: invoice.due_date,
-        invoiceAmount: invoice.invoice_amount,
-        outstandingAmount: invoice.outstanding_amount,
-        overdueDays: invoice.overdue_days,
-        notes: invoice.notes || undefined,
+        vendorInvoiceNumber: selectedInvoice.vendor_invoice_number,
+        poNumber: selectedInvoice.po_number,
+        productName: selectedInvoice.product_name || undefined,
+        spPoDate: selectedInvoice.sp_po_date,
+        invoiceDate: selectedInvoice.invoice_date,
+        dueDate: selectedInvoice.due_date,
+        invoiceAmount: selectedInvoice.invoice_amount,
+        outstandingAmount: selectedInvoice.outstanding_amount,
+        overdueDays: selectedInvoice.overdue_days,
+        notes: paymentRequestData.notes || undefined,
         companyName: companyProfile?.company_name || companyProfile?.brand_name || 'Company',
         companyAddress: companyProfile?.address || undefined,
         companyPhone: companyProfile?.phone || undefined,
         companyEmail: companyProfile?.email || undefined,
         companyLogoUrl: companyProfile?.logo_url || undefined,
         requestedBy: user?.name || 'User',
-        status: invoice.status,
-        paymentMethod: 'transfer',
-        bankName: bankAccounts.length > 0 ? bankAccounts[0].bank_name : undefined,
-        bankAccountNo: bankAccounts.length > 0 ? bankAccounts[0].account_no : undefined,
-        transferAmount: invoice.outstanding_amount,
+        status: selectedInvoice.status,
+        paymentMethod: paymentRequestData.payment_method,
+        bankName: selectedBank?.bank_name || undefined,
+        bankAccountNo: selectedBank?.account_no || undefined,
+        transferAmount: transferAmount > 0 ? transferAmount : undefined,
+        cashAmount: cashAmount > 0 ? cashAmount : undefined,
       };
 
       const html = generatePaymentRequestHTML(requestData);
       printPaymentRequest(html);
 
+      setIsPaymentRequestDialogOpen(false);
       toast.success(language === 'en' 
         ? `Payment request ${requestNo} created and printed` 
         : `Pengajuan pembayaran ${requestNo} dibuat dan dicetak`);
@@ -713,6 +754,8 @@ export default function ApListPage() {
       toast.error(language === 'en' 
         ? 'Failed to create payment request' 
         : 'Gagal membuat pengajuan pembayaran');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -945,9 +988,9 @@ export default function ApListPage() {
                             </>
                           )}
                           {canPrintPaymentRequest(invoice.status) && (
-                            <DropdownMenuItem className="gap-2" onClick={() => handlePrintPaymentRequest(invoice)}>
+                            <DropdownMenuItem className="gap-2" onClick={() => handleOpenPaymentRequest(invoice)}>
                               <Printer className="w-4 h-4" />
-                              {language === 'en' ? 'Print Payment Request' : 'Cetak Pengajuan Pembayaran'}
+                              {language === 'en' ? 'Create Payment Request' : 'Buat Pengajuan Pembayaran'}
                             </DropdownMenuItem>
                           )}
                           {canRecordPayment(invoice.status, invoice.outstanding_amount) && (
@@ -1306,6 +1349,132 @@ export default function ApListPage() {
             <Button onClick={handleRecordPayment} disabled={saving}>
               {saving && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               {t('btn.save')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Payment Request Form Dialog */}
+      <Dialog open={isPaymentRequestDialogOpen} onOpenChange={setIsPaymentRequestDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'en' ? 'Create Payment Request' : 'Buat Pengajuan Pembayaran'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'en' 
+                ? 'Fill in payment request details' 
+                : 'Isi detail pengajuan pembayaran'}
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedInvoice && (
+            <div className="space-y-4">
+              {/* Invoice Info Summary */}
+              <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">{language === 'en' ? 'Vendor' : 'Vendor'}</p>
+                  <p className="text-sm font-medium">{selectedInvoice.vendor_name}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">{language === 'en' ? 'Invoice No.' : 'No. Invoice'}</p>
+                  <p className="text-sm font-medium">{selectedInvoice.vendor_invoice_number}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">{language === 'en' ? 'Invoice Amount' : 'Jumlah Invoice'}</p>
+                  <p className="text-sm font-medium">{formatCurrency(selectedInvoice.invoice_amount)}</p>
+                </div>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground">{language === 'en' ? 'Outstanding' : 'Sisa'}</p>
+                  <p className="text-sm font-medium text-warning">{formatCurrency(selectedInvoice.outstanding_amount)}</p>
+                </div>
+              </div>
+
+              {/* Payment Method */}
+              <div className="space-y-2">
+                <Label>{language === 'en' ? 'Payment Method' : 'Metode Pembayaran'} *</Label>
+                <Select 
+                  value={paymentRequestData.payment_method} 
+                  onValueChange={(v: 'transfer' | 'cash') => setPaymentRequestData({...paymentRequestData, payment_method: v})}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="transfer">{language === 'en' ? 'Bank Transfer' : 'Transfer Bank'}</SelectItem>
+                    <SelectItem value="cash">{language === 'en' ? 'Cash' : 'Tunai'}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Bank Account (only for transfer) */}
+              {paymentRequestData.payment_method === 'transfer' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>{language === 'en' ? 'Bank Account' : 'Rekening Bank'} *</Label>
+                    <Select 
+                      value={paymentRequestData.bank_account_id} 
+                      onValueChange={(v) => setPaymentRequestData({...paymentRequestData, bank_account_id: v})}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={language === 'en' ? 'Select bank account' : 'Pilih rekening bank'} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {bankAccounts.map((b) => (
+                          <SelectItem key={b.id} value={b.id}>
+                            {b.bank_name} - {b.account_no} ({b.account_name})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>{language === 'en' ? 'Transfer Amount' : 'Jumlah Transfer'} *</Label>
+                    <Input 
+                      type="number"
+                      value={paymentRequestData.transfer_amount} 
+                      onChange={(e) => setPaymentRequestData({...paymentRequestData, transfer_amount: e.target.value})}
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Cash Amount (only for cash) */}
+              {paymentRequestData.payment_method === 'cash' && (
+                <div className="space-y-2">
+                  <Label>{language === 'en' ? 'Cash Amount' : 'Jumlah Tunai'} *</Label>
+                  <Input 
+                    type="number"
+                    value={paymentRequestData.cash_amount} 
+                    onChange={(e) => setPaymentRequestData({...paymentRequestData, cash_amount: e.target.value})}
+                  />
+                </div>
+              )}
+
+              {/* Notes */}
+              <div className="space-y-2">
+                <Label>{language === 'en' ? 'Notes / Description' : 'Catatan / Keterangan'}</Label>
+                <Textarea 
+                  value={paymentRequestData.notes} 
+                  onChange={(e) => setPaymentRequestData({...paymentRequestData, notes: e.target.value})}
+                  rows={3}
+                  placeholder={language === 'en' ? 'Enter payment request notes...' : 'Masukkan catatan pengajuan...'}
+                />
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPaymentRequestDialogOpen(false)}>
+              {t('btn.cancel')}
+            </Button>
+            <Button onClick={handleSubmitPaymentRequest} disabled={saving} className="gap-2">
+              {saving ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Printer className="w-4 h-4" />
+              )}
+              {language === 'en' ? 'Create & Print' : 'Buat & Cetak'}
             </Button>
           </DialogFooter>
         </DialogContent>
