@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Filter, Eye, Printer, Check, X, Loader2, Download, FileText } from 'lucide-react';
+import { Search, Filter, Eye, Printer, Check, X, Loader2, Download, FileText, Trash2, FileDown } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -39,8 +39,18 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { generatePaymentRequestHTML, printPaymentRequest, PaymentRequestData } from '@/lib/paymentRequestUtils';
+import { generatePaymentRequestHTML, printPaymentRequest, previewPaymentRequest, downloadPaymentRequestPDF, PaymentRequestData } from '@/lib/paymentRequestUtils';
 import { exportToCSV, exportToExcel, formatDateForExport, formatCurrencyForExport, ExportColumn } from '@/lib/exportUtils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface PaymentRequest {
   id: string;
@@ -113,8 +123,11 @@ export default function PaymentRequestsPage() {
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<PaymentRequest | null>(null);
   const [processing, setProcessing] = useState(false);
+  const [previewHtml, setPreviewHtml] = useState<string>('');
 
   const isFinance = user?.role === 'FINANCE' || user?.role === 'SUPER_ADMIN';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
@@ -270,8 +283,8 @@ export default function PaymentRequestsPage() {
     }
   };
 
-  const handlePrint = (request: PaymentRequest) => {
-    const requestData: PaymentRequestData = {
+  const getPaymentRequestData = (request: PaymentRequest): PaymentRequestData => {
+    return {
       requestNo: request.request_no,
       requestDate: request.request_date,
       vendorName: request.vendor_name,
@@ -292,9 +305,55 @@ export default function PaymentRequestsPage() {
       requestedBy: request.requester_name,
       status: request.status,
     };
+  };
 
+  const handlePrint = (request: PaymentRequest) => {
+    const requestData = getPaymentRequestData(request);
     const html = generatePaymentRequestHTML(requestData);
     printPaymentRequest(html);
+  };
+
+  const handlePreview = (request: PaymentRequest) => {
+    const requestData = getPaymentRequestData(request);
+    const html = generatePaymentRequestHTML(requestData);
+    setPreviewHtml(html);
+    setSelectedRequest(request);
+    setIsPreviewDialogOpen(true);
+  };
+
+  const handleDownloadPDF = (request: PaymentRequest) => {
+    const requestData = getPaymentRequestData(request);
+    const html = generatePaymentRequestHTML(requestData);
+    downloadPaymentRequestPDF(html, `Pengajuan_Pembayaran_${request.request_no}.pdf`);
+    toast.success(language === 'en' ? 'PDF download initiated' : 'Download PDF dimulai');
+  };
+
+  const handleDelete = async () => {
+    if (!selectedRequest) return;
+    
+    try {
+      setProcessing(true);
+      const { error } = await supabase
+        .from('payment_requests')
+        .delete()
+        .eq('id', selectedRequest.id);
+
+      if (error) throw error;
+      toast.success(language === 'en' ? 'Payment request deleted' : 'Pengajuan pembayaran dihapus');
+      setIsDeleteDialogOpen(false);
+      setSelectedRequest(null);
+      fetchData();
+    } catch (error: any) {
+      console.error('Error deleting:', error);
+      toast.error(language === 'en' ? 'Failed to delete' : 'Gagal menghapus');
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const openDeleteDialog = (request: PaymentRequest) => {
+    setSelectedRequest(request);
+    setIsDeleteDialogOpen(true);
   };
 
   const handleExport = (format: 'csv' | 'excel') => {
@@ -481,14 +540,22 @@ export default function PaymentRequestsPage() {
                             <Eye className="w-4 h-4" />
                             {language === 'en' ? 'View' : 'Lihat'}
                           </DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2" onClick={() => handlePreview(request)}>
+                            <FileText className="w-4 h-4" />
+                            {language === 'en' ? 'Preview' : 'Preview'}
+                          </DropdownMenuItem>
                           <DropdownMenuItem className="gap-2" onClick={() => handlePrint(request)}>
                             <Printer className="w-4 h-4" />
                             {language === 'en' ? 'Print' : 'Cetak'}
                           </DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2" onClick={() => handleDownloadPDF(request)}>
+                            <FileDown className="w-4 h-4" />
+                            {language === 'en' ? 'Download PDF' : 'Download PDF'}
+                          </DropdownMenuItem>
                           {isFinance && request.status === 'PENDING' && (
                             <>
                               <DropdownMenuItem
-                                className="gap-2 text-green-600"
+                                className="gap-2 text-success"
                                 onClick={() => handleApprove(request)}
                                 disabled={processing}
                               >
@@ -507,12 +574,22 @@ export default function PaymentRequestsPage() {
                           )}
                           {isFinance && request.status === 'APPROVED' && (
                             <DropdownMenuItem
-                              className="gap-2 text-green-600"
+                              className="gap-2 text-success"
                               onClick={() => handleMarkAsPaid(request)}
                               disabled={processing}
                             >
                               <Check className="w-4 h-4" />
                               {language === 'en' ? 'Mark as Paid' : 'Tandai Dibayar'}
+                            </DropdownMenuItem>
+                          )}
+                          {(isSuperAdmin || (request.status === 'PENDING' && request.requested_by === user?.id)) && (
+                            <DropdownMenuItem
+                              className="gap-2 text-destructive"
+                              onClick={() => openDeleteDialog(request)}
+                              disabled={processing}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                              {language === 'en' ? 'Delete' : 'Hapus'}
                             </DropdownMenuItem>
                           )}
                         </DropdownMenuContent>
@@ -579,14 +656,14 @@ export default function PaymentRequestsPage() {
                 <h4 className="font-medium mb-2">{language === 'en' ? 'Approval History' : 'Riwayat Persetujuan'}</h4>
                 <div className="space-y-2">
                   <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                    <div className="w-2 h-2 rounded-full bg-primary"></div>
                     <span className="text-sm">
                       {language === 'en' ? 'Requested by' : 'Diajukan oleh'}: <strong>{selectedRequest.requester_name}</strong>
                     </span>
                   </div>
                   {selectedRequest.approver_name && (
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-blue-500"></div>
+                      <div className="w-2 h-2 rounded-full bg-accent"></div>
                       <span className="text-sm">
                         {language === 'en' ? 'Approved by' : 'Disetujui oleh'}: <strong>{selectedRequest.approver_name}</strong>
                         {selectedRequest.approved_at && (
@@ -599,7 +676,7 @@ export default function PaymentRequestsPage() {
                   )}
                   {selectedRequest.paid_at && (
                     <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 rounded-full bg-green-600"></div>
+                      <div className="w-2 h-2 rounded-full bg-primary"></div>
                       <span className="text-sm">
                         {language === 'en' ? 'Paid on' : 'Dibayar pada'}: <strong>{formatDate(selectedRequest.paid_at)}</strong>
                       </span>
@@ -630,6 +707,82 @@ export default function PaymentRequestsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Preview Dialog */}
+      <Dialog open={isPreviewDialogOpen} onOpenChange={setIsPreviewDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] p-0 overflow-hidden">
+          <DialogHeader className="p-6 pb-0">
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="w-5 h-5" />
+              {language === 'en' ? 'Document Preview' : 'Preview Dokumen'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedRequest?.request_no}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex-1 overflow-auto p-6 pt-4">
+            <iframe
+              srcDoc={previewHtml}
+              className="w-full h-[60vh] border rounded-lg bg-white"
+              title="Payment Request Preview"
+              sandbox="allow-same-origin"
+            />
+          </div>
+
+          <DialogFooter className="p-6 pt-0 gap-2">
+            <Button variant="outline" onClick={() => setIsPreviewDialogOpen(false)}>
+              {language === 'en' ? 'Close' : 'Tutup'}
+            </Button>
+            {selectedRequest && (
+              <>
+                <Button variant="outline" onClick={() => handleDownloadPDF(selectedRequest)} className="gap-2">
+                  <FileDown className="w-4 h-4" />
+                  {language === 'en' ? 'Download PDF' : 'Download PDF'}
+                </Button>
+                <Button onClick={() => handlePrint(selectedRequest)} className="gap-2">
+                  <Printer className="w-4 h-4" />
+                  {language === 'en' ? 'Print' : 'Cetak'}
+                </Button>
+              </>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {language === 'en' ? 'Delete Payment Request?' : 'Hapus Pengajuan Pembayaran?'}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {language === 'en' 
+                ? `Are you sure you want to delete payment request "${selectedRequest?.request_no}"? This action cannot be undone.`
+                : `Apakah Anda yakin ingin menghapus pengajuan pembayaran "${selectedRequest?.request_no}"? Tindakan ini tidak dapat dibatalkan.`
+              }
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={processing}>
+              {language === 'en' ? 'Cancel' : 'Batal'}
+            </AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDelete} 
+              disabled={processing}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {processing ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : (
+                <Trash2 className="w-4 h-4 mr-2" />
+              )}
+              {language === 'en' ? 'Delete' : 'Hapus'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
