@@ -184,19 +184,28 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
       margin-bottom: 15px;
     }
     
-    .category-row {
-      display: flex;
-      margin-bottom: 3px;
+    .category-table {
+      border-collapse: collapse;
+    }
+    
+    .category-table td {
+      padding: 2px 0;
+      vertical-align: top;
     }
     
     .category-label {
-      width: 130px;
       font-weight: bold;
       font-style: italic;
+      white-space: nowrap;
+      padding-right: 10px;
+    }
+    
+    .category-colon {
+      padding-right: 10px;
     }
     
     .category-value {
-      flex: 1;
+      /* Value column */
     }
     
     .info-grid {
@@ -388,7 +397,7 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
     <div class="logo-container">
       ${safeData.companyLogoUrl ? 
         `<img src="${safeData.companyLogoUrl}" alt="Company Logo" />` : 
-        `<div class="logo-text">${safeData.companyName}</div>`
+        `<img src="/logo-kemika-new.png" alt="Kemika Logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><div class="logo-text" style="display:none;">${safeData.companyName}</div>`
       }
     </div>
     <div class="title-section">
@@ -407,14 +416,18 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
   </div>
 
   <div class="category-section">
-    <div class="category-row">
-      <span class="category-label">Kategori Pembayaran</span>
-      <span class="category-value">: Hutang Vendor (AP)</span>
-    </div>
-    <div class="category-row">
-      <span class="category-label">Division</span>
-      <span class="category-value">: Purchasing / Finance</span>
-    </div>
+    <table class="category-table">
+      <tr>
+        <td class="category-label">Kategori Pembayaran</td>
+        <td class="category-colon">:</td>
+        <td class="category-value">Hutang Vendor (AP)</td>
+      </tr>
+      <tr>
+        <td class="category-label">Division</td>
+        <td class="category-colon">:</td>
+        <td class="category-value">Purchasing / Finance</td>
+      </tr>
+    </table>
   </div>
 
   <div class="info-grid">
@@ -613,7 +626,18 @@ export const previewPaymentRequest = (html: string): void => {
 
 export const downloadPaymentRequestPDF = async (html: string, filename: string): Promise<void> => {
   const printWindow = safeWindowOpen();
-  if (!printWindow) return;
+  if (!printWindow) {
+    // If popup blocked, try alternative approach
+    const blob = new Blob([sanitizePrintableHtml(html)], { type: 'text/html' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename.replace('.pdf', '.html');
+    link.click();
+    URL.revokeObjectURL(url);
+    alert('Popup diblokir. File HTML telah didownload. Silakan buka file tersebut dan print ke PDF.');
+    return;
+  }
 
   const sanitizedHtml = sanitizePrintableHtml(html);
   
@@ -638,11 +662,24 @@ export const downloadPaymentRequestPDF = async (html: string, filename: string):
   printWindow.document.close();
 
   // Wait for content to load then trigger print dialog (user can save as PDF)
+  printWindow.onload = () => {
+    setTimeout(() => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch (e) {
+        console.error('Print error:', e);
+      }
+    }, 500);
+  };
+  
+  // Fallback if onload doesn't fire
   setTimeout(() => {
     try {
+      printWindow.focus();
       printWindow.print();
     } catch {
       // ignore
     }
-  }, 300);
+  }, 1000);
 };
