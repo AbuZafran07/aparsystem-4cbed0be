@@ -256,11 +256,11 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
       display: grid;
       grid-template-columns: 3fr 1fr;
       margin-bottom: 20px;
-      border: 1px solid #1a5c3a;
+      border: 2px solid #333;
     }
     
     .transfer-section {
-      border-right: 1px solid #1a5c3a;
+      border-right: 2px solid #333;
     }
     
     .transfer-header {
@@ -269,7 +269,7 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
       padding: 8px;
       background-color: #1a5c3a;
       color: white;
-      border-bottom: 1px solid #1a5c3a;
+      border-bottom: 2px solid #333;
     }
     
     .transfer-body {
@@ -281,7 +281,7 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
     .transfer-item {
       padding: 10px;
       text-align: center;
-      border-right: 1px solid #1a5c3a;
+      border-right: 2px solid #333;
     }
     
     .transfer-item:last-child {
@@ -309,7 +309,7 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
       padding: 8px;
       background-color: #1a5c3a;
       color: white;
-      border-bottom: 1px solid #1a5c3a;
+      border-bottom: 2px solid #333;
     }
     
     .cash-body {
@@ -337,26 +337,25 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
     
     .signature-box {
       text-align: center;
-      padding: 10px;
-      background-color: #1a5c3a;
-      color: white;
+      border: 2px solid #333;
+      background: white;
     }
     
     .signature-title {
       font-weight: bold;
       font-size: 11pt;
-      margin-bottom: 8px;
+      padding: 8px;
+      border-bottom: 2px solid #333;
+      color: #333;
     }
     
     .signature-content {
       background: white;
       min-height: 80px;
-      margin: 0 5px 5px 5px;
-      padding: 10px;
+      padding: 10px 15px;
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
-      border: 1px solid #333;
     }
     
     .signature-line {
@@ -366,7 +365,7 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
     }
     
     .signature-date {
-      color: #666;
+      color: #333;
       font-size: 9pt;
     }
     
