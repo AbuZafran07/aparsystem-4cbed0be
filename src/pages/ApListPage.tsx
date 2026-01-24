@@ -89,6 +89,8 @@ interface Vendor {
   id: string;
   vendor_name: string;
   address?: string | null;
+  bank_name?: string | null;
+  bank_account_no?: string | null;
 }
 
 interface PaymentTerms {
@@ -222,10 +224,10 @@ export default function ApListPage() {
 
       setInvoices(formattedInvoices);
 
-      // Fetch vendors for dropdown (include address for payment request)
+      // Fetch vendors for dropdown (include address and bank details for payment request)
       const { data: vendorsData } = await supabase
         .from('vendors')
-        .select('id, vendor_name, address')
+        .select('id, vendor_name, address, bank_name, bank_account_no')
         .eq('is_active', true)
         .order('vendor_name');
 
@@ -654,8 +656,13 @@ export default function ApListPage() {
   const handleSubmitPaymentRequest = async () => {
     if (!selectedInvoice) return;
 
-    if (paymentRequestData.payment_method === 'transfer' && !paymentRequestData.bank_account_id) {
-      toast.error(language === 'en' ? 'Please select a bank account' : 'Mohon pilih rekening bank');
+    const vendor = vendors.find(v => v.id === selectedInvoice.vendor_id);
+
+    // Validate vendor bank details for transfer payment
+    if (paymentRequestData.payment_method === 'transfer' && (!vendor?.bank_name || !vendor?.bank_account_no)) {
+      toast.error(language === 'en' 
+        ? 'Vendor bank details not available. Please update vendor master data first.' 
+        : 'Data rekening vendor belum tersedia. Mohon update data master vendor terlebih dahulu.');
       return;
     }
 
@@ -666,13 +673,10 @@ export default function ApListPage() {
       toast.error(language === 'en' ? 'Please enter payment amount' : 'Mohon masukkan jumlah pembayaran');
       return;
     }
-
-    const vendor = vendors.find(v => v.id === selectedInvoice.vendor_id);
-    const selectedBank = bankAccounts.find(b => b.id === paymentRequestData.bank_account_id);
     
     try {
       setSaving(true);
-      
+
       // Generate request number - format: PR-YYYYMM-XXXX
       const now = new Date();
       const prefix = `PR-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}-`;
@@ -712,7 +716,7 @@ export default function ApListPage() {
 
       if (insertError) throw insertError;
 
-      // Generate and print PDF
+      // Generate and print PDF - use vendor bank details for transfer
       const requestData: PaymentRequestData = {
         requestNo: requestNo,
         requestDate: new Date().toISOString(),
@@ -736,8 +740,9 @@ export default function ApListPage() {
         requestedBy: user?.name || 'User',
         status: selectedInvoice.status,
         paymentMethod: paymentRequestData.payment_method,
-        bankName: selectedBank?.bank_name || undefined,
-        bankAccountNo: selectedBank?.account_no || undefined,
+        // Use vendor bank details for transfer payment
+        bankName: vendor?.bank_name || undefined,
+        bankAccountNo: vendor?.bank_account_no || undefined,
         transferAmount: transferAmount > 0 ? transferAmount : undefined,
         cashAmount: cashAmount > 0 ? cashAmount : undefined,
       };
@@ -1368,7 +1373,9 @@ export default function ApListPage() {
             </DialogDescription>
           </DialogHeader>
           
-          {selectedInvoice && (
+          {selectedInvoice && (() => {
+            const selectedVendor = vendors.find(v => v.id === selectedInvoice.vendor_id);
+            return (
             <div className="space-y-4">
               {/* Invoice Info Summary */}
               <div className="grid grid-cols-2 gap-4 p-4 bg-muted/50 rounded-lg">
@@ -1390,6 +1397,36 @@ export default function ApListPage() {
                 </div>
               </div>
 
+              {/* Vendor Bank Details (auto-populated from master data) */}
+              {selectedVendor && (selectedVendor.bank_name || selectedVendor.bank_account_no) && (
+                <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                  <p className="text-xs text-muted-foreground mb-2 font-medium">
+                    {language === 'en' ? 'Vendor Bank Account (from master data)' : 'Rekening Bank Vendor (dari master data)'}
+                  </p>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">{language === 'en' ? 'Bank Name' : 'Nama Bank'}</p>
+                      <p className="text-sm font-medium">{selectedVendor.bank_name || '-'}</p>
+                    </div>
+                    <div className="space-y-1">
+                      <p className="text-xs text-muted-foreground">{language === 'en' ? 'Account Number' : 'No. Rekening'}</p>
+                      <p className="text-sm font-medium">{selectedVendor.bank_account_no || '-'}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Warning if no bank details */}
+              {selectedVendor && !selectedVendor.bank_name && !selectedVendor.bank_account_no && paymentRequestData.payment_method === 'transfer' && (
+                <div className="p-3 bg-warning/10 border border-warning/30 rounded-lg">
+                  <p className="text-xs text-warning">
+                    {language === 'en' 
+                      ? '⚠️ Vendor bank details not available. Please update vendor master data.' 
+                      : '⚠️ Data rekening vendor belum tersedia. Mohon update data master vendor.'}
+                  </p>
+                </div>
+              )}
+
               {/* Payment Method */}
               <div className="space-y-2">
                 <Label>{language === 'en' ? 'Payment Method' : 'Metode Pembayaran'} *</Label>
@@ -1407,36 +1444,16 @@ export default function ApListPage() {
                 </Select>
               </div>
 
-              {/* Bank Account (only for transfer) */}
+              {/* Transfer Amount (only for transfer) */}
               {paymentRequestData.payment_method === 'transfer' && (
-                <>
-                  <div className="space-y-2">
-                    <Label>{language === 'en' ? 'Bank Account' : 'Rekening Bank'} *</Label>
-                    <Select 
-                      value={paymentRequestData.bank_account_id} 
-                      onValueChange={(v) => setPaymentRequestData({...paymentRequestData, bank_account_id: v})}
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder={language === 'en' ? 'Select bank account' : 'Pilih rekening bank'} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {bankAccounts.map((b) => (
-                          <SelectItem key={b.id} value={b.id}>
-                            {b.bank_name} - {b.account_no} ({b.account_name})
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>{language === 'en' ? 'Transfer Amount' : 'Jumlah Transfer'} *</Label>
-                    <Input 
-                      type="number"
-                      value={paymentRequestData.transfer_amount} 
-                      onChange={(e) => setPaymentRequestData({...paymentRequestData, transfer_amount: e.target.value})}
-                    />
-                  </div>
-                </>
+                <div className="space-y-2">
+                  <Label>{language === 'en' ? 'Transfer Amount' : 'Jumlah Transfer'} *</Label>
+                  <Input 
+                    type="number"
+                    value={paymentRequestData.transfer_amount} 
+                    onChange={(e) => setPaymentRequestData({...paymentRequestData, transfer_amount: e.target.value})}
+                  />
+                </div>
               )}
 
               {/* Cash Amount (only for cash) */}
@@ -1462,7 +1479,8 @@ export default function ApListPage() {
                 />
               </div>
             </div>
-          )}
+            );
+          })()}
           
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsPaymentRequestDialogOpen(false)}>
