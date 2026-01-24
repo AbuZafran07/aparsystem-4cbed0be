@@ -63,6 +63,7 @@ const menuStructure: MenuSection[] = [
     items: [
       { key: 'billingLetters', translationKey: 'menu.billingLetters', icon: Mail, path: '/billing-letters' },
       { key: 'billingEmailLogs', translationKey: 'menu.billingEmailLogs', icon: MailCheck, path: '/billing-email-logs' },
+      { key: 'paymentRequests', translationKey: 'menu.paymentRequestsAp', icon: ClipboardList, path: '/payment-requests' },
     ],
   },
   {
@@ -84,7 +85,6 @@ const menuStructure: MenuSection[] = [
       { key: 'apReport', translationKey: 'menu.apReport', icon: FileBarChart, path: '/ap-report' },
       { key: 'arReport', translationKey: 'menu.arReport', icon: FileBarChart2, path: '/ar-report' },
       { key: 'cashflow', translationKey: 'menu.cashflow', icon: DollarSign, path: '/cashflow' },
-      { key: 'paymentRequests', translationKey: 'menu.paymentRequests', icon: ClipboardList, path: '/payment-requests' },
       { key: 'exportCenter', translationKey: 'menu.exportCenter', icon: Download, path: '/export-center' },
       { key: 'importExportCenter', translationKey: 'menu.importExportCenter', icon: ArrowUpDown, path: '/import-export' },
     ],

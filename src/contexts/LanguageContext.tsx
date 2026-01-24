@@ -39,6 +39,7 @@ const translations: TranslationMap = {
   'menu.arReport': { en: 'AR Report', id: 'Laporan AR' },
   'menu.cashflow': { en: 'Cashflow', id: 'Arus Kas' },
   'menu.paymentRequests': { en: 'Payment Requests', id: 'Pengajuan Pembayaran' },
+  'menu.paymentRequestsAp': { en: 'AP Payment Requests', id: 'Pengajuan Pembayaran AP' },
   'menu.exportCenter': { en: 'Export Center', id: 'Pusat Ekspor' },
   'menu.importExportCenter': { en: 'Import/Export Center', id: 'Pusat Impor/Ekspor' },
   'menu.auditLogs': { en: 'Audit Logs', id: 'Log Audit' },
