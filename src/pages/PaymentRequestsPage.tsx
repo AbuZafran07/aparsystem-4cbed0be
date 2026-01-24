@@ -82,6 +82,7 @@ interface CompanyProfile {
   address: string | null;
   phone: string | null;
   email: string | null;
+  logo_url: string | null;
 }
 
 const statusConfig: Record<string, { label: { en: string; id: string }; className: string }> = {
@@ -205,7 +206,7 @@ export default function PaymentRequestsPage() {
       // Fetch company profile
       const { data: companyData } = await supabase
         .from('company_profile')
-        .select('company_name, brand_name, address, phone, email')
+        .select('company_name, brand_name, address, phone, email, logo_url')
         .limit(1)
         .maybeSingle();
 
@@ -302,6 +303,7 @@ export default function PaymentRequestsPage() {
       companyAddress: companyProfile?.address || undefined,
       companyPhone: companyProfile?.phone || undefined,
       companyEmail: companyProfile?.email || undefined,
+      companyLogoUrl: companyProfile?.logo_url || undefined,
       requestedBy: request.requester_name,
       status: request.status,
     };
