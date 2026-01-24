@@ -256,29 +256,32 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
       display: grid;
       grid-template-columns: 3fr 1fr;
       margin-bottom: 20px;
+      border: 1px solid #1a5c3a;
     }
     
     .transfer-section {
-      background-color: #1a5c3a;
-      color: white;
+      border-right: 1px solid #1a5c3a;
     }
     
     .transfer-header {
       text-align: center;
       font-weight: bold;
       padding: 8px;
-      border-bottom: 1px solid rgba(255,255,255,0.3);
+      background-color: #1a5c3a;
+      color: white;
+      border-bottom: 1px solid #1a5c3a;
     }
     
     .transfer-body {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
+      background: white;
     }
     
     .transfer-item {
       padding: 10px;
       text-align: center;
-      border-right: 1px solid rgba(255,255,255,0.3);
+      border-right: 1px solid #1a5c3a;
     }
     
     .transfer-item:last-child {
@@ -288,23 +291,25 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
     .transfer-label {
       font-size: 9pt;
       margin-bottom: 4px;
+      color: #333;
     }
     
     .transfer-value {
       font-weight: bold;
+      color: #000;
     }
     
     .cash-section {
-      background-color: #f5f5f5;
-      border: 1px solid #ddd;
+      background: white;
     }
     
     .cash-header {
       text-align: center;
       font-weight: bold;
       padding: 8px;
-      background-color: #e0e0e0;
-      border-bottom: 1px solid #ddd;
+      background-color: #1a5c3a;
+      color: white;
+      border-bottom: 1px solid #1a5c3a;
     }
     
     .cash-body {
@@ -315,52 +320,43 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
     .cash-label {
       font-size: 9pt;
       margin-bottom: 4px;
+      color: #333;
     }
     
     .cash-value {
       font-weight: bold;
+      color: #000;
     }
     
     .signature-section {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       margin-bottom: 20px;
+      gap: 15px;
     }
     
     .signature-box {
       text-align: center;
       padding: 10px;
-    }
-    
-    .signature-box.pemohon {
       background-color: #1a5c3a;
-      color: white;
-    }
-    
-    .signature-box.mengetahui {
-      background-color: #2d7a4e;
-      color: white;
-    }
-    
-    .signature-box.menyetujui {
-      background-color: #3d8a5e;
       color: white;
     }
     
     .signature-title {
       font-weight: bold;
       font-size: 11pt;
-      margin-bottom: 5px;
+      margin-bottom: 8px;
     }
     
     .signature-content {
       background: white;
       min-height: 80px;
-      margin: 5px;
+      margin: 0 5px 5px 5px;
       padding: 10px;
       display: flex;
       flex-direction: column;
       justify-content: flex-end;
+      border: 1px solid #333;
     }
     
     .signature-line {
@@ -500,21 +496,21 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
   </div>
 
   <div class="signature-section">
-    <div class="signature-box pemohon">
+    <div class="signature-box">
       <div class="signature-title">Pemohon</div>
       <div class="signature-content">
         <div class="signature-line"></div>
         <div class="signature-date">Date: ___________</div>
       </div>
     </div>
-    <div class="signature-box mengetahui">
+    <div class="signature-box">
       <div class="signature-title">Mengetahui</div>
       <div class="signature-content">
         <div class="signature-line"></div>
         <div class="signature-date">Date: ___________</div>
       </div>
     </div>
-    <div class="signature-box menyetujui">
+    <div class="signature-box">
       <div class="signature-title">Menyetujui</div>
       <div class="signature-content">
         <div class="signature-line"></div>
