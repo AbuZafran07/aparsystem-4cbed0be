@@ -36,6 +36,8 @@ export default function VendorsPage() {
   const [formAddress, setFormAddress] = useState('');
   const [formPhone, setFormPhone] = useState('');
   const [formEmail, setFormEmail] = useState('');
+  const [formBankName, setFormBankName] = useState('');
+  const [formBankAccountNo, setFormBankAccountNo] = useState('');
   const [formActive, setFormActive] = useState(true);
 
   const { data: vendors = [], isLoading } = useQuery({
@@ -101,6 +103,8 @@ export default function VendorsPage() {
     setFormAddress('');
     setFormPhone('');
     setFormEmail('');
+    setFormBankName('');
+    setFormBankAccountNo('');
     setFormActive(true);
     setIsDialogOpen(true);
   };
@@ -111,6 +115,8 @@ export default function VendorsPage() {
     setFormAddress(vendor.address || '');
     setFormPhone(vendor.phone || '');
     setFormEmail(vendor.email || '');
+    setFormBankName((vendor as any).bank_name || '');
+    setFormBankAccountNo((vendor as any).bank_account_no || '');
     setFormActive(vendor.is_active);
     setIsDialogOpen(true);
   };
@@ -130,8 +136,10 @@ export default function VendorsPage() {
       address: formAddress || null,
       phone: formPhone || null,
       email: formEmail || null,
+      bank_name: formBankName || null,
+      bank_account_no: formBankAccountNo || null,
       is_active: formActive,
-    });
+    } as any);
   };
 
   const handleDelete = (vendor: Vendor) => {
@@ -250,6 +258,16 @@ export default function VendorsPage() {
               <div className="space-y-2">
                 <Label>Email</Label>
                 <Input type="email" value={formEmail} onChange={(e) => setFormEmail(e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>{language === 'en' ? 'Bank Name' : 'Nama Bank'}</Label>
+                <Input value={formBankName} onChange={(e) => setFormBankName(e.target.value)} placeholder="e.g., Bank Mandiri" />
+              </div>
+              <div className="space-y-2">
+                <Label>{language === 'en' ? 'Bank Account No' : 'No. Rekening'}</Label>
+                <Input value={formBankAccountNo} onChange={(e) => setFormBankAccountNo(e.target.value)} placeholder="e.g., 1234567890" />
               </div>
             </div>
             <div className="flex items-center gap-2">

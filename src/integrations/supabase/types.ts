@@ -874,6 +874,8 @@ export type Database = {
       vendors: {
         Row: {
           address: string | null
+          bank_account_no: string | null
+          bank_name: string | null
           created_at: string
           email: string | null
           id: string
@@ -884,6 +886,8 @@ export type Database = {
         }
         Insert: {
           address?: string | null
+          bank_account_no?: string | null
+          bank_name?: string | null
           created_at?: string
           email?: string | null
           id?: string
@@ -894,6 +898,8 @@ export type Database = {
         }
         Update: {
           address?: string | null
+          bank_account_no?: string | null
+          bank_name?: string | null
           created_at?: string
           email?: string | null
           id?: string
