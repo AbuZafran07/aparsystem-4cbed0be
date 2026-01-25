@@ -15,6 +15,7 @@ export interface BillingLetterData {
   companyAddress?: string;
   companyPhone?: string;
   companyEmail?: string;
+  companyLogoUrl?: string;
 }
 
 // HTML escape function to prevent XSS attacks
@@ -71,6 +72,7 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
     companyAddress: escapeHtml(data.companyAddress),
     companyPhone: escapeHtml(data.companyPhone),
     companyEmail: escapeHtml(data.companyEmail),
+    companyLogoUrl: data.companyLogoUrl, // URL is validated by storage
   };
 
   return `
@@ -96,6 +98,12 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
       margin-bottom: 30px;
       border-bottom: 2px solid #1a5c3a;
       padding-bottom: 15px;
+    }
+    .company-logo {
+      max-width: 180px;
+      max-height: 80px;
+      object-fit: contain;
+      margin-bottom: 10px;
     }
     .company-name { 
       font-size: 18pt; 
@@ -171,7 +179,10 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
 </head>
 <body>
   <div class="header">
-    <div class="company-name">${safeData.companyName}</div>
+    ${safeData.companyLogoUrl ? 
+      `<img src="${safeData.companyLogoUrl}" alt="Company Logo" class="company-logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><div class="company-name" style="display:none;">${safeData.companyName}</div>` : 
+      `<img src="/logo-kemika-new.png" alt="Kemika Logo" class="company-logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><div class="company-name" style="display:none;">${safeData.companyName}</div>`
+    }
     <div class="company-info">
       ${safeData.companyAddress || ''}<br>
       ${safeData.companyPhone ? `Telp: ${safeData.companyPhone}` : ''} ${safeData.companyEmail ? `| Email: ${safeData.companyEmail}` : ''}
