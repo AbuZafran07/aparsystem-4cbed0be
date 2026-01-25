@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Search, Filter, Eye, Edit, Trash2, Check, X, MoreHorizontal, Loader2, Download, Upload, CreditCard, FileDown, Printer } from 'lucide-react';
 import { exportToCSV, exportToExcel, formatCurrencyForExport, formatDateForExport, ExportColumn } from '@/lib/exportUtils';
 import { parseExcelFile, validateAndMapApData, generateApTemplate, ImportError } from '@/lib/importUtils';
-import { generatePaymentRequestHTML, printPaymentRequest, PaymentRequestData } from '@/lib/paymentRequestUtils';
+import { generatePaymentRequestHTML, downloadPaymentRequestPDF, PaymentRequestData } from '@/lib/paymentRequestUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -748,12 +748,14 @@ export default function ApListPage() {
       };
 
       const html = generatePaymentRequestHTML(requestData);
-      printPaymentRequest(html);
+      
+      // Download as PDF directly
+      await downloadPaymentRequestPDF(html, `Pengajuan_Pembayaran_${requestNo}.pdf`);
 
       setIsPaymentRequestDialogOpen(false);
       toast.success(language === 'en' 
-        ? `Payment request ${requestNo} created and printed` 
-        : `Pengajuan pembayaran ${requestNo} dibuat dan dicetak`);
+        ? `Payment request ${requestNo} created and PDF downloaded` 
+        : `Pengajuan pembayaran ${requestNo} dibuat dan PDF didownload`);
     } catch (error: any) {
       console.error('Error creating payment request:', error);
       toast.error(language === 'en' 

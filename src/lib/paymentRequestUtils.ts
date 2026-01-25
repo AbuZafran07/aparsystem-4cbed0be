@@ -625,61 +625,96 @@ export const previewPaymentRequest = (html: string): void => {
 };
 
 export const downloadPaymentRequestPDF = async (html: string, filename: string): Promise<void> => {
-  const printWindow = safeWindowOpen();
-  if (!printWindow) {
-    // If popup blocked, try alternative approach
-    const blob = new Blob([sanitizePrintableHtml(html)], { type: 'text/html' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename.replace('.pdf', '.html');
-    link.click();
-    URL.revokeObjectURL(url);
-    alert('Popup diblokir. File HTML telah didownload. Silakan buka file tersebut dan print ke PDF.');
-    return;
-  }
+  try {
+    // Dynamically import html2pdf.js
+    const html2pdf = (await import('html2pdf.js')).default;
+    
+    // Create a container for the HTML content
+    const container = document.createElement('div');
+    container.innerHTML = sanitizePrintableHtml(html);
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    container.style.width = '210mm'; // A4 width
+    document.body.appendChild(container);
 
-  const sanitizedHtml = sanitizePrintableHtml(html);
-  
-  // Add CSS to help with PDF styling
-  const pdfHtml = sanitizedHtml.replace(
-    '</head>',
-    `<style>
-      @page {
-        size: A4;
-        margin: 15mm;
-      }
-      body {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
-    </style>
-    </head>`
-  );
+    // Wait for images to load
+    const images = container.querySelectorAll('img');
+    await Promise.all(
+      Array.from(images).map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            if (img.complete) {
+              resolve();
+            } else {
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+            }
+          })
+      )
+    );
 
-  printWindow.document.open();
-  printWindow.document.write(pdfHtml);
-  printWindow.document.close();
+    // PDF options for A4 format
+    const opt = {
+      margin: [10, 10, 10, 10] as [number, number, number, number],
+      filename: filename,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+      },
+      jsPDF: { 
+        unit: 'mm' as const, 
+        format: 'a4' as const, 
+        orientation: 'portrait' as const,
+      },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] as const },
+    };
 
-  // Wait for content to load then trigger print dialog (user can save as PDF)
-  printWindow.onload = () => {
+    // Generate and download PDF
+    await html2pdf().set(opt).from(container).save();
+
+    // Cleanup
+    document.body.removeChild(container);
+  } catch (error) {
+    console.error('PDF generation error:', error);
+    
+    // Fallback to print dialog
+    const printWindow = safeWindowOpen();
+    if (!printWindow) {
+      alert('Gagal membuat PDF. Silakan coba lagi atau gunakan browser lain.');
+      return;
+    }
+
+    const sanitizedHtml = sanitizePrintableHtml(html);
+    const pdfHtml = sanitizedHtml.replace(
+      '</head>',
+      `<style>
+        @page {
+          size: A4;
+          margin: 15mm;
+        }
+        body {
+          -webkit-print-color-adjust: exact !important;
+          print-color-adjust: exact !important;
+        }
+      </style>
+      </head>`
+    );
+
+    printWindow.document.open();
+    printWindow.document.write(pdfHtml);
+    printWindow.document.close();
+
     setTimeout(() => {
       try {
         printWindow.focus();
         printWindow.print();
-      } catch (e) {
-        console.error('Print error:', e);
+      } catch {
+        // ignore
       }
     }, 500);
-  };
-  
-  // Fallback if onload doesn't fire
-  setTimeout(() => {
-    try {
-      printWindow.focus();
-      printWindow.print();
-    } catch {
-      // ignore
-    }
-  }, 1000);
+  }
 };
