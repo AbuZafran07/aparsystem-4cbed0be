@@ -45,6 +45,7 @@ import { toast } from 'sonner';
 import { 
   generateBillingLetterHTML, 
   printBillingLetter,
+  sanitizePrintableHtml,
   formatCurrencyIDR,
   formatDateID,
   generateLetterNumber,
@@ -86,6 +87,7 @@ interface CompanyProfile {
   address: string | null;
   phone: string | null;
   email: string | null;
+  logo_url: string | null;
 }
 
 const statusConfig: Record<RecordStatus, { label: { en: string; id: string }; className: string }> = {
@@ -196,9 +198,9 @@ export default function BillingLettersPage() {
       // Fetch company profile
       const { data: profileData } = await supabase
         .from('company_profile')
-        .select('company_name, address, phone, email')
+        .select('company_name, address, phone, email, logo_url')
         .limit(1)
-        .single();
+        .maybeSingle();
 
       setCompanyProfile(profileData);
 
@@ -236,6 +238,7 @@ export default function BillingLettersPage() {
       companyAddress: companyProfile.address || undefined,
       companyPhone: companyProfile.phone || undefined,
       companyEmail: companyProfile.email || undefined,
+      companyLogoUrl: companyProfile.logo_url || undefined,
     };
 
     const html = generateBillingLetterHTML(billingData);
@@ -496,68 +499,72 @@ export default function BillingLettersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* View Dialog */}
+      {/* View Dialog with Preview */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <FileText className="h-5 w-5" />
-              {language === 'en' ? 'Billing Letter Details' : 'Detail Surat Tagihan'}
+              {language === 'en' ? 'Billing Letter Preview' : 'Preview Surat Tagihan'}
             </DialogTitle>
             <DialogDescription>
               {selectedLetter?.letter_no}
             </DialogDescription>
           </DialogHeader>
           
-          {selectedLetter && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+          {selectedLetter && companyProfile && (
+            <div className="flex-1 overflow-hidden flex flex-col gap-4">
+              {/* Preview iframe */}
+              <div className="flex-1 overflow-auto border rounded-lg bg-white min-h-[400px]">
+                <iframe
+                  srcDoc={sanitizePrintableHtml(generateBillingLetterHTML({
+                    letterNo: selectedLetter.letter_no,
+                    letterDate: selectedLetter.letter_date,
+                    customerName: selectedLetter.customer_name,
+                    customerAddress: selectedLetter.customer_address || undefined,
+                    invoiceNumber: selectedLetter.invoice_number,
+                    invoiceDate: selectedLetter.invoice_date,
+                    dueDate: selectedLetter.due_date,
+                    invoiceAmount: selectedLetter.invoice_amount,
+                    outstandingAmount: selectedLetter.outstanding_amount,
+                    overdueDays: selectedLetter.overdue_days,
+                    companyName: companyProfile.company_name,
+                    companyAddress: companyProfile.address || undefined,
+                    companyPhone: companyProfile.phone || undefined,
+                    companyEmail: companyProfile.email || undefined,
+                    companyLogoUrl: companyProfile.logo_url || undefined,
+                  }))}
+                  className="w-full h-full min-h-[500px]"
+                  title="Billing Letter Preview"
+                  sandbox="allow-same-origin"
+                />
+              </div>
+
+              {/* Info summary */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
                 <div>
-                  <p className="text-sm text-muted-foreground">{language === 'en' ? 'Letter No' : 'No. Surat'}</p>
-                  <p className="font-medium">{selectedLetter.letter_no}</p>
+                  <p className="text-xs text-muted-foreground">{language === 'en' ? 'Invoice' : 'Invoice'}</p>
+                  <p className="font-medium text-sm">{selectedLetter.invoice_number}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">{language === 'en' ? 'Letter Date' : 'Tanggal Surat'}</p>
-                  <p className="font-medium">{formatDateID(selectedLetter.letter_date)}</p>
+                  <p className="text-xs text-muted-foreground">{language === 'en' ? 'Customer' : 'Customer'}</p>
+                  <p className="font-medium text-sm">{selectedLetter.customer_name}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('table.invoiceNumber')}</p>
-                  <p className="font-medium">{selectedLetter.invoice_number}</p>
+                  <p className="text-xs text-muted-foreground">{t('table.outstanding')}</p>
+                  <p className="font-medium text-sm text-destructive">{formatCurrencyIDR(selectedLetter.outstanding_amount)}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">{t('table.customerName')}</p>
-                  <p className="font-medium">{selectedLetter.customer_name}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{t('table.invoiceAmount')}</p>
-                  <p className="font-medium">{formatCurrencyIDR(selectedLetter.invoice_amount)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{t('table.outstanding')}</p>
-                  <p className="font-medium text-destructive">{formatCurrencyIDR(selectedLetter.outstanding_amount)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{t('table.dueDate')}</p>
-                  <p className="font-medium">{formatDateID(selectedLetter.due_date)}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">{language === 'en' ? 'Overdue Days' : 'Hari Keterlambatan'}</p>
-                  <p className="font-medium">
+                  <p className="text-xs text-muted-foreground">{language === 'en' ? 'Overdue' : 'Keterlambatan'}</p>
+                  <p className="font-medium text-sm">
                     {selectedLetter.overdue_days > 0 ? (
                       <span className="text-destructive">{selectedLetter.overdue_days} {language === 'en' ? 'days' : 'hari'}</span>
                     ) : '-'}
                   </p>
                 </div>
               </div>
-              
-              {selectedLetter.notes && (
-                <div>
-                  <p className="text-sm text-muted-foreground">{language === 'en' ? 'Notes' : 'Catatan'}</p>
-                  <p className="font-medium">{selectedLetter.notes}</p>
-                </div>
-              )}
 
-              <div className="flex justify-end gap-2 pt-4 border-t">
+              <div className="flex justify-end gap-2 pt-2 border-t">
                 <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
                   {t('btn.close')}
                 </Button>
