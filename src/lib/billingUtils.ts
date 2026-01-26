@@ -428,29 +428,76 @@ export const printBillingLetter = (html: string): void => {
 };
 
 export const downloadBillingLetterPDF = async (html: string, filename: string): Promise<void> => {
-  // Open in new window for manual PDF save (print to PDF)
-  const printWindow = safeWindowOpen();
-  if (!printWindow) return;
-
-  const sanitizedHtml = sanitizePrintableHtml(html);
-  const safeTitle = String(filename).replace(/[\r\n\t]/g, ' ').slice(0, 200);
-
-  printWindow.document.open();
-  printWindow.document.write(sanitizedHtml);
-  printWindow.document.close();
-
-  // Set title and show instructions without injecting script into the document
   try {
-    printWindow.document.title = safeTitle;
-  } catch {
-    // ignore
-  }
-
-  setTimeout(() => {
-    try {
-      printWindow.alert("Untuk menyimpan sebagai PDF, gunakan Ctrl+P atau Cmd+P, lalu pilih 'Save as PDF'");
-    } catch {
-      // ignore
+    // Dynamically import html2pdf.js
+    const html2pdf = (await import('html2pdf.js')).default;
+    
+    const sanitizedHtml = sanitizePrintableHtml(html);
+    const safeFilename = String(filename).replace(/[\r\n\t]/g, ' ').replace(/[^a-zA-Z0-9\-_]/g, '_').slice(0, 100);
+    
+    // Create a temporary container
+    const container = document.createElement('div');
+    container.innerHTML = sanitizedHtml;
+    container.style.position = 'absolute';
+    container.style.left = '-9999px';
+    container.style.top = '0';
+    document.body.appendChild(container);
+    
+    // Wait for images to load
+    const images = container.querySelectorAll('img');
+    await Promise.all(
+      Array.from(images).map(
+        (img) =>
+          new Promise<void>((resolve) => {
+            if (img.complete) {
+              resolve();
+            } else {
+              img.onload = () => resolve();
+              img.onerror = () => resolve();
+            }
+          })
+      )
+    );
+    
+    const opt = {
+      margin: [10, 10, 10, 10] as [number, number, number, number],
+      filename: `${safeFilename}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true,
+        allowTaint: true,
+        logging: false 
+      },
+      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
+    };
+    
+    await html2pdf().set(opt).from(container).save();
+    
+    // Cleanup
+    document.body.removeChild(container);
+  } catch (error) {
+    console.error('PDF generation failed:', error);
+    
+    // Fallback to print dialog
+    const printWindow = safeWindowOpen();
+    if (!printWindow) {
+      alert('Tidak dapat membuka window untuk download. Silakan izinkan popup di browser Anda.');
+      return;
     }
-  }, 250);
+
+    const sanitizedHtml = sanitizePrintableHtml(html);
+    printWindow.document.open();
+    printWindow.document.write(sanitizedHtml);
+    printWindow.document.close();
+
+    setTimeout(() => {
+      try {
+        printWindow.focus();
+        printWindow.print();
+      } catch {
+        // ignore
+      }
+    }, 500);
+  }
 };
