@@ -532,7 +532,7 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
   </div>
 
   <div class="footer">
-    Dokumen ini dicetak pada ${printDateTime} | ${safeData.companyName} - Expense Budget & Approval System
+    Dokumen ini dicetak pada ${printDateTime} | ${safeData.companyName} - Enterprise AP/AR System
   </div>
 </body>
 </html>
