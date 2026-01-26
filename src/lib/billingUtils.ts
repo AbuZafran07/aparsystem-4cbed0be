@@ -93,17 +93,57 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
       max-width: 800px;
       margin: 0 auto;
     }
-    .header { 
-      text-align: center; 
-      margin-bottom: 30px;
-      border-bottom: 2px solid #1a5c3a;
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
       padding-bottom: 15px;
+      border-bottom: 2px solid #1a5c3a;
     }
-    .company-logo {
-      max-width: 180px;
-      max-height: 80px;
+    .logo-container {
+      width: 150px;
+    }
+    .logo-container img {
+      max-width: 150px;
+      max-height: 60px;
       object-fit: contain;
-      margin-bottom: 10px;
+    }
+    .logo-text {
+      font-size: 16pt;
+      font-weight: bold;
+      color: #1a5c3a;
+    }
+    .title-section {
+      flex: 1;
+      text-align: center;
+      padding: 0 20px;
+    }
+    .document-title {
+      font-size: 18pt;
+      font-weight: bold;
+      color: #1a5c3a;
+      margin-top: 10px;
+    }
+    .doc-info-box {
+      border: 2px solid #1a5c3a;
+      padding: 8px 12px;
+      display: inline-block;
+      text-align: left;
+      min-width: 180px;
+    }
+    .doc-info-row {
+      display: flex;
+      gap: 10px;
+      font-size: 10pt;
+      margin-bottom: 2px;
+    }
+    .doc-info-row:last-child {
+      margin-bottom: 0;
+    }
+    .doc-info-label {
+      font-weight: bold;
+      min-width: 35px;
     }
     .company-name { 
       font-size: 18pt; 
@@ -115,13 +155,7 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
       font-size: 10pt; 
       color: #666; 
     }
-    .letter-info { 
-      display: flex; 
-      justify-content: space-between; 
-      margin-bottom: 25px;
-    }
-    .letter-no { font-weight: bold; }
-    .recipient { margin-bottom: 25px; }
+    .recipient { margin-bottom: 25px; margin-top: 20px; }
     .recipient-label { font-weight: bold; margin-bottom: 5px; }
     .subject { 
       font-weight: bold; 
@@ -179,23 +213,24 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
 </head>
 <body>
   <div class="header">
-    ${safeData.companyLogoUrl ? 
-      `<img src="${safeData.companyLogoUrl}" alt="Company Logo" class="company-logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><div class="company-name" style="display:none;">${safeData.companyName}</div>` : 
-      `<img src="/logo-kemika-new.png" alt="Kemika Logo" class="company-logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><div class="company-name" style="display:none;">${safeData.companyName}</div>`
-    }
-    <div class="company-info">
-      ${safeData.companyAddress || ''}<br>
-      ${safeData.companyPhone ? `Telp: ${safeData.companyPhone}` : ''} ${safeData.companyEmail ? `| Email: ${safeData.companyEmail}` : ''}
+    <div class="logo-container">
+      ${safeData.companyLogoUrl ? 
+        `<img src="${safeData.companyLogoUrl}" alt="Company Logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><div class="logo-text" style="display:none;">${safeData.companyName}</div>` : 
+        `<img src="/logo-kemika-new.png" alt="Kemika Logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><div class="logo-text" style="display:none;">${safeData.companyName}</div>`
+      }
     </div>
-  </div>
-
-  <div class="letter-info">
-    <div>
-      <div class="letter-no">No: ${safeData.letterNo}</div>
-      <div>Perihal: <strong>Surat Penagihan</strong></div>
+    <div class="title-section">
+      <div class="document-title">SURAT PENAGIHAN</div>
     </div>
-    <div style="text-align: right;">
-      <div>Jakarta, ${formatDateID(safeData.letterDate)}</div>
+    <div class="doc-info-box">
+      <div class="doc-info-row">
+        <span class="doc-info-label">No.</span>
+        <span>: ${safeData.letterNo}</span>
+      </div>
+      <div class="doc-info-row">
+        <span class="doc-info-label">Date</span>
+        <span>: ${formatDateID(safeData.letterDate)}</span>
+      </div>
     </div>
   </div>
 
