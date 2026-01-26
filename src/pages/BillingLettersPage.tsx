@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, Eye, Printer, Trash2, Loader2, FileText, Plus } from 'lucide-react';
+import { Search, Eye, Printer, Trash2, Loader2, FileText, Plus, Download, MessageCircle } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -45,6 +45,9 @@ import { toast } from 'sonner';
 import { 
   generateBillingLetterHTML, 
   printBillingLetter,
+  downloadBillingLetterPDF,
+  generateWhatsAppMessage,
+  openWhatsApp,
   sanitizePrintableHtml,
   formatCurrencyIDR,
   formatDateID,
@@ -63,6 +66,7 @@ interface BillingLetter {
   invoice_number: string;
   customer_name: string;
   customer_address: string | null;
+  customer_phone: string | null;
   invoice_amount: number;
   outstanding_amount: number;
   invoice_date: string;
@@ -144,7 +148,8 @@ export default function BillingLettersPage() {
             overdue_days,
             customers (
               customer_name,
-              address
+              address,
+              phone
             )
           )
         `)
@@ -160,6 +165,7 @@ export default function BillingLettersPage() {
         invoice_number: letter.ar_invoices?.invoice_number || '',
         customer_name: letter.ar_invoices?.customers?.customer_name || 'Unknown',
         customer_address: letter.ar_invoices?.customers?.address || null,
+        customer_phone: letter.ar_invoices?.customers?.phone || null,
         invoice_amount: letter.ar_invoices?.invoice_amount || 0,
         outstanding_amount: letter.ar_invoices?.outstanding_amount || 0,
         invoice_date: letter.ar_invoices?.invoice_date || '',
@@ -217,13 +223,13 @@ export default function BillingLettersPage() {
     setIsViewDialogOpen(true);
   };
 
-  const handlePrint = (letter: BillingLetter) => {
+  const getBillingData = (letter: BillingLetter): BillingLetterData | null => {
     if (!companyProfile) {
       toast.error(language === 'en' ? 'Company profile not found' : 'Profil perusahaan tidak ditemukan');
-      return;
+      return null;
     }
 
-    const billingData: BillingLetterData = {
+    return {
       letterNo: letter.letter_no,
       letterDate: letter.letter_date,
       customerName: letter.customer_name,
@@ -240,9 +246,42 @@ export default function BillingLettersPage() {
       companyEmail: companyProfile.email || undefined,
       companyLogoUrl: companyProfile.logo_url || undefined,
     };
+  };
+
+  const handlePrint = (letter: BillingLetter) => {
+    const billingData = getBillingData(letter);
+    if (!billingData) return;
 
     const html = generateBillingLetterHTML(billingData);
     printBillingLetter(html);
+  };
+
+  const handleDownloadPDF = async (letter: BillingLetter) => {
+    const billingData = getBillingData(letter);
+    if (!billingData) return;
+
+    try {
+      toast.loading(language === 'en' ? 'Generating PDF...' : 'Membuat PDF...', { id: 'pdf-download' });
+      const html = generateBillingLetterHTML(billingData);
+      await downloadBillingLetterPDF(html, `Surat-Tagihan-${letter.letter_no}`);
+      toast.success(language === 'en' ? 'PDF downloaded' : 'PDF berhasil diunduh', { id: 'pdf-download' });
+    } catch (error) {
+      console.error('PDF download error:', error);
+      toast.error(language === 'en' ? 'Failed to download PDF' : 'Gagal mengunduh PDF', { id: 'pdf-download' });
+    }
+  };
+
+  const handleSendWhatsApp = (letter: BillingLetter) => {
+    if (!letter.customer_phone) {
+      toast.error(language === 'en' ? 'Customer phone number not available' : 'Nomor telepon customer tidak tersedia');
+      return;
+    }
+
+    const billingData = getBillingData(letter);
+    if (!billingData) return;
+
+    const message = generateWhatsAppMessage(billingData);
+    openWhatsApp(letter.customer_phone, message);
   };
 
   const handleCreate = async () => {
@@ -409,10 +448,26 @@ export default function BillingLettersPage() {
                         <Button
                           variant="ghost"
                           size="icon"
+                          onClick={() => handleDownloadPDF(letter)}
+                          title={language === 'en' ? 'Download PDF' : 'Unduh PDF'}
+                        >
+                          <Download className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
                           onClick={() => handlePrint(letter)}
                           title={language === 'en' ? 'Print' : 'Cetak'}
                         >
                           <Printer className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleSendWhatsApp(letter)}
+                          title={language === 'en' ? 'Send via WhatsApp' : 'Kirim via WhatsApp'}
+                        >
+                          <MessageCircle className="h-4 w-4" />
                         </Button>
                         {canDelete(letter.status) && (
                           <Button
@@ -567,6 +622,18 @@ export default function BillingLettersPage() {
               <div className="flex justify-end gap-2 pt-2 border-t">
                 <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
                   {t('btn.close')}
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleSendWhatsApp(selectedLetter)}
+                  disabled={!selectedLetter.customer_phone}
+                >
+                  <MessageCircle className="h-4 w-4 mr-2" />
+                  WhatsApp
+                </Button>
+                <Button variant="outline" onClick={() => handleDownloadPDF(selectedLetter)}>
+                  <Download className="h-4 w-4 mr-2" />
+                  {language === 'en' ? 'Download PDF' : 'Unduh PDF'}
                 </Button>
                 <Button onClick={() => handlePrint(selectedLetter)}>
                   <Printer className="h-4 w-4 mr-2" />
