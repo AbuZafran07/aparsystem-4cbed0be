@@ -437,13 +437,14 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
     // Create a temporary container with proper styling
     const container = document.createElement('div');
     container.style.position = 'fixed';
-    container.style.left = '0';
+    // Keep it rendered (so html2canvas can capture), but move off-screen
+    container.style.left = '-10000px';
     container.style.top = '0';
     container.style.width = '210mm';
     container.style.minHeight = '297mm';
     container.style.background = 'white';
-    container.style.zIndex = '-9999';
-    container.style.visibility = 'hidden';
+    container.style.opacity = '0';
+    container.style.pointerEvents = 'none';
     
     // Extract body content from the full HTML document
     const parser = new DOMParser();
@@ -459,11 +460,17 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
         ${bodyContent}
       </div>
     `;
+
+    // Ensure external images (e.g., logo) can be captured by html2canvas
+    const images = container.querySelectorAll('img');
+    images.forEach((img) => {
+      if (!img.getAttribute('crossorigin')) img.setAttribute('crossorigin', 'anonymous');
+      if (!img.getAttribute('referrerpolicy')) img.setAttribute('referrerpolicy', 'no-referrer');
+    });
     
     document.body.appendChild(container);
     
     // Wait for images to load with timeout
-    const images = container.querySelectorAll('img');
     const imageLoadPromises = Array.from(images).map(
       (img) =>
         new Promise<void>((resolve) => {
