@@ -443,7 +443,8 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
     container.style.width = '210mm';
     container.style.minHeight = '297mm';
     container.style.background = 'white';
-    container.style.opacity = '0';
+    // IMPORTANT: don't set opacity:0, otherwise html2canvas captures fully transparent output (blank PDF)
+    container.style.opacity = '1';
     container.style.pointerEvents = 'none';
     
     // Extract body content from the full HTML document
