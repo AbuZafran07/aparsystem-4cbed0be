@@ -629,30 +629,60 @@ export const downloadPaymentRequestPDF = async (html: string, filename: string):
     // Dynamically import html2pdf.js
     const html2pdf = (await import('html2pdf.js')).default;
     
-    // Create a container for the HTML content
+    // Create a temporary container with proper styling
     const container = document.createElement('div');
-    container.innerHTML = sanitizePrintableHtml(html);
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
+    container.style.position = 'fixed';
+    container.style.left = '0';
     container.style.top = '0';
-    container.style.width = '210mm'; // A4 width
+    container.style.width = '210mm';
+    container.style.minHeight = '297mm';
+    container.style.background = 'white';
+    container.style.zIndex = '-9999';
+    container.style.visibility = 'hidden';
+    
+    // Extract body content from the full HTML document
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    // Get style and body content
+    const styleContent = doc.querySelector('style')?.outerHTML || '';
+    const bodyContent = doc.body?.innerHTML || html;
+    
+    container.innerHTML = `
+      ${styleContent}
+      <div style="font-family: 'Arial', sans-serif; font-size: 10pt; line-height: 1.4; color: #333; padding: 30px; max-width: 850px; margin: 0 auto; background: white;">
+        ${bodyContent}
+      </div>
+    `;
+    
     document.body.appendChild(container);
 
-    // Wait for images to load
+    // Wait for images to load with timeout
     const images = container.querySelectorAll('img');
-    await Promise.all(
-      Array.from(images).map(
-        (img) =>
-          new Promise<void>((resolve) => {
-            if (img.complete) {
+    const imageLoadPromises = Array.from(images).map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.complete && img.naturalHeight !== 0) {
+            resolve();
+          } else {
+            const timeout = setTimeout(() => resolve(), 3000);
+            img.onload = () => {
+              clearTimeout(timeout);
               resolve();
-            } else {
-              img.onload = () => resolve();
-              img.onerror = () => resolve();
-            }
-          })
-      )
+            };
+            img.onerror = () => {
+              clearTimeout(timeout);
+              img.style.display = 'none';
+              resolve();
+            };
+          }
+        })
     );
+    
+    await Promise.all(imageLoadPromises);
+    
+    // Small delay to ensure rendering is complete
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     // PDF options for A4 format
     const opt = {
@@ -664,6 +694,8 @@ export const downloadPaymentRequestPDF = async (html: string, filename: string):
         useCORS: true,
         allowTaint: true,
         logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 794, // A4 width in pixels at 96 DPI
       },
       jsPDF: { 
         unit: 'mm' as const, 
