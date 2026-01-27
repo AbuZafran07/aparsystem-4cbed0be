@@ -432,32 +432,62 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
     // Dynamically import html2pdf.js
     const html2pdf = (await import('html2pdf.js')).default;
     
-    const sanitizedHtml = sanitizePrintableHtml(html);
     const safeFilename = String(filename).replace(/[\r\n\t]/g, ' ').replace(/[^a-zA-Z0-9\-_]/g, '_').slice(0, 100);
     
-    // Create a temporary container
+    // Create a temporary container with proper styling
     const container = document.createElement('div');
-    container.innerHTML = sanitizedHtml;
-    container.style.position = 'absolute';
-    container.style.left = '-9999px';
+    container.style.position = 'fixed';
+    container.style.left = '0';
     container.style.top = '0';
+    container.style.width = '210mm';
+    container.style.minHeight = '297mm';
+    container.style.background = 'white';
+    container.style.zIndex = '-9999';
+    container.style.visibility = 'hidden';
+    
+    // Extract body content from the full HTML document
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    // Get style and body content
+    const styleContent = doc.querySelector('style')?.outerHTML || '';
+    const bodyContent = doc.body?.innerHTML || html;
+    
+    container.innerHTML = `
+      ${styleContent}
+      <div style="font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; color: #333; padding: 40px; max-width: 800px; margin: 0 auto; background: white;">
+        ${bodyContent}
+      </div>
+    `;
+    
     document.body.appendChild(container);
     
-    // Wait for images to load
+    // Wait for images to load with timeout
     const images = container.querySelectorAll('img');
-    await Promise.all(
-      Array.from(images).map(
-        (img) =>
-          new Promise<void>((resolve) => {
-            if (img.complete) {
+    const imageLoadPromises = Array.from(images).map(
+      (img) =>
+        new Promise<void>((resolve) => {
+          if (img.complete && img.naturalHeight !== 0) {
+            resolve();
+          } else {
+            const timeout = setTimeout(() => resolve(), 3000);
+            img.onload = () => {
+              clearTimeout(timeout);
               resolve();
-            } else {
-              img.onload = () => resolve();
-              img.onerror = () => resolve();
-            }
-          })
-      )
+            };
+            img.onerror = () => {
+              clearTimeout(timeout);
+              img.style.display = 'none';
+              resolve();
+            };
+          }
+        })
     );
+    
+    await Promise.all(imageLoadPromises);
+    
+    // Small delay to ensure rendering is complete
+    await new Promise(resolve => setTimeout(resolve, 100));
     
     const opt = {
       margin: [10, 10, 10, 10] as [number, number, number, number],
@@ -467,7 +497,9 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
         scale: 2, 
         useCORS: true,
         allowTaint: true,
-        logging: false 
+        logging: false,
+        backgroundColor: '#ffffff',
+        windowWidth: 794, // A4 width in pixels at 96 DPI
       },
       jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
     };
