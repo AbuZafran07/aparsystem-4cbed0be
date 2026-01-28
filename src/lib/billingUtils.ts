@@ -434,18 +434,22 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
     
     const safeFilename = String(filename).replace(/[\r\n\t]/g, ' ').replace(/[^a-zA-Z0-9\-_]/g, '_').slice(0, 100);
     
-    // Create a temporary container with proper styling
+    // Create a temporary container - MUST be fully visible for html2canvas to capture
     const container = document.createElement('div');
-    container.style.position = 'fixed';
-    // Keep it rendered (so html2canvas can capture), but move off-screen
-    container.style.left = '-10000px';
-    container.style.top = '0';
-    container.style.width = '210mm';
-    container.style.minHeight = '297mm';
-    container.style.background = 'white';
-    // IMPORTANT: don't set opacity:0, otherwise html2canvas captures fully transparent output (blank PDF)
-    container.style.opacity = '1';
-    container.style.pointerEvents = 'none';
+    container.id = 'pdf-generation-container';
+    
+    // Use absolute positioning with transform to hide from view
+    // This keeps the element fully rendered (not hidden) for html2canvas
+    container.style.cssText = `
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 210mm;
+      min-height: 297mm;
+      background: white;
+      z-index: -9999;
+      transform: translateX(-200%);
+    `;
     
     // Extract body content from the full HTML document
     const parser = new DOMParser();
@@ -465,11 +469,14 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
     // Ensure external images (e.g., logo) can be captured by html2canvas
     const images = container.querySelectorAll('img');
     images.forEach((img) => {
-      if (!img.getAttribute('crossorigin')) img.setAttribute('crossorigin', 'anonymous');
-      if (!img.getAttribute('referrerpolicy')) img.setAttribute('referrerpolicy', 'no-referrer');
+      img.setAttribute('crossorigin', 'anonymous');
+      img.setAttribute('referrerpolicy', 'no-referrer');
     });
     
     document.body.appendChild(container);
+    
+    // Force reflow to ensure styles are applied
+    container.offsetHeight;
     
     // Wait for images to load with timeout
     const imageLoadPromises = Array.from(images).map(
@@ -494,8 +501,8 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
     
     await Promise.all(imageLoadPromises);
     
-    // Small delay to ensure rendering is complete
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Give browser more time to fully render
+    await new Promise(resolve => setTimeout(resolve, 300));
     
     const opt = {
       margin: [10, 10, 10, 10] as [number, number, number, number],
@@ -507,7 +514,16 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
         allowTaint: true,
         logging: false,
         backgroundColor: '#ffffff',
-        windowWidth: 794, // A4 width in pixels at 96 DPI
+        windowWidth: 794,
+        // Critical: use onclone to ensure cloned element is fully visible
+        onclone: (clonedDoc: Document) => {
+          const clonedContainer = clonedDoc.getElementById('pdf-generation-container');
+          if (clonedContainer) {
+            clonedContainer.style.transform = 'none';
+            clonedContainer.style.position = 'static';
+            clonedContainer.style.zIndex = 'auto';
+          }
+        },
       },
       jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
     };
