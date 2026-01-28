@@ -629,17 +629,22 @@ export const downloadPaymentRequestPDF = async (html: string, filename: string):
     // Dynamically import html2pdf.js
     const html2pdf = (await import('html2pdf.js')).default;
     
-    // Create a temporary container with proper styling
+    // Create a temporary container - MUST be fully visible for html2canvas to capture
     const container = document.createElement('div');
-    container.style.position = 'fixed';
-    // Keep it rendered (so html2canvas can capture), but move off-screen
-    container.style.left = '-10000px';
-    container.style.top = '0';
-    container.style.width = '210mm';
-    container.style.minHeight = '297mm';
-    container.style.background = 'white';
-    container.style.opacity = '0';
-    container.style.pointerEvents = 'none';
+    container.id = 'pdf-generation-container-pr';
+    
+    // Use absolute positioning with transform to hide from view
+    // This keeps the element fully rendered (not hidden) for html2canvas
+    container.style.cssText = `
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 210mm;
+      min-height: 297mm;
+      background: white;
+      z-index: -9999;
+      transform: translateX(-200%);
+    `;
     
     // Extract body content from the full HTML document
     const parser = new DOMParser();
@@ -659,11 +664,14 @@ export const downloadPaymentRequestPDF = async (html: string, filename: string):
     // Ensure external images (e.g., logo) can be captured by html2canvas
     const images = container.querySelectorAll('img');
     images.forEach((img) => {
-      if (!img.getAttribute('crossorigin')) img.setAttribute('crossorigin', 'anonymous');
-      if (!img.getAttribute('referrerpolicy')) img.setAttribute('referrerpolicy', 'no-referrer');
+      img.setAttribute('crossorigin', 'anonymous');
+      img.setAttribute('referrerpolicy', 'no-referrer');
     });
     
     document.body.appendChild(container);
+    
+    // Force reflow to ensure styles are applied
+    container.offsetHeight;
 
     // Wait for images to load with timeout
     const imageLoadPromises = Array.from(images).map(
@@ -688,8 +696,8 @@ export const downloadPaymentRequestPDF = async (html: string, filename: string):
     
     await Promise.all(imageLoadPromises);
     
-    // Small delay to ensure rendering is complete
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Give browser more time to fully render
+    await new Promise(resolve => setTimeout(resolve, 300));
 
     // PDF options for A4 format
     const opt = {
@@ -702,7 +710,16 @@ export const downloadPaymentRequestPDF = async (html: string, filename: string):
         allowTaint: true,
         logging: false,
         backgroundColor: '#ffffff',
-        windowWidth: 794, // A4 width in pixels at 96 DPI
+        windowWidth: 794,
+        // Critical: use onclone to ensure cloned element is fully visible
+        onclone: (clonedDoc: Document) => {
+          const clonedContainer = clonedDoc.getElementById('pdf-generation-container-pr');
+          if (clonedContainer) {
+            clonedContainer.style.transform = 'none';
+            clonedContainer.style.position = 'static';
+            clonedContainer.style.zIndex = 'auto';
+          }
+        },
       },
       jsPDF: { 
         unit: 'mm' as const, 
