@@ -639,8 +639,8 @@ export const downloadPaymentRequestPDF = async (html: string, filename: string):
       position: fixed;
       left: 0;
       top: 0;
-      width: 210mm;
-      min-height: 297mm;
+      width: 794px;
+      min-height: 1123px;
       background: white;
       opacity: 0.01;
       pointer-events: none;
@@ -658,17 +658,45 @@ export const downloadPaymentRequestPDF = async (html: string, filename: string):
     
     container.innerHTML = `
       ${styleContent}
-      <div style="font-family: 'Arial', sans-serif; font-size: 10pt; line-height: 1.4; color: #333; padding: 30px; max-width: 850px; margin: 0 auto; background: white;">
+      <div style="font-family: 'Arial', sans-serif; font-size: 10pt; line-height: 1.4; color: #333; padding: 30px; width: 794px; box-sizing: border-box; background: white;">
         ${bodyContent}
       </div>
     `;
 
-    // Ensure external images (e.g., logo) can be captured by html2canvas
-    const images = container.querySelectorAll('img');
-    images.forEach((img) => {
-      img.setAttribute('crossorigin', 'anonymous');
-      img.setAttribute('referrerpolicy', 'no-referrer');
-    });
+    // IMPORTANT:
+    // If an <img> loads without proper CORS, it can taint the canvas and html2canvas/html2pdf may produce a blank PDF.
+    // Setting crossorigin AFTER src is set is often too late; therefore we recreate each <img> and set CORS first.
+    const prepareImagesForCanvas = (root: HTMLElement) => {
+      const imgs = Array.from(root.querySelectorAll('img'));
+      for (const img of imgs) {
+        const src = img.getAttribute('src')?.trim();
+        if (!src) continue;
+
+        const newImg = document.createElement('img');
+        for (const attr of Array.from(img.attributes)) {
+          const name = attr.name.toLowerCase();
+          if (name === 'src') continue;
+          if (name.startsWith('on')) continue;
+          newImg.setAttribute(attr.name, attr.value);
+        }
+
+        newImg.crossOrigin = 'anonymous';
+        newImg.referrerPolicy = 'no-referrer';
+
+        // Hide broken logos to prevent capture failures.
+        newImg.onerror = () => {
+          newImg.style.display = 'none';
+          const next = newImg.nextElementSibling as HTMLElement | null;
+          if (next) next.style.display = 'block';
+        };
+
+        newImg.src = src;
+        img.replaceWith(newImg);
+      }
+    };
+
+    prepareImagesForCanvas(container);
+    const images = Array.from(container.querySelectorAll('img'));
     
     document.body.appendChild(container);
     
@@ -676,20 +704,35 @@ export const downloadPaymentRequestPDF = async (html: string, filename: string):
     container.offsetHeight;
 
     // Wait for images to load with timeout
-    const imageLoadPromises = Array.from(images).map(
+    const imageLoadPromises = images.map(
       (img) =>
         new Promise<void>((resolve) => {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const decodeFn = (img as any).decode as (() => Promise<void>) | undefined;
+          if (decodeFn) {
+            const timeout = setTimeout(() => resolve(), 4000);
+            decodeFn
+              .call(img)
+              .catch(() => {
+                // ignore
+              })
+              .finally(() => {
+                clearTimeout(timeout);
+                resolve();
+              });
+            return;
+          }
+
           if (img.complete && img.naturalHeight !== 0) {
             resolve();
           } else {
-            const timeout = setTimeout(() => resolve(), 3000);
+            const timeout = setTimeout(() => resolve(), 4000);
             img.onload = () => {
               clearTimeout(timeout);
               resolve();
             };
             img.onerror = () => {
               clearTimeout(timeout);
-              img.style.display = 'none';
               resolve();
             };
           }
@@ -738,6 +781,8 @@ export const downloadPaymentRequestPDF = async (html: string, filename: string):
             clonedContainer.style.position = 'static';
             clonedContainer.style.zIndex = 'auto';
             (clonedContainer as HTMLElement).style.opacity = '1';
+            (clonedContainer as HTMLElement).style.width = '794px';
+            (clonedContainer as HTMLElement).style.minHeight = '1123px';
           }
         },
       },
