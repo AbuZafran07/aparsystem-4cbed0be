@@ -434,21 +434,23 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
     
     const safeFilename = String(filename).replace(/[\r\n\t]/g, ' ').replace(/[^a-zA-Z0-9\-_]/g, '_').slice(0, 100);
     
-    // Create a temporary container - MUST be fully visible for html2canvas to capture
+    // Create a temporary container.
+    // Important: keep it in the viewport so the browser actually paints it (some browsers skip painting far-offscreen content).
     const container = document.createElement('div');
     container.id = 'pdf-generation-container';
     
-    // Use absolute positioning with transform to hide from view
-    // This keeps the element fully rendered (not hidden) for html2canvas
+    // Keep it effectively invisible but still paintable.
     container.style.cssText = `
-      position: absolute;
+      position: fixed;
       left: 0;
       top: 0;
       width: 210mm;
       min-height: 297mm;
       background: white;
-      z-index: -9999;
-      transform: translateX(-200%);
+      opacity: 0.01;
+      pointer-events: none;
+      overflow: visible;
+      z-index: 2147483647;
     `;
     
     // Extract body content from the full HTML document
@@ -500,6 +502,21 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
     );
     
     await Promise.all(imageLoadPromises);
+
+    // Wait fonts (if supported) to avoid blank/unstyled render in canvas
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const fonts: any = (document as any).fonts;
+    if (fonts?.ready) {
+      try {
+        await fonts.ready;
+      } catch {
+        // ignore
+      }
+    }
+
+    // Give the browser a couple of frames to paint
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
     
     // Give browser more time to fully render
     await new Promise(resolve => setTimeout(resolve, 300));
@@ -511,10 +528,12 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
       html2canvas: { 
         scale: 2, 
         useCORS: true,
-        allowTaint: true,
+        allowTaint: false,
         logging: false,
         backgroundColor: '#ffffff',
         windowWidth: 794,
+        scrollX: 0,
+        scrollY: 0,
         // Critical: use onclone to ensure cloned element is fully visible
         onclone: (clonedDoc: Document) => {
           const clonedContainer = clonedDoc.getElementById('pdf-generation-container');
@@ -522,6 +541,7 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
             clonedContainer.style.transform = 'none';
             clonedContainer.style.position = 'static';
             clonedContainer.style.zIndex = 'auto';
+            (clonedContainer as HTMLElement).style.opacity = '1';
           }
         },
       },
