@@ -630,10 +630,19 @@ export const downloadPaymentRequestPDF = async (html: string, filename: string):
     const html2pdf = (await import('html2pdf.js')).default;
     const { prepareImagesForCanvas, saveWithHtml2PdfWorker } = await import('@/lib/html2pdfWorkerUtils');
     
-    // Create a source container (does NOT need to be appended to DOM).
+    // Create a source container - MUST be appended to DOM for accurate height calculation
     const container = document.createElement('div');
     container.id = 'pdf-generation-container-pr';
-    container.style.cssText = `width: 794px; min-height: 1123px; background: white;`;
+    // Use fixed A4 width, but let height be auto to capture full content
+    container.style.cssText = `
+      position: fixed;
+      left: 0;
+      top: 0;
+      width: 794px;
+      background: white;
+      z-index: -9999;
+      opacity: 0.01;
+    `;
     
     // Extract body content from the full HTML document
     const parser = new DOMParser();
@@ -650,10 +659,18 @@ export const downloadPaymentRequestPDF = async (html: string, filename: string):
       </div>
     `;
 
+    // Append to DOM so browser calculates actual height
+    document.body.appendChild(container);
+
     // Ensure <img> has crossorigin/referrerPolicy BEFORE html2pdf clones it.
     prepareImagesForCanvas(container);
 
-    // PDF options for A4 format
+    // Wait for fonts and rendering
+    if (document.fonts?.ready) await document.fonts.ready;
+    await new Promise(r => requestAnimationFrame(() => r(undefined)));
+    await new Promise(r => requestAnimationFrame(() => r(undefined)));
+
+    // PDF options for A4 format - use auto height to capture all content
     const opt = {
       margin: [10, 10, 10, 10] as [number, number, number, number],
       filename: filename,
@@ -664,9 +681,17 @@ export const downloadPaymentRequestPDF = async (html: string, filename: string):
         allowTaint: false,
         logging: false,
         backgroundColor: '#ffffff',
-        windowWidth: 794,
+        width: 794,
         scrollX: 0,
         scrollY: 0,
+        onclone: (clonedDoc: Document) => {
+          const el = clonedDoc.getElementById('pdf-generation-container-pr');
+          if (el) {
+            el.style.opacity = '1';
+            el.style.position = 'static';
+            el.style.zIndex = 'auto';
+          }
+        },
       },
       jsPDF: { 
         unit: 'mm' as const, 
@@ -676,8 +701,13 @@ export const downloadPaymentRequestPDF = async (html: string, filename: string):
       pagebreak: { mode: ['avoid-all', 'css', 'legacy'] as const },
     };
 
-    // IMPORTANT: wait assets inside html2pdf internal container BEFORE capture.
-    await saveWithHtml2PdfWorker(html2pdf, container, opt);
+    try {
+      // IMPORTANT: wait assets inside html2pdf internal container BEFORE capture.
+      await saveWithHtml2PdfWorker(html2pdf, container, opt);
+    } finally {
+      // Always cleanup
+      container.remove();
+    }
   } catch (error) {
     console.error('PDF generation error:', error);
 
