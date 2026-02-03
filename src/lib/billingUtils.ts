@@ -431,27 +431,14 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
   try {
     // Dynamically import html2pdf.js
     const html2pdf = (await import('html2pdf.js')).default;
+    const { prepareImagesForCanvas, saveWithHtml2PdfWorker } = await import('@/lib/html2pdfWorkerUtils');
     
     const safeFilename = String(filename).replace(/[\r\n\t]/g, ' ').replace(/[^a-zA-Z0-9\-_]/g, '_').slice(0, 100);
     
-    // Create a temporary container.
-    // Important: keep it in the viewport so the browser actually paints it (some browsers skip painting far-offscreen content).
+    // Create a source container (does NOT need to be appended to DOM).
     const container = document.createElement('div');
     container.id = 'pdf-generation-container';
-    
-    // Keep it effectively invisible but still paintable.
-    container.style.cssText = `
-      position: fixed;
-      left: 0;
-      top: 0;
-      width: 794px;
-      min-height: 1123px;
-      background: white;
-      opacity: 0.01;
-      pointer-events: none;
-      overflow: visible;
-      z-index: 2147483647;
-    `;
+    container.style.cssText = `width: 794px; min-height: 1123px; background: white;`;
     
     // Extract body content from the full HTML document
     const parser = new DOMParser();
@@ -468,104 +455,8 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
       </div>
     `;
 
-    // IMPORTANT:
-    // If an <img> loads without proper CORS, it can taint the canvas and html2canvas/html2pdf may produce a blank PDF.
-    // Setting crossorigin AFTER src is set is often too late; therefore we recreate each <img> and set CORS first.
-    const prepareImagesForCanvas = (root: HTMLElement) => {
-      const imgs = Array.from(root.querySelectorAll('img'));
-      for (const img of imgs) {
-        const src = img.getAttribute('src')?.trim();
-        if (!src) continue;
-
-        const newImg = document.createElement('img');
-
-        // Copy non-event attributes except src
-        for (const attr of Array.from(img.attributes)) {
-          const name = attr.name.toLowerCase();
-          if (name === 'src') continue;
-          if (name.startsWith('on')) continue;
-          newImg.setAttribute(attr.name, attr.value);
-        }
-
-        newImg.crossOrigin = 'anonymous';
-        newImg.referrerPolicy = 'no-referrer';
-
-        // Graceful fallback: hide broken image + reveal next sibling (logo text) if present.
-        newImg.onerror = () => {
-          newImg.style.display = 'none';
-          const next = newImg.nextElementSibling as HTMLElement | null;
-          if (next) next.style.display = 'block';
-        };
-
-        newImg.src = src;
-        img.replaceWith(newImg);
-      }
-    };
-
+    // Ensure <img> has crossorigin/referrerPolicy BEFORE html2pdf clones it.
     prepareImagesForCanvas(container);
-    const images = Array.from(container.querySelectorAll('img'));
-    
-    document.body.appendChild(container);
-    
-    // Force reflow to ensure styles are applied
-    container.offsetHeight;
-    
-    // Wait for images to load with timeout
-    const imageLoadPromises = images.map(
-      (img) =>
-        new Promise<void>((resolve) => {
-          // decode() is the most reliable signal when available
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const decodeFn = (img as any).decode as (() => Promise<void>) | undefined;
-          if (decodeFn) {
-            const timeout = setTimeout(() => resolve(), 4000);
-            decodeFn
-              .call(img)
-              .catch(() => {
-                // ignore; we'll resolve anyway
-              })
-              .finally(() => {
-                clearTimeout(timeout);
-                resolve();
-              });
-            return;
-          }
-
-          if (img.complete && img.naturalHeight !== 0) {
-            resolve();
-          } else {
-            const timeout = setTimeout(() => resolve(), 4000);
-            img.onload = () => {
-              clearTimeout(timeout);
-              resolve();
-            };
-            img.onerror = () => {
-              clearTimeout(timeout);
-              resolve();
-            };
-          }
-        })
-    );
-    
-    await Promise.all(imageLoadPromises);
-
-    // Wait fonts (if supported) to avoid blank/unstyled render in canvas
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const fonts: any = (document as any).fonts;
-    if (fonts?.ready) {
-      try {
-        await fonts.ready;
-      } catch {
-        // ignore
-      }
-    }
-
-    // Give the browser a couple of frames to paint
-    await new Promise<void>((r) => requestAnimationFrame(() => r()));
-    await new Promise<void>((r) => requestAnimationFrame(() => r()));
-    
-    // Give browser more time to fully render
-    await new Promise(resolve => setTimeout(resolve, 300));
     
     const opt = {
       margin: [10, 10, 10, 10] as [number, number, number, number],
@@ -580,28 +471,21 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
         windowWidth: 794,
         scrollX: 0,
         scrollY: 0,
-        // Critical: use onclone to ensure cloned element is fully visible
-        onclone: (clonedDoc: Document) => {
-          const clonedContainer = clonedDoc.getElementById('pdf-generation-container');
-          if (clonedContainer) {
-            clonedContainer.style.transform = 'none';
-            clonedContainer.style.position = 'static';
-            clonedContainer.style.zIndex = 'auto';
-            (clonedContainer as HTMLElement).style.opacity = '1';
-            (clonedContainer as HTMLElement).style.width = '794px';
-            (clonedContainer as HTMLElement).style.minHeight = '1123px';
-          }
-        },
       },
       jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
     };
-    
-    await html2pdf().set(opt).from(container).save();
-    
-    // Cleanup
-    document.body.removeChild(container);
+
+    // IMPORTANT: wait assets inside html2pdf internal container BEFORE capture.
+    await saveWithHtml2PdfWorker(html2pdf, container, opt);
   } catch (error) {
     console.error('PDF generation failed:', error);
+
+    try {
+      const { cleanupHtml2PdfOverlays } = await import('@/lib/html2pdfWorkerUtils');
+      cleanupHtml2PdfOverlays();
+    } catch {
+      // ignore
+    }
     
     // Fallback to print dialog
     const printWindow = safeWindowOpen();

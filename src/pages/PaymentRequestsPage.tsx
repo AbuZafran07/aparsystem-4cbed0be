@@ -323,11 +323,18 @@ export default function PaymentRequestsPage() {
     setIsPreviewDialogOpen(true);
   };
 
-  const handleDownloadPDF = (request: PaymentRequest) => {
+  const handleDownloadPDF = async (request: PaymentRequest) => {
     const requestData = getPaymentRequestData(request);
     const html = generatePaymentRequestHTML(requestData);
-    downloadPaymentRequestPDF(html, `Pengajuan_Pembayaran_${request.request_no}.pdf`);
-    toast.success(language === 'en' ? 'PDF download initiated' : 'Download PDF dimulai');
+
+    try {
+      toast.loading(language === 'en' ? 'Generating PDF...' : 'Membuat PDF...', { id: 'pdf-download-pr' });
+      await downloadPaymentRequestPDF(html, `Pengajuan_Pembayaran_${request.request_no}.pdf`);
+      toast.success(language === 'en' ? 'PDF downloaded' : 'PDF berhasil diunduh', { id: 'pdf-download-pr' });
+    } catch (e) {
+      console.error('Payment Request PDF download error:', e);
+      toast.error(language === 'en' ? 'Failed to download PDF' : 'Gagal mengunduh PDF', { id: 'pdf-download-pr' });
+    }
   };
 
   const handleDelete = async () => {
