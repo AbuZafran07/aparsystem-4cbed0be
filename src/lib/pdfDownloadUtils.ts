@@ -1,0 +1,171 @@
+type DownloadPdfFromHtmlParams = {
+  /** Full HTML document (recommended) or partial HTML. */
+  html: string;
+  /** Filename with or without .pdf */
+  filename: string;
+  /** html2canvas scale factor (higher = sharper, slower). */
+  scale?: number;
+  /** Force a consistent A4-ish layout width in pixels (96dpi A4 width ~= 794px). */
+  viewportWidthPx?: number;
+  /** Max time to wait for images/fonts in ms. */
+  assetTimeoutMs?: number;
+};
+
+const raf = () => new Promise<void>((r) => requestAnimationFrame(() => r()));
+
+const withPdfExt = (name: string) => {
+  const trimmed = String(name || '').trim();
+  if (!trimmed) return 'document.pdf';
+  return trimmed.toLowerCase().endsWith('.pdf') ? trimmed : `${trimmed}.pdf`;
+};
+
+const injectBaseHref = (html: string) => {
+  // Ensures relative URLs inside srcDoc resolve to the app origin.
+  const baseTag = `<base href="${window.location.origin}/">`;
+  if (/<base\b/i.test(html)) return html;
+  if (/<head\b[^>]*>/i.test(html)) {
+    return html.replace(/<head\b([^>]*)>/i, (m) => `${m}\n${baseTag}`);
+  }
+  return `<!doctype html><html><head>${baseTag}</head><body>${html}</body></html>`;
+};
+
+const waitForImages = async (doc: Document, timeoutMs: number) => {
+  const imgs = Array.from(doc.querySelectorAll('img'));
+  const tasks = imgs.map(
+    (img) =>
+      new Promise<void>((resolve) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const decodeFn = (img as any).decode as (() => Promise<void>) | undefined;
+        const timer = window.setTimeout(() => resolve(), timeoutMs);
+
+        const done = () => {
+          window.clearTimeout(timer);
+          resolve();
+        };
+
+        if (decodeFn) {
+          decodeFn.call(img).catch(() => undefined).finally(done);
+          return;
+        }
+
+        if (img.complete) return done();
+        img.onload = done;
+        img.onerror = done;
+      })
+  );
+
+  await Promise.all(tasks);
+};
+
+const waitForFonts = async (doc: Document, timeoutMs: number) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const fonts: any = (doc as any).fonts;
+  if (!fonts?.ready) return;
+
+  await Promise.race([
+    fonts.ready.catch(() => undefined),
+    new Promise<void>((r) => window.setTimeout(() => r(), timeoutMs)),
+  ]);
+};
+
+const waitForIframeLoad = (iframe: HTMLIFrameElement, timeoutMs: number) =>
+  new Promise<void>((resolve, reject) => {
+    const t = window.setTimeout(() => reject(new Error('PDF iframe load timeout')), timeoutMs);
+    iframe.onload = () => {
+      window.clearTimeout(t);
+      resolve();
+    };
+  });
+
+/**
+ * Robust PDF generation:
+ * 1) Render sanitized HTML in an off-screen iframe (so layout matches the preview)
+ * 2) Snapshot iframe DOM with html2canvas
+ * 3) Build a multi-page A4 PDF with jsPDF
+ */
+export const downloadPdfFromHtml = async ({
+  html,
+  filename,
+  scale = 2,
+  viewportWidthPx = 794,
+  assetTimeoutMs = 12_000,
+}: DownloadPdfFromHtmlParams): Promise<void> => {
+  const finalFilename = withPdfExt(filename);
+  const iframe = document.createElement('iframe');
+
+  // IMPORTANT: don't use opacity: 0 or display:none — some renderers produce a blank canvas.
+  // Keep it rendered, but place it far off-screen.
+  iframe.style.cssText = [
+    'position: fixed',
+    'left: -10000px',
+    'top: 0',
+    `width: ${viewportWidthPx}px`,
+    'height: 1123px',
+    'border: 0',
+    'background: white',
+    'pointer-events: none',
+    'z-index: -1',
+  ].join(';');
+
+  document.body.appendChild(iframe);
+
+  try {
+    iframe.srcdoc = injectBaseHref(html);
+    await waitForIframeLoad(iframe, 15_000);
+
+    const doc = iframe.contentDocument;
+    const win = iframe.contentWindow;
+    if (!doc || !win) throw new Error('PDF iframe not ready');
+
+    // Force white background (prevents transparent pages)
+    doc.documentElement.style.background = '#ffffff';
+    doc.body.style.background = '#ffffff';
+    doc.body.style.margin = '0';
+    doc.body.style.overflow = 'visible';
+
+    await waitForImages(doc, assetTimeoutMs);
+    await waitForFonts(doc, assetTimeoutMs);
+    await raf();
+    await raf();
+
+    const html2canvas = (await import('html2canvas')).default;
+    const { jsPDF } = await import('jspdf');
+
+    const canvas = await html2canvas(doc.body, {
+      scale,
+      useCORS: true,
+      allowTaint: false,
+      logging: false,
+      backgroundColor: '#ffffff',
+      width: viewportWidthPx,
+      windowWidth: viewportWidthPx,
+      scrollX: 0,
+      scrollY: 0,
+    });
+
+    const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    const imgData = canvas.toDataURL('image/jpeg', 0.98);
+    const imgWidth = pageWidth;
+    const imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+    let heightLeft = imgHeight;
+    let position = 0;
+
+    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+    heightLeft -= pageHeight;
+
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight; // negative offset crops the same image into next page
+      pdf.addPage();
+      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
+      heightLeft -= pageHeight;
+    }
+
+    pdf.save(finalFilename);
+  } finally {
+    iframe.remove();
+  }
+};
