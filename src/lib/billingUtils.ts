@@ -429,94 +429,18 @@ export const printBillingLetter = (html: string): void => {
 
 export const downloadBillingLetterPDF = async (html: string, filename: string): Promise<void> => {
   try {
-    // Dynamically import html2pdf.js
-    const html2pdf = (await import('html2pdf.js')).default;
-    const { prepareImagesForCanvas, saveWithHtml2PdfWorker } = await import('@/lib/html2pdfWorkerUtils');
-    
     const safeFilename = String(filename).replace(/[\r\n\t]/g, ' ').replace(/[^a-zA-Z0-9\-_]/g, '_').slice(0, 100);
-    
-    // Create a source container - MUST be appended to DOM for accurate height calculation
-    const container = document.createElement('div');
-    container.id = 'pdf-generation-container';
-    // Use fixed A4 width, but let height be auto to capture full content
-    container.style.cssText = `
-      position: fixed;
-      left: 0;
-      top: 0;
-      width: 794px;
-      background: white;
-      z-index: -9999;
-      opacity: 0.01;
-    `;
-    
-    // Extract body content from the full HTML document
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    
-    // Get style and body content
-    const styleContent = doc.querySelector('style')?.outerHTML || '';
-    const bodyContent = doc.body?.innerHTML || html;
-    
-    container.innerHTML = `
-      ${styleContent}
-      <div style="font-family: 'Times New Roman', serif; font-size: 12pt; line-height: 1.5; color: #333; padding: 40px; width: 794px; box-sizing: border-box; background: white;">
-        ${bodyContent}
-      </div>
-    `;
+    const { downloadPdfFromHtml } = await import('@/lib/pdfDownloadUtils');
+    const sanitizedHtml = sanitizePrintableHtml(html);
 
-    // Append to DOM so browser calculates actual height
-    document.body.appendChild(container);
-
-    // Ensure <img> has crossorigin/referrerPolicy BEFORE html2pdf clones it.
-    prepareImagesForCanvas(container);
-    
-    // Wait for fonts and rendering
-    if (document.fonts?.ready) await document.fonts.ready;
-    await new Promise(r => requestAnimationFrame(() => r(undefined)));
-    await new Promise(r => requestAnimationFrame(() => r(undefined)));
-    
-    const opt = {
-      margin: [10, 10, 10, 10] as [number, number, number, number],
-      filename: `${safeFilename}.pdf`,
-      image: { type: 'jpeg' as const, quality: 0.98 },
-      html2canvas: { 
-        scale: 2, 
-        useCORS: true,
-        allowTaint: false,
-        logging: false,
-        backgroundColor: '#ffffff',
-        width: 794,
-        scrollX: 0,
-        scrollY: 0,
-        onclone: (clonedDoc: Document) => {
-          const el = clonedDoc.getElementById('pdf-generation-container');
-          if (el) {
-            el.style.opacity = '1';
-            el.style.position = 'static';
-            el.style.zIndex = 'auto';
-          }
-        },
-      },
-      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] as const },
-    };
-
-    try {
-      // IMPORTANT: wait assets inside html2pdf internal container BEFORE capture.
-      await saveWithHtml2PdfWorker(html2pdf, container, opt);
-    } finally {
-      // Always cleanup
-      container.remove();
-    }
+    await downloadPdfFromHtml({
+      html: sanitizedHtml,
+      filename: safeFilename,
+      scale: 2,
+      viewportWidthPx: 794,
+    });
   } catch (error) {
     console.error('PDF generation failed:', error);
-
-    try {
-      const { cleanupHtml2PdfOverlays } = await import('@/lib/html2pdfWorkerUtils');
-      cleanupHtml2PdfOverlays();
-    } catch {
-      // ignore
-    }
     
     // Fallback to print dialog
     const printWindow = safeWindowOpen();
