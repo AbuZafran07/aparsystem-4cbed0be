@@ -30,8 +30,8 @@ import AuditLogsPage from "@/pages/AuditLogsPage";
 import SystemSettingsPage from "@/pages/SystemSettingsPage";
 import ImportExportPage from "@/pages/ImportExportPage";
 import PaymentRequestsPage from "@/pages/PaymentRequestsPage";
+import MyProfilePage from "@/pages/MyProfilePage";
 import NotFound from "@/pages/NotFound";
-
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -89,6 +89,9 @@ const App = () => (
                 <Route path="/audit-logs" element={<AuditLogsPage />} />
                 <Route path="/users" element={<UserManagementPage />} />
                 <Route path="/settings" element={<SystemSettingsPage />} />
+                
+                {/* User Profile */}
+                <Route path="/my-profile" element={<MyProfilePage />} />
               </Route>
 
               {/* Redirects */}

@@ -1,11 +1,14 @@
-import React from 'react';
-import { LogOut } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { LogOut, User } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
-
 const roleColors: Record<string, string> = {
   SUPER_ADMIN: 'bg-danger text-danger-foreground',
   ADMIN: 'bg-info text-info-foreground',
@@ -27,9 +30,39 @@ interface AppTopbarProps {
 export default function AppTopbar({ pageTitle }: AppTopbarProps) {
   const { user, logout } = useAuth();
   const { t, language, toggleLanguage } = useLanguage();
+  const navigate = useNavigate();
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
+
+  // Fetch avatar URL
+  useEffect(() => {
+    const fetchAvatar = async () => {
+      if (!user?.id) return;
+      
+      const { data } = await supabase
+        .from('profiles')
+        .select('avatar_url')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (data?.avatar_url) {
+        setAvatarUrl(data.avatar_url);
+      }
+    };
+    
+    fetchAvatar();
+  }, [user?.id]);
+
+  // Get initials for avatar fallback
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2);
+  };
 
   if (!user) return null;
-
   return (
     <header className="h-14 bg-card border-b border-border flex items-center justify-between px-6">
       {/* Page Title */}
@@ -51,26 +84,36 @@ export default function AppTopbar({ pageTitle }: AppTopbarProps) {
           <span className={cn(language === 'id' && 'text-foreground font-semibold')}>ID</span>
         </button>
 
-        {/* User Info */}
-        <div className="flex items-center gap-3">
-          <div className="text-right">
-            <p className="text-sm font-medium text-foreground">{user.name}</p>
-            <Badge className={cn('text-[10px] px-2 py-0', roleColors[user.role])}>
-              {roleLabels[user.role]?.[language] || user.role}
-            </Badge>
-          </div>
-
-          {/* Logout Button */}
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={logout}
-            className="gap-2"
-          >
-            <LogOut className="w-4 h-4" />
-            <span className="hidden sm:inline">{t('btn.logout')}</span>
-          </Button>
-        </div>
+        {/* User Info with Dropdown */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button className="flex items-center gap-3 hover:bg-muted p-2 rounded-lg transition-colors">
+              <div className="text-right">
+                <p className="text-sm font-medium text-foreground">{user.name}</p>
+                <Badge className={cn('text-[10px] px-2 py-0', roleColors[user.role])}>
+                  {roleLabels[user.role]?.[language] || user.role}
+                </Badge>
+              </div>
+              <Avatar className="h-9 w-9">
+                <AvatarImage src={avatarUrl || undefined} alt={user.name} />
+                <AvatarFallback className="bg-primary text-primary-foreground text-sm">
+                  {getInitials(user.name || 'U')}
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuItem onClick={() => navigate('/my-profile')}>
+              <User className="w-4 h-4 mr-2" />
+              {language === 'id' ? 'Profil Saya' : 'My Profile'}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={logout} className="text-destructive focus:text-destructive">
+              <LogOut className="w-4 h-4 mr-2" />
+              {t('btn.logout')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     </header>
   );
