@@ -100,6 +100,7 @@ interface ArInvoice {
   terms_id: string | null;
   notes: string | null;
   created_by: string;
+  doc_sent_date: string | null;
 }
 
 interface Customer {
@@ -143,13 +144,14 @@ const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString('id-ID');
 };
 
-type StatusTab = 'ALL' | 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'PAID';
+type StatusTab = 'ALL' | 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'DOC_SENT' | 'PAID';
 
 const statusTabs: { value: StatusTab; label: { en: string; id: string }; statuses: InvoiceStatus[] }[] = [
   { value: 'ALL', label: { en: 'All', id: 'Semua' }, statuses: ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'PARTIAL', 'PAID', 'CANCELLED'] },
   { value: 'DRAFT', label: { en: 'Draft', id: 'Draft' }, statuses: ['DRAFT', 'REJECTED'] },
   { value: 'SUBMITTED', label: { en: 'Submitted', id: 'Diajukan' }, statuses: ['SUBMITTED'] },
   { value: 'APPROVED', label: { en: 'Approved', id: 'Disetujui' }, statuses: ['APPROVED', 'PARTIAL'] },
+  { value: 'DOC_SENT', label: { en: 'Doc Sent', id: 'Dok. Terkirim' }, statuses: ['APPROVED', 'PARTIAL'] },
   { value: 'PAID', label: { en: 'Paid', id: 'Lunas' }, statuses: ['PAID'] },
 ];
 
@@ -173,6 +175,8 @@ export default function ArListPage() {
   const [isBillingDialogOpen, setIsBillingDialogOpen] = useState(false);
   const [isBillingPreviewOpen, setIsBillingPreviewOpen] = useState(false);
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [isDocSentDialogOpen, setIsDocSentDialogOpen] = useState(false);
+  const [docSentDate, setDocSentDate] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<ArInvoice | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [saving, setSaving] = useState(false);
@@ -496,10 +500,25 @@ export default function ArListPage() {
       inv.invoice_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
       inv.order_number.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesStatus = activeTabStatuses.includes(inv.status);
+    
+    // Special filtering for APPROVED vs DOC_SENT tabs
+    if (activeTab === 'APPROVED') {
+      return matchesSearch && matchesStatus && !inv.doc_sent_date;
+    }
+    if (activeTab === 'DOC_SENT') {
+      return matchesSearch && matchesStatus && !!inv.doc_sent_date;
+    }
+    
     return matchesSearch && matchesStatus;
   });
 
-  const getTabCount = (statuses: InvoiceStatus[]) => {
+  const getTabCount = (tab: StatusTab, statuses: InvoiceStatus[]) => {
+    if (tab === 'APPROVED') {
+      return invoices.filter(inv => statuses.includes(inv.status) && !inv.doc_sent_date).length;
+    }
+    if (tab === 'DOC_SENT') {
+      return invoices.filter(inv => statuses.includes(inv.status) && !!inv.doc_sent_date).length;
+    }
     return invoices.filter(inv => statuses.includes(inv.status)).length;
   };
 
@@ -517,6 +536,42 @@ export default function ArListPage() {
 
   const canDelete = (status: InvoiceStatus) => {
     return isSuperAdmin || (isFinance && (status === 'DRAFT' || status === 'REJECTED'));
+  };
+
+  const canMarkDocSent = (invoice: ArInvoice) => {
+    return isFinance && (invoice.status === 'APPROVED' || invoice.status === 'PARTIAL') && !invoice.doc_sent_date;
+  };
+
+  const handleOpenDocSent = (invoice: ArInvoice) => {
+    setSelectedInvoice(invoice);
+    setDocSentDate(new Date().toISOString().split('T')[0]);
+    setIsDocSentDialogOpen(true);
+  };
+
+  const handleSaveDocSent = async () => {
+    if (!selectedInvoice || !docSentDate) {
+      toast.error(language === 'en' ? 'Please select a date' : 'Mohon pilih tanggal');
+      return;
+    }
+
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from('ar_invoices')
+        .update({ doc_sent_date: docSentDate } as any)
+        .eq('id', selectedInvoice.id);
+
+      if (error) throw error;
+      toast.success(language === 'en' ? 'Document sent date saved' : 'Tanggal dokumen terkirim berhasil disimpan');
+      setIsDocSentDialogOpen(false);
+      setSelectedInvoice(null);
+      fetchData();
+    } catch (error: any) {
+      console.error('Error saving doc sent date:', error);
+      toast.error(language === 'en' ? 'Failed to save' : 'Gagal menyimpan');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const canSendBilling = (status: InvoiceStatus, outstanding: number) => {
@@ -877,7 +932,7 @@ export default function ArListPage() {
       {/* Status Tabs */}
       <div className="flex flex-wrap gap-2">
         {statusTabs.map((tab) => {
-          const count = getTabCount(tab.statuses);
+          const count = getTabCount(tab.value, tab.statuses);
           const isActive = activeTab === tab.value;
           return (
             <Button
@@ -1005,6 +1060,11 @@ export default function ArListPage() {
                       <Badge className={cn('text-xs', statusConfig[invoice.status]?.className)}>
                         {statusConfig[invoice.status]?.label[language] || invoice.status}
                       </Badge>
+                      {invoice.doc_sent_date && (
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {language === 'en' ? 'Sent' : 'Terkirim'}: {formatDate(invoice.doc_sent_date)}
+                        </p>
+                      )}
                     </TableCell>
                     <TableCell>
                       <DropdownMenu>
@@ -1047,6 +1107,12 @@ export default function ArListPage() {
                                 {t('btn.reject')}
                               </DropdownMenuItem>
                             </>
+                          )}
+                          {canMarkDocSent(invoice) && (
+                            <DropdownMenuItem className="gap-2" onClick={() => handleOpenDocSent(invoice)}>
+                              <Send className="w-4 h-4" />
+                              {language === 'en' ? 'Mark Doc Sent' : 'Dokumen Terkirim'}
+                            </DropdownMenuItem>
                           )}
                           {canSendBilling(invoice.status, invoice.outstanding_amount) && (
                             <DropdownMenuItem className="gap-2" onClick={() => handleOpenBilling(invoice)}>
@@ -1668,6 +1734,51 @@ export default function ArListPage() {
               {sendingEmail && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
               <Send className="w-4 h-4 mr-2" />
               {language === 'en' ? 'Send' : 'Kirim'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Doc Sent Date Dialog */}
+      <Dialog open={isDocSentDialogOpen} onOpenChange={setIsDocSentDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'en' ? 'Mark Document as Sent' : 'Tandai Dokumen Terkirim'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'en'
+                ? 'Enter the date when the invoice document was sent to the customer.'
+                : 'Masukkan tanggal pengiriman dokumen invoice ke customer.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedInvoice && (
+            <div className="space-y-4">
+              <div className="rounded-md bg-muted p-3 space-y-1 text-sm">
+                <p><span className="font-medium">{language === 'en' ? 'Customer' : 'Customer'}:</span> {selectedInvoice.customer_name}</p>
+                <p><span className="font-medium">{language === 'en' ? 'Invoice' : 'Invoice'}:</span> {selectedInvoice.invoice_number}</p>
+                <p><span className="font-medium">{language === 'en' ? 'Amount' : 'Jumlah'}:</span> {formatCurrency(selectedInvoice.invoice_amount)}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{language === 'en' ? 'Document Sent Date' : 'Tanggal Dokumen Terkirim'} *</Label>
+                <Input
+                  type="date"
+                  value={docSentDate}
+                  onChange={(e) => setDocSentDate(e.target.value)}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDocSentDialogOpen(false)}>
+              {t('btn.cancel')}
+            </Button>
+            <Button onClick={handleSaveDocSent} disabled={saving} className="gap-2">
+              {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+              <Send className="w-4 h-4" />
+              {language === 'en' ? 'Save' : 'Simpan'}
             </Button>
           </DialogFooter>
         </DialogContent>
