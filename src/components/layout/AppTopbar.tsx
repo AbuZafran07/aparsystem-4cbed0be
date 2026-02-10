@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LogOut, User } from 'lucide-react';
+import { LogOut, User, Menu } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+
 const roleColors: Record<string, string> = {
   SUPER_ADMIN: 'bg-danger text-danger-foreground',
   ADMIN: 'bg-info text-info-foreground',
@@ -25,34 +26,30 @@ const roleLabels: Record<string, { en: string; id: string }> = {
 
 interface AppTopbarProps {
   pageTitle?: string;
+  onMenuToggle?: () => void;
 }
 
-export default function AppTopbar({ pageTitle }: AppTopbarProps) {
+export default function AppTopbar({ pageTitle, onMenuToggle }: AppTopbarProps) {
   const { user, logout } = useAuth();
   const { t, language, toggleLanguage } = useLanguage();
   const navigate = useNavigate();
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 
-  // Fetch avatar URL
   useEffect(() => {
     const fetchAvatar = async () => {
       if (!user?.id) return;
-      
       const { data } = await supabase
         .from('profiles')
         .select('avatar_url')
         .eq('user_id', user.id)
         .single();
-      
       if (data?.avatar_url) {
         setAvatarUrl(data.avatar_url);
       }
     };
-    
     fetchAvatar();
   }, [user?.id]);
 
-  // Get initials for avatar fallback
   const getInitials = (name: string) => {
     return name
       .split(' ')
@@ -63,17 +60,27 @@ export default function AppTopbar({ pageTitle }: AppTopbarProps) {
   };
 
   if (!user) return null;
+
   return (
-    <header className="h-14 bg-card border-b border-border flex items-center justify-between px-6">
-      {/* Page Title */}
-      <div>
+    <header className="h-14 bg-card border-b border-border flex items-center justify-between px-4 md:px-6">
+      {/* Left Section */}
+      <div className="flex items-center gap-3">
+        {/* Mobile hamburger */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden"
+          onClick={onMenuToggle}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
         {pageTitle && (
-          <h1 className="text-xl font-semibold text-foreground">{pageTitle}</h1>
+          <h1 className="text-lg md:text-xl font-semibold text-foreground truncate">{pageTitle}</h1>
         )}
       </div>
 
       {/* Right Section */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         {/* Language Toggle */}
         <button
           onClick={toggleLanguage}
@@ -87,14 +94,14 @@ export default function AppTopbar({ pageTitle }: AppTopbarProps) {
         {/* User Info with Dropdown */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-3 hover:bg-muted p-2 rounded-lg transition-colors">
-              <div className="text-right">
+            <button className="flex items-center gap-2 md:gap-3 hover:bg-muted p-1.5 md:p-2 rounded-lg transition-colors">
+              <div className="text-right hidden sm:block">
                 <p className="text-sm font-medium text-foreground">{user.name}</p>
                 <Badge className={cn('text-[10px] px-2 py-0', roleColors[user.role])}>
                   {roleLabels[user.role]?.[language] || user.role}
                 </Badge>
               </div>
-              <Avatar className="h-9 w-9">
+              <Avatar className="h-8 w-8 md:h-9 md:w-9">
                 <AvatarImage src={avatarUrl || undefined} alt={user.name} />
                 <AvatarFallback className="bg-primary text-primary-foreground text-sm">
                   {getInitials(user.name || 'U')}
@@ -103,6 +110,13 @@ export default function AppTopbar({ pageTitle }: AppTopbarProps) {
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
+            {/* Show name on mobile in dropdown */}
+            <div className="sm:hidden px-2 py-1.5 border-b border-border mb-1">
+              <p className="text-sm font-medium text-foreground">{user.name}</p>
+              <Badge className={cn('text-[10px] px-2 py-0 mt-1', roleColors[user.role])}>
+                {roleLabels[user.role]?.[language] || user.role}
+              </Badge>
+            </div>
             <DropdownMenuItem onClick={() => navigate('/my-profile')}>
               <User className="w-4 h-4 mr-2" />
               {language === 'id' ? 'Profil Saya' : 'My Profile'}

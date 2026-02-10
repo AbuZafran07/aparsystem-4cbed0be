@@ -99,12 +99,15 @@ const menuStructure: MenuSection[] = [
   },
 ];
 
-export default function AppSidebar() {
+interface AppSidebarProps {
+  onNavigate?: () => void;
+}
+
+export default function AppSidebar({ onNavigate }: AppSidebarProps) {
   const { t } = useLanguage();
   const { canAccessMenu } = useRoleAccess();
   const location = useLocation();
 
-  // Filter sections based on role access
   const filteredSections = menuStructure
     .map(section => ({
       ...section,
@@ -113,7 +116,7 @@ export default function AppSidebar() {
     .filter(section => section.items.length > 0);
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-[260px] bg-sidebar flex flex-col z-50">
+    <aside className="h-full bg-sidebar flex flex-col">
       {/* Logo Section */}
       <div className="h-16 flex items-center gap-3 px-5 border-b border-sidebar-border/30">
         <div className="w-9 h-9 bg-sidebar-accent rounded-lg flex items-center justify-center">
@@ -129,14 +132,11 @@ export default function AppSidebar() {
       <nav className="flex-1 overflow-y-auto py-4 px-3 scrollbar-thin">
         {filteredSections.map((section, sectionIdx) => (
           <div key={section.sectionKey} className={cn(sectionIdx > 0 && 'mt-6')}>
-            {/* Section Header */}
             <div className="px-3 mb-2">
               <span className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
                 {t(section.sectionKey)}
               </span>
             </div>
-
-            {/* Menu Items */}
             <div className="space-y-1">
               {section.items.map(item => {
                 const isActive = location.pathname === item.path || 
@@ -147,6 +147,7 @@ export default function AppSidebar() {
                   <NavLink
                     key={item.key}
                     to={item.path}
+                    onClick={onNavigate}
                     className={cn(
                       'relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
                       isActive
