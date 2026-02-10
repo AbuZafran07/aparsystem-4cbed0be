@@ -542,6 +542,10 @@ export default function ArListPage() {
     return isFinance && (invoice.status === 'APPROVED' || invoice.status === 'PARTIAL') && !invoice.doc_sent_date;
   };
 
+  const canEditDocSent = (invoice: ArInvoice) => {
+    return isFinance && (invoice.status === 'APPROVED' || invoice.status === 'PARTIAL') && !!invoice.doc_sent_date;
+  };
+
   const handleOpenDocSent = (invoice: ArInvoice) => {
     setSelectedInvoice(invoice);
     setDocSentDate(new Date().toISOString().split('T')[0]);
@@ -569,6 +573,29 @@ export default function ArListPage() {
     } catch (error: any) {
       console.error('Error saving doc sent date:', error);
       toast.error(language === 'en' ? 'Failed to save' : 'Gagal menyimpan');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCancelDocSent = async () => {
+    if (!selectedInvoice) return;
+
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from('ar_invoices')
+        .update({ doc_sent_date: null } as any)
+        .eq('id', selectedInvoice.id);
+
+      if (error) throw error;
+      toast.success(language === 'en' ? 'Document sent date cleared' : 'Tanggal dokumen terkirim berhasil dibatalkan');
+      setIsDocSentDialogOpen(false);
+      setSelectedInvoice(null);
+      fetchData();
+    } catch (error: any) {
+      console.error('Error clearing doc sent date:', error);
+      toast.error(language === 'en' ? 'Failed to clear' : 'Gagal membatalkan');
     } finally {
       setSaving(false);
     }
@@ -1112,6 +1139,16 @@ export default function ArListPage() {
                             <DropdownMenuItem className="gap-2" onClick={() => handleOpenDocSent(invoice)}>
                               <Send className="w-4 h-4" />
                               {language === 'en' ? 'Mark Doc Sent' : 'Dokumen Terkirim'}
+                            </DropdownMenuItem>
+                          )}
+                          {canEditDocSent(invoice) && (
+                            <DropdownMenuItem className="gap-2" onClick={() => {
+                              setSelectedInvoice(invoice);
+                              setDocSentDate(invoice.doc_sent_date || '');
+                              setIsDocSentDialogOpen(true);
+                            }}>
+                              <Edit className="w-4 h-4" />
+                              {language === 'en' ? 'Edit/Cancel Doc Sent' : 'Ubah/Batalkan Dok. Terkirim'}
                             </DropdownMenuItem>
                           )}
                           {canSendBilling(invoice.status, invoice.outstanding_amount) && (
@@ -1743,12 +1780,18 @@ export default function ArListPage() {
         <DialogContent className="max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {language === 'en' ? 'Mark Document as Sent' : 'Tandai Dokumen Terkirim'}
+              {selectedInvoice?.doc_sent_date
+                ? (language === 'en' ? 'Edit / Cancel Document Sent' : 'Ubah / Batalkan Dokumen Terkirim')
+                : (language === 'en' ? 'Mark Document as Sent' : 'Tandai Dokumen Terkirim')}
             </DialogTitle>
             <DialogDescription>
-              {language === 'en'
-                ? 'Enter the date when the invoice document was sent to the customer.'
-                : 'Masukkan tanggal pengiriman dokumen invoice ke customer.'}
+              {selectedInvoice?.doc_sent_date
+                ? (language === 'en'
+                  ? 'You can change the sent date or cancel (clear) it to move the invoice back to Approved.'
+                  : 'Anda dapat mengubah tanggal terkirim atau membatalkannya agar invoice kembali ke tab Approved.')
+                : (language === 'en'
+                  ? 'Enter the date when the invoice document was sent to the customer.'
+                  : 'Masukkan tanggal pengiriman dokumen invoice ke customer.')}
             </DialogDescription>
           </DialogHeader>
 
@@ -1771,7 +1814,14 @@ export default function ArListPage() {
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {selectedInvoice?.doc_sent_date && (
+              <Button variant="destructive" onClick={handleCancelDocSent} disabled={saving} className="gap-2 sm:mr-auto">
+                {saving && <Loader2 className="w-4 h-4 animate-spin" />}
+                <X className="w-4 h-4" />
+                {language === 'en' ? 'Clear Date' : 'Batalkan Tanggal'}
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setIsDocSentDialogOpen(false)}>
               {t('btn.cancel')}
             </Button>
