@@ -8,3 +8,6 @@ verify_jwt = false
 
 [functions.send-billing-email]
 verify_jwt = false
+
+[functions.scan-invoice]
+verify_jwt = false
