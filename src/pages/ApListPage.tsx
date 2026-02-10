@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Search, Filter, Eye, Edit, Trash2, Check, X, MoreHorizontal, Loader2, Download, Upload, CreditCard, FileDown, Printer } from 'lucide-react';
+import { InvoiceScanButton } from '@/components/InvoiceScanButton';
 import { exportToCSV, exportToExcel, formatCurrencyForExport, formatDateForExport, ExportColumn } from '@/lib/exportUtils';
 import { parseExcelFile, validateAndMapApData, generateApTemplate, ImportError } from '@/lib/importUtils';
 import { generatePaymentRequestHTML, downloadPaymentRequestPDF, PaymentRequestData } from '@/lib/paymentRequestUtils';
@@ -1044,6 +1045,29 @@ export default function ApListPage() {
                 : 'Isi detail invoice di bawah ini'}
             </DialogDescription>
           </DialogHeader>
+
+          {!selectedInvoice && (
+            <div className="flex items-center gap-2 p-3 border border-dashed rounded-lg bg-muted/30">
+              <InvoiceScanButton
+                type="ap"
+                onExtracted={(data) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    vendor_invoice_number: data.vendor_invoice_number || prev.vendor_invoice_number,
+                    po_number: data.po_number || prev.po_number,
+                    product_name: data.product_name || prev.product_name,
+                    sp_po_date: data.sp_po_date || prev.sp_po_date,
+                    invoice_date: data.invoice_date || prev.invoice_date,
+                    invoice_amount: data.invoice_amount ? String(data.invoice_amount) : prev.invoice_amount,
+                    notes: data.notes || prev.notes,
+                  }));
+                }}
+              />
+              <span className="text-sm text-muted-foreground">
+                {language === 'en' ? 'Upload invoice image to auto-fill' : 'Upload gambar invoice untuk isi otomatis'}
+              </span>
+            </div>
+          )}
           
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Search, Filter, Eye, Edit, Trash2, Mail, FileText, MoreHorizontal, Loader2, Check, X, Download, Upload, CreditCard, FileDown, MessageCircle, Phone, Send } from 'lucide-react';
+import { InvoiceScanButton } from '@/components/InvoiceScanButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -1201,6 +1202,28 @@ export default function ArListPage() {
                 : 'Isi detail invoice di bawah ini'}
             </DialogDescription>
           </DialogHeader>
+
+          {!selectedInvoice && (
+            <div className="flex items-center gap-2 p-3 border border-dashed rounded-lg bg-muted/30">
+              <InvoiceScanButton
+                type="ar"
+                onExtracted={(data) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    invoice_number: data.invoice_number || prev.invoice_number,
+                    order_number: data.order_number || prev.order_number,
+                    sp_po_date: data.sp_po_date || prev.sp_po_date,
+                    invoice_date: data.invoice_date || prev.invoice_date,
+                    invoice_amount: data.invoice_amount ? String(data.invoice_amount) : prev.invoice_amount,
+                    notes: data.notes || prev.notes,
+                  }));
+                }}
+              />
+              <span className="text-sm text-muted-foreground">
+                {language === 'en' ? 'Upload invoice image to auto-fill' : 'Upload gambar invoice untuk isi otomatis'}
+              </span>
+            </div>
+          )}
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
