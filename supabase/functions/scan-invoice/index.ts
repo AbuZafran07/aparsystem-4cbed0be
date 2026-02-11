@@ -9,7 +9,7 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { image_base64, type } = await req.json();
+    const { image_base64, type, mime_type } = await req.json();
 
     if (!image_base64) {
       return new Response(JSON.stringify({ error: "No image provided" }), {
@@ -79,7 +79,7 @@ Extract these AP invoice fields:
             role: "user",
             content: [
               { type: "text", text: "Extract all invoice data from this image." },
-              { type: "image_url", image_url: { url: `data:image/jpeg;base64,${image_base64}` } },
+              { type: "image_url", image_url: { url: `data:${mime_type || "image/jpeg"};base64,${image_base64}` } },
             ],
           },
         ],

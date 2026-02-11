@@ -41,7 +41,7 @@ export function InvoiceScanButton({ type, onExtracted, disabled }: InvoiceScanBu
       const base64 = await fileToBase64(file);
 
       const { data, error } = await supabase.functions.invoke('scan-invoice', {
-        body: { image_base64: base64, type },
+        body: { image_base64: base64, type, mime_type: file.type },
       });
 
       if (error) throw error;
