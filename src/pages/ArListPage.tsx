@@ -214,7 +214,10 @@ export default function ArListPage() {
   });
 
   const isFinance = user?.role === 'FINANCE' || user?.role === 'SUPER_ADMIN';
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  // PURCHASING can view AR but cannot create/edit/delete
+  const canCreateAr = isFinance || isAdmin;
 
   useEffect(() => {
     fetchData();
@@ -524,11 +527,13 @@ export default function ArListPage() {
   };
 
   const canEdit = (status: InvoiceStatus) => {
-    return isFinance && (status === 'DRAFT' || status === 'REJECTED');
+    if (user?.role === 'PURCHASING') return false;
+    return (isFinance || isAdmin) && (status === 'DRAFT' || status === 'REJECTED');
   };
 
   const canSubmit = (status: InvoiceStatus) => {
-    return isFinance && status === 'DRAFT';
+    if (user?.role === 'PURCHASING') return false;
+    return (isFinance || isAdmin) && status === 'DRAFT';
   };
 
   const canApprove = (status: InvoiceStatus) => {
@@ -536,7 +541,8 @@ export default function ArListPage() {
   };
 
   const canDelete = (status: InvoiceStatus) => {
-    return isSuperAdmin || (isFinance && (status === 'DRAFT' || status === 'REJECTED'));
+    if (user?.role === 'PURCHASING') return false;
+    return isSuperAdmin || (isFinance && (status === 'DRAFT' || status === 'REJECTED')) || (isAdmin && (status === 'DRAFT' || status === 'REJECTED'));
   };
 
   const canMarkDocSent = (invoice: ArInvoice) => {
@@ -942,13 +948,13 @@ export default function ArListPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          {isFinance && (
+          {canCreateAr && (
             <Button variant="outline" className="gap-2" onClick={() => setIsImportDialogOpen(true)}>
               <Upload className="w-4 h-4" />
               {language === 'en' ? 'Import' : 'Impor'}
             </Button>
           )}
-          {isFinance && (
+          {canCreateAr && (
             <Button className="gap-2" onClick={handleOpenCreate}>
               <Plus className="w-4 h-4" />
               {t('btn.newArInvoice')}

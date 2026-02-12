@@ -197,7 +197,20 @@ export default function ApListPage() {
 
   const isPurchasing = user?.role === 'PURCHASING' || user?.role === 'SUPER_ADMIN';
   const isFinance = user?.role === 'FINANCE' || user?.role === 'SUPER_ADMIN';
+  const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
   const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  // FINANCE can view AP but cannot create/edit/delete
+  const canCreateAp = isPurchasing || isAdmin;
+  const canEditAp = (status: string) => {
+    if (user?.role === 'FINANCE') return false;
+    if (isPurchasing) return status === 'DRAFT' || status === 'REJECTED';
+    if (isAdmin) return status === 'DRAFT' || status === 'REJECTED';
+    return false;
+  };
+  const canDeleteAp = (status: string) => {
+    if (user?.role === 'FINANCE') return false;
+    return isSuperAdmin || (isPurchasing && (status === 'DRAFT' || status === 'REJECTED')) || (isAdmin && (status === 'DRAFT' || status === 'REJECTED'));
+  };
 
   useEffect(() => {
     fetchData();
@@ -615,24 +628,18 @@ export default function ApListPage() {
     return invoices.filter(inv => statuses.includes(inv.status)).length;
   };
 
-  const canEdit = (status: InvoiceStatus) => {
-    if (isPurchasing) {
-      return status === 'DRAFT' || status === 'REJECTED';
-    }
-    return false;
-  };
+  const canEdit = (status: InvoiceStatus) => canEditAp(status);
 
   const canSubmit = (status: InvoiceStatus) => {
-    return isPurchasing && status === 'DRAFT';
+    if (user?.role === 'FINANCE') return false;
+    return (isPurchasing || isAdmin) && status === 'DRAFT';
   };
 
   const canApprove = (status: InvoiceStatus) => {
     return isFinance && status === 'SUBMITTED';
   };
 
-  const canDelete = (status: InvoiceStatus) => {
-    return isSuperAdmin || (isPurchasing && (status === 'DRAFT' || status === 'REJECTED'));
-  };
+  const canDelete = (status: InvoiceStatus) => canDeleteAp(status);
 
   const canRecordPayment = (status: InvoiceStatus, outstanding: number) => {
     return isFinance && (status === 'APPROVED' || status === 'PARTIAL') && outstanding > 0;
@@ -813,13 +820,13 @@ export default function ApListPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          {isPurchasing && (
+          {canCreateAp && (
             <Button variant="outline" className="gap-2" onClick={() => setIsImportDialogOpen(true)}>
               <Upload className="w-4 h-4" />
               {language === 'en' ? 'Import' : 'Impor'}
             </Button>
           )}
-          {isPurchasing && (
+          {canCreateAp && (
             <Button className="gap-2" onClick={handleOpenCreate}>
               <Plus className="w-4 h-4" />
               {t('btn.newApInvoice')}
