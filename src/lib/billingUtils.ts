@@ -92,20 +92,34 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
       padding: 0;
       max-width: 800px;
       margin: 0 auto;
-      background-image: url('/kop-surat-kemika.jpg');
-      background-size: 100% 100%;
-      background-repeat: no-repeat;
-      background-position: top left;
       min-height: 1123px;
       position: relative;
     }
+    .bg-letterhead {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+    }
+    .bg-letterhead img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: fill;
+    }
     .content-wrapper {
-      padding: 155px 60px 120px 60px;
+      position: relative;
+      z-index: 1;
+      padding: 130px 80px 180px 60px;
     }
     .doc-info {
       text-align: right;
       margin-bottom: 30px;
       font-size: 11pt;
+      padding-right: 10px;
     }
     .doc-info-row {
       display: flex;
@@ -176,6 +190,7 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
   </style>
 </head>
 <body>
+  <div class="bg-letterhead"><img src="/kop-surat-kemika.jpg" crossorigin="anonymous" /></div>
   <div class="content-wrapper">
     <div class="doc-info">
       <div class="doc-info-row">

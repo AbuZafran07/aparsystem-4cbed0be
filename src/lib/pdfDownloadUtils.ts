@@ -117,9 +117,8 @@ export const downloadPdfFromHtml = async ({
     const win = iframe.contentWindow;
     if (!doc || !win) throw new Error('PDF iframe not ready');
 
-    // Force white background (prevents transparent pages)
+    // Force white background only on html element (not body, to preserve background images)
     doc.documentElement.style.background = '#ffffff';
-    doc.body.style.background = '#ffffff';
     doc.body.style.margin = '0';
     doc.body.style.overflow = 'visible';
 
