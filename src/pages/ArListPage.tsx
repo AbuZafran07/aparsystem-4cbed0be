@@ -178,6 +178,7 @@ export default function ArListPage() {
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isDocSentDialogOpen, setIsDocSentDialogOpen] = useState(false);
   const [docSentDate, setDocSentDate] = useState('');
+  const [docSentInvoiceAmount, setDocSentInvoiceAmount] = useState<number>(0);
   const [selectedInvoice, setSelectedInvoice] = useState<ArInvoice | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [saving, setSaving] = useState(false);
@@ -556,6 +557,7 @@ export default function ArListPage() {
   const handleOpenDocSent = (invoice: ArInvoice) => {
     setSelectedInvoice(invoice);
     setDocSentDate(new Date().toISOString().split('T')[0]);
+    setDocSentInvoiceAmount(invoice.invoice_amount);
     setIsDocSentDialogOpen(true);
   };
 
@@ -564,12 +566,22 @@ export default function ArListPage() {
       toast.error(language === 'en' ? 'Please select a date' : 'Mohon pilih tanggal');
       return;
     }
+    if (docSentInvoiceAmount <= 0) {
+      toast.error(language === 'en' ? 'Invoice amount must be greater than 0' : 'Nilai invoice harus lebih dari 0');
+      return;
+    }
 
     try {
       setSaving(true);
+      const newOutstanding = docSentInvoiceAmount - selectedInvoice.paid_amount;
       const { error } = await supabase
         .from('ar_invoices')
-        .update({ doc_sent_date: docSentDate } as any)
+        .update({ 
+          doc_sent_date: docSentDate,
+          invoice_amount: docSentInvoiceAmount,
+          outstanding_amount: newOutstanding > 0 ? newOutstanding : 0,
+          overdue_amount: newOutstanding > 0 ? newOutstanding : 0,
+        } as any)
         .eq('id', selectedInvoice.id);
 
       if (error) throw error;
@@ -1152,6 +1164,7 @@ export default function ArListPage() {
                             <DropdownMenuItem className="gap-2" onClick={() => {
                               setSelectedInvoice(invoice);
                               setDocSentDate(invoice.doc_sent_date || '');
+                              setDocSentInvoiceAmount(invoice.invoice_amount);
                               setIsDocSentDialogOpen(true);
                             }}>
                               <Edit className="w-4 h-4" />
@@ -1829,7 +1842,16 @@ export default function ArListPage() {
               <div className="rounded-md bg-muted p-3 space-y-1 text-sm">
                 <p><span className="font-medium">{language === 'en' ? 'Customer' : 'Customer'}:</span> {selectedInvoice.customer_name}</p>
                 <p><span className="font-medium">{language === 'en' ? 'Invoice' : 'Invoice'}:</span> {selectedInvoice.invoice_number}</p>
-                <p><span className="font-medium">{language === 'en' ? 'Amount' : 'Jumlah'}:</span> {formatCurrency(selectedInvoice.invoice_amount)}</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label>{language === 'en' ? 'Invoice Amount' : 'Nilai Invoice'} *</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  value={docSentInvoiceAmount}
+                  onChange={(e) => setDocSentInvoiceAmount(Number(e.target.value))}
+                />
               </div>
 
               <div className="space-y-2">
