@@ -213,9 +213,9 @@ export default function ArListPage() {
     notes: '',
   });
 
-  const isFinance = user?.role === 'FINANCE' || user?.role === 'SUPER_ADMIN';
+  const isFinance = user?.role === 'FINANCE' || user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
-  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
   // PURCHASING can view AR but cannot create/edit/delete
   const canCreateAr = isFinance || isAdmin;
 

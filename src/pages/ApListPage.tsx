@@ -195,10 +195,10 @@ export default function ApListPage() {
     notes: '',
   });
 
-  const isPurchasing = user?.role === 'PURCHASING' || user?.role === 'SUPER_ADMIN';
-  const isFinance = user?.role === 'FINANCE' || user?.role === 'SUPER_ADMIN';
+  const isPurchasing = user?.role === 'PURCHASING' || user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
+  const isFinance = user?.role === 'FINANCE' || user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
   const isAdmin = user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN';
-  const isSuperAdmin = user?.role === 'SUPER_ADMIN';
+  const isSuperAdmin = user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
   // FINANCE can view AP but cannot create/edit/delete
   const canCreateAp = isPurchasing || isAdmin;
   const canEditAp = (status: string) => {
