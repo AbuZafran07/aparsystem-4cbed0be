@@ -84,16 +84,23 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
   <title>Billing Letter - ${safeData.letterNo}</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { 
-      font-family: 'Times New Roman', serif; 
-      font-size: 12pt; 
+    body {
+      font-family: 'Times New Roman', serif;
+      font-size: 12pt;
       line-height: 1.5;
       color: #333;
+      margin: 0;
       padding: 0;
-      max-width: 800px;
+      background: #ffffff;
+    }
+    .pdf-page {
+      width: 210mm;
+      min-height: 297mm;
       margin: 0 auto;
-      min-height: 1123px;
+      background: #ffffff;
       position: relative;
+      box-sizing: border-box;
+      overflow: hidden;
     }
     .bg-letterhead {
       position: absolute;
@@ -110,7 +117,7 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
       display: block;
       object-fit: fill;
     }
-    .content-wrapper {
+    .pdf-content {
       position: relative;
       z-index: 1;
       padding: 130px 80px 180px 60px;
@@ -120,6 +127,8 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
       margin-bottom: 30px;
       font-size: 11pt;
       padding-right: 10px;
+      page-break-inside: avoid !important;
+      break-inside: avoid-page !important;
     }
     .doc-info-row {
       display: flex;
@@ -132,137 +141,162 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
       min-width: 35px;
       text-align: left;
     }
-    .recipient { margin-bottom: 25px; }
+    .recipient {
+      margin-bottom: 25px;
+      page-break-inside: avoid !important;
+      break-inside: avoid-page !important;
+    }
     .recipient-label { font-weight: bold; margin-bottom: 5px; }
-    .subject { 
-      font-weight: bold; 
-      text-align: center; 
+    .subject {
+      font-weight: bold;
+      text-align: center;
       margin: 25px 0;
       text-decoration: underline;
       font-size: 13pt;
+      page-break-inside: avoid !important;
+      break-inside: avoid-page !important;
     }
-    .content { 
-      text-align: justify; 
+    .content {
+      text-align: justify;
       margin-bottom: 20px;
+      page-break-inside: avoid !important;
+      break-inside: avoid-page !important;
     }
-    .invoice-table { 
-      width: 100%; 
-      border-collapse: collapse; 
+    .invoice-table {
+      width: 100%;
+      border-collapse: collapse;
       margin: 20px 0;
+      page-break-inside: avoid !important;
+      break-inside: avoid-page !important;
     }
-    .invoice-table th, .invoice-table td { 
-      border: 1px solid #ddd; 
-      padding: 10px; 
+    .invoice-table th, .invoice-table td {
+      border: 1px solid #ddd;
+      padding: 10px;
       text-align: left;
+      page-break-inside: avoid !important;
+      break-inside: avoid-page !important;
     }
-    .invoice-table th { 
-      background-color: #f5f5f5; 
+    .invoice-table th {
+      background-color: #f5f5f5;
       font-weight: bold;
     }
     .amount { text-align: right; }
-    .total-row { 
-      font-weight: bold; 
+    .total-row {
+      font-weight: bold;
       background-color: #fff3cd;
     }
-    .overdue-notice { 
-      background-color: #f8d7da; 
+    .overdue-notice {
+      background-color: #f8d7da;
       border: 1px solid #f5c6cb;
       padding: 15px;
       border-radius: 5px;
       margin: 20px 0;
       color: #721c24;
+      page-break-inside: avoid !important;
+      break-inside: avoid-page !important;
     }
-    .footer { 
-      margin-top: 40px; 
+    .footer {
+      margin-top: 40px;
+      page-break-inside: avoid !important;
+      break-inside: avoid-page !important;
     }
-    .signature { 
+    .signature {
       margin-top: 60px;
+      page-break-inside: avoid !important;
+      break-inside: avoid-page !important;
     }
-    .signature-line { 
+    .signature-line {
       border-top: 1px solid #333;
       width: 200px;
       margin-top: 60px;
       padding-top: 5px;
     }
+    table, thead, tbody, tr, td, th {
+      page-break-inside: avoid !important;
+      break-inside: avoid-page !important;
+    }
     @media print {
       body { padding: 0; }
+      .pdf-page { width: 210mm; min-height: 297mm; }
     }
   </style>
 </head>
 <body>
-  <div class="bg-letterhead"><img src="/kop-surat-kemika.jpg" crossorigin="anonymous" /></div>
-  <div class="content-wrapper">
-    <div class="doc-info">
-      <div class="doc-info-row">
-        <span class="doc-info-label">No.</span>
-        <span>: ${safeData.letterNo}</span>
+  <div class="pdf-page">
+    <div class="bg-letterhead"><img src="/kop-surat-kemika.jpg" crossorigin="anonymous" /></div>
+    <div class="pdf-content">
+      <div class="doc-info">
+        <div class="doc-info-row">
+          <span class="doc-info-label">No.</span>
+          <span>: ${safeData.letterNo}</span>
+        </div>
+        <div class="doc-info-row">
+          <span class="doc-info-label">Tanggal</span>
+          <span>: ${formatDateID(safeData.letterDate)}</span>
+        </div>
       </div>
-      <div class="doc-info-row">
-        <span class="doc-info-label">Tanggal</span>
-        <span>: ${formatDateID(safeData.letterDate)}</span>
+
+      <div class="recipient">
+        <div class="recipient-label">Kepada Yth:</div>
+        <div><strong>${safeData.customerName}</strong></div>
+        ${safeData.customerAddress ? `<div>${safeData.customerAddress}</div>` : ''}
+        <div>Di Tempat</div>
       </div>
-    </div>
 
-    <div class="recipient">
-      <div class="recipient-label">Kepada Yth:</div>
-      <div><strong>${safeData.customerName}</strong></div>
-      ${safeData.customerAddress ? `<div>${safeData.customerAddress}</div>` : ''}
-      <div>Di Tempat</div>
-    </div>
+      <div class="subject">SURAT PENAGIHAN PEMBAYARAN</div>
 
-    <div class="subject">SURAT PENAGIHAN PEMBAYARAN</div>
+      <div class="content">
+        <p>Dengan hormat,</p>
+        <br>
+        <p>Bersama surat ini kami sampaikan bahwa berdasarkan catatan pembukuan kami,
+        terdapat tagihan yang belum terbayar atas transaksi sebagai berikut:</p>
+      </div>
 
-    <div class="content">
-      <p>Dengan hormat,</p>
-      <br>
-      <p>Bersama surat ini kami sampaikan bahwa berdasarkan catatan pembukuan kami, 
-      terdapat tagihan yang belum terbayar atas transaksi sebagai berikut:</p>
-    </div>
+      <table class="invoice-table">
+        <thead>
+          <tr>
+            <th>Keterangan</th>
+            <th class="amount">Jumlah</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>
+              <strong>No. Invoice:</strong> ${safeData.invoiceNumber}<br>
+              <strong>Tanggal Invoice:</strong> ${formatDateID(safeData.invoiceDate)}<br>
+              <strong>Jatuh Tempo:</strong> ${formatDateID(safeData.dueDate)}
+            </td>
+            <td class="amount">${formatCurrencyIDR(safeData.invoiceAmount)}</td>
+          </tr>
+          <tr class="total-row">
+            <td><strong>Total Tagihan Belum Terbayar</strong></td>
+            <td class="amount"><strong>${formatCurrencyIDR(safeData.outstandingAmount)}</strong></td>
+          </tr>
+        </tbody>
+      </table>
 
-    <table class="invoice-table">
-      <thead>
-        <tr>
-          <th>Keterangan</th>
-          <th class="amount">Jumlah</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr>
-          <td>
-            <strong>No. Invoice:</strong> ${safeData.invoiceNumber}<br>
-            <strong>Tanggal Invoice:</strong> ${formatDateID(safeData.invoiceDate)}<br>
-            <strong>Jatuh Tempo:</strong> ${formatDateID(safeData.dueDate)}
-          </td>
-          <td class="amount">${formatCurrencyIDR(safeData.invoiceAmount)}</td>
-        </tr>
-        <tr class="total-row">
-          <td><strong>Total Tagihan Belum Terbayar</strong></td>
-          <td class="amount"><strong>${formatCurrencyIDR(safeData.outstandingAmount)}</strong></td>
-        </tr>
-      </tbody>
-    </table>
+      ${safeData.overdueDays > 0 ? `
+      <div class="overdue-notice">
+        <strong>⚠️ PERHATIAN:</strong> Tagihan ini telah melewati jatuh tempo selama <strong>${safeData.overdueDays} hari</strong>.
+        Mohon segera lakukan pembayaran untuk menghindari tindakan penagihan lebih lanjut.
+      </div>
+      ` : ''}
 
-    ${safeData.overdueDays > 0 ? `
-    <div class="overdue-notice">
-      <strong>⚠️ PERHATIAN:</strong> Tagihan ini telah melewati jatuh tempo selama <strong>${safeData.overdueDays} hari</strong>. 
-      Mohon segera lakukan pembayaran untuk menghindari tindakan penagihan lebih lanjut.
-    </div>
-    ` : ''}
+      <div class="content">
+        <p>Kami mohon kesediaan Bapak/Ibu untuk segera melakukan pembayaran atas tagihan tersebut.
+        Apabila pembayaran sudah dilakukan, mohon abaikan surat ini dan konfirmasi kepada kami
+        dengan menyertakan bukti pembayaran.</p>
+        <br>
+        <p>Atas perhatian dan kerjasamanya, kami ucapkan terima kasih.</p>
+      </div>
 
-    <div class="content">
-      <p>Kami mohon kesediaan Bapak/Ibu untuk segera melakukan pembayaran atas tagihan tersebut. 
-      Apabila pembayaran sudah dilakukan, mohon abaikan surat ini dan konfirmasi kepada kami 
-      dengan menyertakan bukti pembayaran.</p>
-      <br>
-      <p>Atas perhatian dan kerjasamanya, kami ucapkan terima kasih.</p>
-    </div>
-
-    <div class="footer">
-      <p>Hormat kami,</p>
-      <div class="signature">
-        <div class="signature-line">
-          <strong>Finance Department</strong><br>
-          ${safeData.companyName}
+      <div class="footer">
+        <p>Hormat kami,</p>
+        <div class="signature">
+          <div class="signature-line">
+            <strong>Finance Department</strong><br>
+            ${safeData.companyName}
+          </div>
         </div>
       </div>
     </div>
