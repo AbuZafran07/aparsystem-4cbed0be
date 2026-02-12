@@ -89,79 +89,43 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
       font-size: 12pt; 
       line-height: 1.5;
       color: #333;
-      padding: 40px;
+      padding: 0;
       max-width: 800px;
       margin: 0 auto;
+      background-image: url('/kop-surat-kemika.jpg');
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      background-position: top left;
+      min-height: 1123px;
+      position: relative;
     }
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 20px;
-      padding-bottom: 15px;
-      border-bottom: 2px solid #1a5c3a;
+    .content-wrapper {
+      padding: 200px 60px 120px 60px;
     }
-    .logo-container {
-      width: 150px;
-    }
-    .logo-container img {
-      max-width: 150px;
-      max-height: 60px;
-      object-fit: contain;
-    }
-    .logo-text {
-      font-size: 16pt;
-      font-weight: bold;
-      color: #1a5c3a;
-    }
-    .title-section {
-      flex: 1;
-      text-align: center;
-      padding: 0 20px;
-    }
-    .document-title {
-      font-size: 18pt;
-      font-weight: bold;
-      color: #1a5c3a;
-      margin-top: 10px;
-    }
-    .doc-info-box {
-      border: 2px solid #1a5c3a;
-      padding: 8px 12px;
-      display: inline-block;
-      text-align: left;
-      min-width: 180px;
+    .doc-info {
+      text-align: right;
+      margin-bottom: 30px;
+      font-size: 11pt;
     }
     .doc-info-row {
       display: flex;
-      gap: 10px;
-      font-size: 10pt;
+      justify-content: flex-end;
+      gap: 8px;
       margin-bottom: 2px;
-    }
-    .doc-info-row:last-child {
-      margin-bottom: 0;
     }
     .doc-info-label {
       font-weight: bold;
       min-width: 35px;
+      text-align: left;
     }
-    .company-name { 
-      font-size: 18pt; 
-      font-weight: bold; 
-      color: #1a5c3a;
-      margin-bottom: 5px;
-    }
-    .company-info { 
-      font-size: 10pt; 
-      color: #666; 
-    }
-    .recipient { margin-bottom: 25px; margin-top: 20px; }
+    .recipient { margin-bottom: 25px; }
     .recipient-label { font-weight: bold; margin-bottom: 5px; }
     .subject { 
       font-weight: bold; 
       text-align: center; 
       margin: 25px 0;
       text-decoration: underline;
+      font-size: 13pt;
     }
     .content { 
       text-align: justify; 
@@ -207,93 +171,84 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
       padding-top: 5px;
     }
     @media print {
-      body { padding: 20px; }
+      body { padding: 0; }
     }
   </style>
 </head>
 <body>
-  <div class="header">
-    <div class="logo-container">
-      ${safeData.companyLogoUrl ? 
-        `<img src="${safeData.companyLogoUrl}" alt="Company Logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><div class="logo-text" style="display:none;">${safeData.companyName}</div>` : 
-        `<img src="/logo-kemika-new.png" alt="Kemika Logo" onerror="this.style.display='none';this.nextElementSibling.style.display='block';" /><div class="logo-text" style="display:none;">${safeData.companyName}</div>`
-      }
-    </div>
-    <div class="title-section">
-      <div class="document-title">SURAT PENAGIHAN</div>
-    </div>
-    <div class="doc-info-box">
+  <div class="content-wrapper">
+    <div class="doc-info">
       <div class="doc-info-row">
         <span class="doc-info-label">No.</span>
         <span>: ${safeData.letterNo}</span>
       </div>
       <div class="doc-info-row">
-        <span class="doc-info-label">Date</span>
+        <span class="doc-info-label">Tanggal</span>
         <span>: ${formatDateID(safeData.letterDate)}</span>
       </div>
     </div>
-  </div>
 
-  <div class="recipient">
-    <div class="recipient-label">Kepada Yth:</div>
-    <div><strong>${safeData.customerName}</strong></div>
-    ${safeData.customerAddress ? `<div>${safeData.customerAddress}</div>` : ''}
-    <div>Di Tempat</div>
-  </div>
+    <div class="recipient">
+      <div class="recipient-label">Kepada Yth:</div>
+      <div><strong>${safeData.customerName}</strong></div>
+      ${safeData.customerAddress ? `<div>${safeData.customerAddress}</div>` : ''}
+      <div>Di Tempat</div>
+    </div>
 
-  <div class="subject">SURAT PENAGIHAN PEMBAYARAN</div>
+    <div class="subject">SURAT PENAGIHAN PEMBAYARAN</div>
 
-  <div class="content">
-    <p>Dengan hormat,</p>
-    <br>
-    <p>Bersama surat ini kami sampaikan bahwa berdasarkan catatan pembukuan kami, 
-    terdapat tagihan yang belum terbayar atas transaksi sebagai berikut:</p>
-  </div>
+    <div class="content">
+      <p>Dengan hormat,</p>
+      <br>
+      <p>Bersama surat ini kami sampaikan bahwa berdasarkan catatan pembukuan kami, 
+      terdapat tagihan yang belum terbayar atas transaksi sebagai berikut:</p>
+    </div>
 
-  <table class="invoice-table">
-    <thead>
-      <tr>
-        <th>Keterangan</th>
-        <th class="amount">Jumlah</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td>
-          <strong>No. Invoice:</strong> ${safeData.invoiceNumber}<br>
-          <strong>Tanggal Invoice:</strong> ${formatDateID(safeData.invoiceDate)}<br>
-          <strong>Jatuh Tempo:</strong> ${formatDateID(safeData.dueDate)}
-        </td>
-        <td class="amount">${formatCurrencyIDR(safeData.invoiceAmount)}</td>
-      </tr>
-      <tr class="total-row">
-        <td><strong>Total Tagihan Belum Terbayar</strong></td>
-        <td class="amount"><strong>${formatCurrencyIDR(safeData.outstandingAmount)}</strong></td>
-      </tr>
-    </tbody>
-  </table>
+    <table class="invoice-table">
+      <thead>
+        <tr>
+          <th>Keterangan</th>
+          <th class="amount">Jumlah</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>
+            <strong>No. Invoice:</strong> ${safeData.invoiceNumber}<br>
+            <strong>Tanggal Invoice:</strong> ${formatDateID(safeData.invoiceDate)}<br>
+            <strong>Jatuh Tempo:</strong> ${formatDateID(safeData.dueDate)}
+          </td>
+          <td class="amount">${formatCurrencyIDR(safeData.invoiceAmount)}</td>
+        </tr>
+        <tr class="total-row">
+          <td><strong>Total Tagihan Belum Terbayar</strong></td>
+          <td class="amount"><strong>${formatCurrencyIDR(safeData.outstandingAmount)}</strong></td>
+        </tr>
+      </tbody>
+    </table>
 
-  ${safeData.overdueDays > 0 ? `
-  <div class="overdue-notice">
-    <strong>⚠️ PERHATIAN:</strong> Tagihan ini telah melewati jatuh tempo selama <strong>${safeData.overdueDays} hari</strong>. 
-    Mohon segera lakukan pembayaran untuk menghindari tindakan penagihan lebih lanjut.
-  </div>
-  ` : ''}
+    ${safeData.overdueDays > 0 ? `
+    <div class="overdue-notice">
+      <strong>⚠️ PERHATIAN:</strong> Tagihan ini telah melewati jatuh tempo selama <strong>${safeData.overdueDays} hari</strong>. 
+      Mohon segera lakukan pembayaran untuk menghindari tindakan penagihan lebih lanjut.
+    </div>
+    ` : ''}
 
-  <div class="content">
-    <p>Kami mohon kesediaan Bapak/Ibu untuk segera melakukan pembayaran atas tagihan tersebut. 
-    Apabila pembayaran sudah dilakukan, mohon abaikan surat ini dan konfirmasi kepada kami 
-    dengan menyertakan bukti pembayaran.</p>
-    <br>
-    <p>Atas perhatian dan kerjasamanya, kami ucapkan terima kasih.</p>
-  </div>
+    <div class="content">
+      <p>Kami mohon kesediaan Bapak/Ibu untuk segera melakukan pembayaran atas tagihan tersebut. 
+      Apabila pembayaran sudah dilakukan, mohon abaikan surat ini dan konfirmasi kepada kami 
+      dengan menyertakan bukti pembayaran.</p>
+      <br>
+      <p>Atas perhatian dan kerjasamanya, kami ucapkan terima kasih.</p>
+    </div>
 
-  <div class="footer">
-    <p>Hormat kami,</p>
-    <div class="signature">
-      <div class="signature-line">
-        <strong>Finance Department</strong><br>
-        ${safeData.companyName}
+    <div class="footer">
+      <p>Hormat kami,</p>
+      <div class="signature">
+        <div class="signature-line">
+          <strong>Finance Department</strong><br>
+          ${safeData.companyName}
+        </div>
       </div>
     </div>
   </div>
