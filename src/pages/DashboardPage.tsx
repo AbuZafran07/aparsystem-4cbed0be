@@ -425,7 +425,7 @@ export default function DashboardPage() {
       </div>
 
       {/* AR Received vs AP Paid Comparison */}
-      {isFinanceOrSuper && (
+      {true && (
         <>
           {/* Summary KPI Cards */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
