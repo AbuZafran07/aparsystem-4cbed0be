@@ -41,17 +41,20 @@ interface DashboardData {
   monthlyComparison: { month: string; arReceived: number; apPaid: number }[];
 }
 
-const formatCurrency = (amount: number) => {
-  if (amount >= 1000000000) {
-    return `Rp ${(amount / 1000000000).toFixed(1)}B`;
+const formatCurrency = (amount: number, compact = false) => {
+  if (compact) {
+    if (Math.abs(amount) >= 1000000000) {
+      return `Rp ${(amount / 1000000000).toFixed(1)}B`;
+    }
+    if (Math.abs(amount) >= 1000000) {
+      return `Rp ${(amount / 1000000).toFixed(1)}Jt`;
+    }
+    if (Math.abs(amount) >= 1000) {
+      return `Rp ${(amount / 1000).toFixed(0)}K`;
+    }
+    return `Rp ${amount.toFixed(0)}`;
   }
-  if (amount >= 1000000) {
-    return `Rp ${(amount / 1000000).toFixed(0)}M`;
-  }
-  if (amount >= 1000) {
-    return `Rp ${(amount / 1000).toFixed(0)}K`;
-  }
-  return `Rp ${amount.toFixed(0)}`;
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0, maximumFractionDigits: 0 }).format(amount);
 };
 
 const formatFullCurrency = (amount: number) => {
@@ -468,7 +471,7 @@ export default function DashboardPage() {
                     <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
                     <XAxis dataKey="month" className="text-xs fill-muted-foreground" />
                     <YAxis 
-                      tickFormatter={(value) => formatCurrency(value)}
+                      tickFormatter={(value) => formatCurrency(value, true)}
                       className="text-xs fill-muted-foreground"
                     />
                     <Tooltip
@@ -521,7 +524,7 @@ export default function DashboardPage() {
                   </defs>
                   <XAxis dataKey="month" className="text-xs fill-muted-foreground" />
                   <YAxis 
-                    tickFormatter={(value) => formatCurrency(value)}
+                    tickFormatter={(value) => formatCurrency(value, true)}
                     className="text-xs fill-muted-foreground"
                   />
                   <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
