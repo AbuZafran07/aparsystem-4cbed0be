@@ -173,6 +173,14 @@ export default function UserManagementPage() {
       });
       return;
     }
+    if (formPassword.length < 8) {
+      toast({
+        title: language === 'en' ? 'Error' : 'Error',
+        description: language === 'en' ? 'Password must be at least 8 characters' : 'Password minimal 8 karakter',
+        variant: 'destructive',
+      });
+      return;
+    }
     createMutation.mutate({ email: formEmail, password: formPassword, fullName: formFullName, role: formRole });
   };
 
