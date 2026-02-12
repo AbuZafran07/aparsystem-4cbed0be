@@ -10,7 +10,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { Link } from 'react-router-dom';
-import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from 'recharts';
+import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
 
 interface AgingBucket {
   label: string;
@@ -36,6 +36,9 @@ interface DashboardData {
   salesCount: number;
   bankCount: number;
   monthlyTrend: any[];
+  totalArReceived: number;
+  totalApPaid: number;
+  monthlyComparison: { month: string; arReceived: number; apPaid: number }[];
 }
 
 const formatCurrency = (amount: number) => {
@@ -114,6 +117,9 @@ export default function DashboardPage() {
     salesCount: 0,
     bankCount: 0,
     monthlyTrend: [],
+    totalArReceived: 0,
+    totalApPaid: 0,
+    monthlyComparison: [],
   });
 
   const isPurchasing = user?.role === 'PURCHASING';
@@ -234,17 +240,40 @@ export default function DashboardPage() {
         .sort((a, b) => b.overdueDays - a.overdueDays)
         .slice(0, 5);
 
-      // Monthly trend (last 6 months) - mock for now
-      const monthlyTrend = [];
+      // Fetch AR receipts and AP payments for comparison
+      const [arReceiptsRes, apPaymentsRes] = await Promise.all([
+        supabase.from('ar_receipts').select('total_amount, receipt_date'),
+        supabase.from('ap_payments').select('total_amount, payment_date'),
+      ]);
+
+      const arReceipts = arReceiptsRes.data || [];
+      const apPayments = apPaymentsRes.data || [];
+
+      const totalArReceived = arReceipts.reduce((sum, r) => sum + (r.total_amount || 0), 0);
+      const totalApPaid = apPayments.reduce((sum, p) => sum + (p.total_amount || 0), 0);
+
+      // Monthly comparison (last 6 months) - real data
+      const monthlyComparison: { month: string; arReceived: number; apPaid: number }[] = [];
+      const monthlyTrend: any[] = [];
       for (let i = 5; i >= 0; i--) {
         const date = new Date();
         date.setMonth(date.getMonth() - i);
+        const year = date.getFullYear();
+        const month = date.getMonth();
         const monthName = date.toLocaleDateString('id-ID', { month: 'short' });
-        monthlyTrend.push({
-          month: monthName,
-          ap: Math.random() * 500000000 + 200000000,
-          ar: Math.random() * 800000000 + 300000000,
-        });
+        const startOfMonth = new Date(year, month, 1).toISOString().split('T')[0];
+        const endOfMonth = new Date(year, month + 1, 0).toISOString().split('T')[0];
+
+        const monthArReceived = arReceipts
+          .filter(r => r.receipt_date >= startOfMonth && r.receipt_date <= endOfMonth)
+          .reduce((sum, r) => sum + (r.total_amount || 0), 0);
+
+        const monthApPaid = apPayments
+          .filter(p => p.payment_date >= startOfMonth && p.payment_date <= endOfMonth)
+          .reduce((sum, p) => sum + (p.total_amount || 0), 0);
+
+        monthlyComparison.push({ month: monthName, arReceived: monthArReceived, apPaid: monthApPaid });
+        monthlyTrend.push({ month: monthName, ap: monthApPaid, ar: monthArReceived });
       }
 
       setData({
@@ -265,6 +294,9 @@ export default function DashboardPage() {
         salesCount: salesRes.count || 0,
         bankCount: bankRes.count || 0,
         monthlyTrend,
+        totalArReceived,
+        totalApPaid,
+        monthlyComparison,
       });
 
     } catch (error: any) {
@@ -391,6 +423,79 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+
+      {/* AR Received vs AP Paid Comparison */}
+      {isFinanceOrSuper && (
+        <>
+          {/* Summary KPI Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <KpiCard
+              title={language === 'en' ? 'Total AR Received' : 'Total AR Masuk'}
+              value={formatCurrency(data.totalArReceived)}
+              subtitle={language === 'en' ? 'All time receipts' : 'Total penerimaan'}
+              icon={TrendingUp}
+              variant="green"
+            />
+            <KpiCard
+              title={language === 'en' ? 'Total AP Paid' : 'Total AP Keluar'}
+              value={formatCurrency(data.totalApPaid)}
+              subtitle={language === 'en' ? 'All time payments' : 'Total pembayaran'}
+              icon={TrendingDown}
+              variant="red"
+            />
+            <KpiCard
+              title={language === 'en' ? 'Net Cashflow' : 'Arus Kas Bersih'}
+              value={formatCurrency(data.totalArReceived - data.totalApPaid)}
+              subtitle={data.totalArReceived - data.totalApPaid >= 0 
+                ? (language === 'en' ? 'Positive' : 'Positif') 
+                : (language === 'en' ? 'Negative' : 'Negatif')}
+              icon={CreditCard}
+              variant={data.totalArReceived - data.totalApPaid >= 0 ? 'green' : 'red'}
+            />
+          </div>
+
+          {/* Monthly AR vs AP Bar Chart */}
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-semibold">
+                {language === 'en' ? 'AR Received vs AP Paid (6 Months)' : 'Perbandingan AR Masuk vs AP Keluar (6 Bulan)'}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={data.monthlyComparison} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
+                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                    <XAxis dataKey="month" className="text-xs fill-muted-foreground" />
+                    <YAxis 
+                      tickFormatter={(value) => formatCurrency(value)}
+                      className="text-xs fill-muted-foreground"
+                    />
+                    <Tooltip
+                      formatter={(value: number, name: string) => [
+                        formatFullCurrency(value),
+                        name === 'arReceived' 
+                          ? (language === 'en' ? 'AR Received' : 'AR Masuk') 
+                          : (language === 'en' ? 'AP Paid' : 'AP Keluar')
+                      ]}
+                      contentStyle={{ backgroundColor: 'hsl(var(--card))', borderColor: 'hsl(var(--border))' }}
+                    />
+                    <Legend 
+                      formatter={(value) => 
+                        value === 'arReceived' 
+                          ? (language === 'en' ? 'AR Received' : 'AR Masuk') 
+                          : (language === 'en' ? 'AP Paid' : 'AP Keluar')
+                      }
+                    />
+                    <Bar dataKey="arReceived" fill="hsl(142, 71%, 45%)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="apPaid" fill="hsl(0, 84%, 60%)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </>
+      )}
 
       {/* Trend Chart for Finance/Super Admin */}
       {isFinanceOrSuper && (
