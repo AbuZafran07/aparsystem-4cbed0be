@@ -13,7 +13,7 @@ const getCorsHeaders = (req: Request) => {
   const allowedOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
   return {
     'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-seed-token',
   };
 };
 
@@ -32,6 +32,16 @@ Deno.serve(async (req) => {
 
   try {
     console.log('Starting seed-admin function...');
+
+    // Require a secret seed token to prevent unauthorized access
+    const SEED_TOKEN = Deno.env.get('SUPER_ADMIN_PASSWORD');
+    const providedToken = req.headers.get('x-seed-token');
+    if (!providedToken || providedToken !== SEED_TOKEN) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
     
     // Validate required environment variables
     if (!SUPER_ADMIN_EMAIL || !SUPER_ADMIN_PASSWORD) {
