@@ -100,7 +100,7 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
       position: relative;
     }
     .content-wrapper {
-      padding: 200px 60px 120px 60px;
+      padding: 155px 60px 120px 60px;
     }
     .doc-info {
       text-align: right;
