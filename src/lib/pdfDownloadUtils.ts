@@ -93,7 +93,6 @@ export const downloadPdfFromHtml = async ({
   const finalFilename = withPdfExt(filename);
   const iframe = document.createElement('iframe');
 
-  // Use a wider viewport to fit 210mm content (~794px at 96dpi)
   iframe.style.cssText = [
     'position: fixed',
     'left: -10000px',
@@ -128,7 +127,7 @@ export const downloadPdfFromHtml = async ({
     const html2canvas = (await import('html2canvas')).default;
     const { jsPDF } = await import('jspdf');
 
-    // Capture the .pdf-page wrapper if it exists, otherwise fallback to body
+    // Capture the .pdf-page wrapper (fixed 794x1123 = exact A4 ratio)
     const captureEl = doc.querySelector('.pdf-page') as HTMLElement || doc.body;
 
     const canvas = await html2canvas(captureEl, {
@@ -137,32 +136,21 @@ export const downloadPdfFromHtml = async ({
       allowTaint: false,
       logging: false,
       backgroundColor: '#ffffff',
-      width: captureEl.scrollWidth,
+      width: 794,
+      height: 1123,
       windowWidth: viewportWidthPx,
       scrollX: 0,
       scrollY: 0,
     });
 
     const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-    const pageWidth = pdf.internal.pageSize.getWidth();
-    const pageHeight = pdf.internal.pageSize.getHeight();
+    const pageWidth = pdf.internal.pageSize.getWidth();  // 210mm
+    const pageHeight = pdf.internal.pageSize.getHeight(); // 297mm
 
     const imgData = canvas.toDataURL('image/jpeg', 0.98);
-    const imgWidth = pageWidth;
-    const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-    let heightLeft = imgHeight;
-    let position = 0;
-
-    pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-    heightLeft -= pageHeight;
-
-    while (heightLeft > 0) {
-      position = heightLeft - imgHeight;
-      pdf.addPage();
-      pdf.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight, undefined, 'FAST');
-      heightLeft -= pageHeight;
-    }
+    // Single page — canvas is exactly A4 ratio, so it maps 1:1
+    pdf.addImage(imgData, 'JPEG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
 
     pdf.save(finalFilename);
   } finally {
