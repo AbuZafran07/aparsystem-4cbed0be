@@ -197,11 +197,14 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
     }
     .footer {
       margin-top: 40px;
+      text-align: right;
       page-break-inside: avoid !important;
       break-inside: avoid-page !important;
     }
     .signature {
       margin-top: 60px;
+      display: inline-block;
+      text-align: left;
       page-break-inside: avoid !important;
       break-inside: avoid-page !important;
     }
