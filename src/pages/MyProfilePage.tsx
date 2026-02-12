@@ -118,9 +118,9 @@ export default function MyProfilePage() {
       return;
     }
     
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8) {
       toast({
-        title: language === 'id' ? 'Password minimal 6 karakter' : 'Password must be at least 6 characters',
+        title: language === 'id' ? 'Password minimal 8 karakter' : 'Password must be at least 8 characters',
         variant: 'destructive',
       });
       return;
