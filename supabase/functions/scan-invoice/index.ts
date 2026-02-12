@@ -1,18 +1,71 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"];
+const MAX_BASE64_SIZE = 14 * 1024 * 1024; // ~10MB file = ~14MB base64
+
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
+    // Authentication check
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+
+    const token = authHeader.replace("Bearer ", "");
+    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
+    if (claimsError || !claimsData?.claims) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const { image_base64, type, mime_type } = await req.json();
 
-    if (!image_base64) {
+    // Validate required fields
+    if (!image_base64 || typeof image_base64 !== "string") {
       return new Response(JSON.stringify({ error: "No image provided" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate type parameter
+    if (type !== "ar" && type !== "ap") {
+      return new Response(JSON.stringify({ error: "Invalid type. Must be 'ar' or 'ap'" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate MIME type
+    if (mime_type && !ALLOWED_MIME_TYPES.includes(mime_type)) {
+      return new Response(JSON.stringify({ error: "Invalid file type" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Validate base64 size
+    if (image_base64.length > MAX_BASE64_SIZE) {
+      return new Response(JSON.stringify({ error: "File too large (max 10MB)" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -65,6 +118,8 @@ Extract these AP invoice fields:
           notes: { type: "string" },
         };
 
+    const safeMimeType = mime_type && ALLOWED_MIME_TYPES.includes(mime_type) ? mime_type : "image/jpeg";
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -79,7 +134,7 @@ Extract these AP invoice fields:
             role: "user",
             content: [
               { type: "text", text: "Extract all invoice data from this image." },
-              { type: "image_url", image_url: { url: `data:${mime_type || "image/jpeg"};base64,${image_base64}` } },
+              { type: "image_url", image_url: { url: `data:${safeMimeType};base64,${image_base64}` } },
             ],
           },
         ],
@@ -128,7 +183,6 @@ Extract these AP invoice fields:
     }
 
     const extracted = JSON.parse(toolCall.function.arguments);
-    console.log("Extracted invoice data:", extracted);
 
     return new Response(JSON.stringify({ success: true, data: extracted }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
