@@ -119,9 +119,7 @@ export default function AppSidebar({ onNavigate }: AppSidebarProps) {
     <aside className="h-full bg-sidebar flex flex-col">
       {/* Logo Section */}
       <div className="h-16 flex items-center gap-3 px-5 border-b border-sidebar-border/30">
-        <div className="w-9 h-9 bg-sidebar-accent rounded-lg flex items-center justify-center">
-          <FileText className="w-5 h-5 text-sidebar-foreground" />
-        </div>
+        <img src="/logo-kemika-new.png" alt="Kemika" className="w-9 h-9 rounded-lg object-contain" />
         <div className="flex flex-col">
           <span className="text-base font-bold text-sidebar-foreground">AP/AR HUB</span>
           <span className="text-xs text-sidebar-foreground/60">Finance System</span>
