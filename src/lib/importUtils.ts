@@ -501,40 +501,177 @@ export const generateArTemplate = async (): Promise<void> => {
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Template AR');
   
-  // Add headers
   const headers = [
-    'Nama Customer',
-    'Nama Sales',
-    'No Invoice',
-    'No Order',
-    'Tanggal PO SP',
-    'Tanggal Invoice',
-    'Terms Pembayaran',
-    'Jumlah Invoice',
-    'Catatan',
+    'Nama Customer', 'Nama Sales', 'No Invoice', 'No Order',
+    'Tanggal PO SP', 'Tanggal Invoice', 'Terms Pembayaran', 'Jumlah Invoice', 'Catatan',
   ];
   
   worksheet.addRow(headers);
-  
-  // Style header row
   const headerRow = worksheet.getRow(1);
   headerRow.font = { bold: true };
-  headerRow.fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FFCCCCCC' }
-  };
-  
-  // Add sample data
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } };
   worksheet.addRow(['PT Customer XYZ', 'John Doe', 'INV-AR-001', 'ORD-2024-001', '01/01/2024', '05/01/2024', 'NET 30', 15000000, '']);
+  worksheet.columns.forEach(column => { column.width = 20; });
   
-  // Auto-fit columns
-  worksheet.columns.forEach(column => {
-    column.width = 20;
-  });
-  
-  // Generate and download
   const buffer = await workbook.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   saveAs(blob, 'Template_Import_AR_Invoice.xlsx');
+};
+
+// ==================== VENDOR IMPORT ====================
+
+export const VENDOR_HEADERS_MAP: Record<string, string> = {
+  'nama vendor': 'vendor_name',
+  'alamat': 'address',
+  'telepon': 'phone',
+  'email': 'email',
+  'nama bank': 'bank_name',
+  'no rekening': 'bank_account_no',
+};
+
+export const generateVendorTemplate = async (): Promise<void> => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Template Vendor');
+  
+  const headers = ['Nama Vendor', 'Alamat', 'Telepon', 'Email', 'Nama Bank', 'No Rekening'];
+  worksheet.addRow(headers);
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } };
+  worksheet.addRow(['PT Supplier ABC', 'Jl. Industri No. 1', '021-12345678', 'supplier@abc.com', 'Bank Mandiri', '1234567890']);
+  worksheet.addRow(['CV Maju Jaya', 'Jl. Raya No. 10', '021-87654321', 'info@majujaya.com', 'Bank BCA', '0987654321']);
+  worksheet.columns.forEach(column => { column.width = 22; });
+  
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, 'Template_Import_Vendor.xlsx');
+};
+
+export const validateAndMapVendorData = (rows: any[][]): ImportResult => {
+  const errors: ImportError[] = [];
+  const data: any[] = [];
+  
+  if (rows.length < 2) {
+    errors.push({ row: 0, message: 'File is empty or has no data rows' });
+    return { success: false, data: [], errors };
+  }
+  
+  const headers = rows[0].map((h: any) => String(h || '').toLowerCase().trim());
+  const headerMap: Record<number, string> = {};
+  headers.forEach((header, index) => {
+    const mappedKey = VENDOR_HEADERS_MAP[header];
+    if (mappedKey) headerMap[index] = mappedKey;
+  });
+  
+  const mappedHeaders = Object.values(headerMap);
+  if (!mappedHeaders.includes('vendor_name')) {
+    errors.push({ row: 1, message: 'Missing required column: Nama Vendor' });
+    return { success: false, data: [], errors };
+  }
+  
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.every((cell: any) => cell === null || cell === undefined || cell === '')) continue;
+    
+    const rowData: Record<string, any> = {};
+    Object.entries(headerMap).forEach(([colIndex, key]) => {
+      rowData[key] = row[parseInt(colIndex)];
+    });
+    
+    const vendorName = rowData.vendor_name ? String(rowData.vendor_name).trim() : '';
+    if (!vendorName) {
+      errors.push({ row: i + 1, column: 'Nama Vendor', message: 'Nama vendor wajib diisi' });
+      continue;
+    }
+    
+    data.push({
+      vendor_name: vendorName,
+      address: rowData.address ? String(rowData.address).trim() : null,
+      phone: rowData.phone ? String(rowData.phone).trim() : null,
+      email: rowData.email ? String(rowData.email).trim() : null,
+      bank_name: rowData.bank_name ? String(rowData.bank_name).trim() : null,
+      bank_account_no: rowData.bank_account_no ? String(rowData.bank_account_no).trim() : null,
+      is_active: true,
+    });
+  }
+  
+  return { success: errors.length === 0, data, errors };
+};
+
+// ==================== CUSTOMER IMPORT ====================
+
+export const CUSTOMER_HEADERS_MAP: Record<string, string> = {
+  'nama customer': 'customer_name',
+  'nama pelanggan': 'customer_name',
+  'alamat': 'address',
+  'telepon': 'phone',
+  'email penagihan': 'billing_email',
+  'billing email': 'billing_email',
+};
+
+export const generateCustomerTemplate = async (): Promise<void> => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Template Customer');
+  
+  const headers = ['Nama Customer', 'Alamat', 'Telepon', 'Email Penagihan'];
+  worksheet.addRow(headers);
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } };
+  worksheet.addRow(['PT Customer XYZ', 'Jl. Sudirman No. 1', '021-11111111', 'billing@xyz.com']);
+  worksheet.addRow(['CV Abadi Sentosa', 'Jl. Gatot Subroto No. 5', '021-22222222', 'finance@abadi.com']);
+  worksheet.columns.forEach(column => { column.width = 22; });
+  
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, 'Template_Import_Customer.xlsx');
+};
+
+export const validateAndMapCustomerData = (rows: any[][]): ImportResult => {
+  const errors: ImportError[] = [];
+  const data: any[] = [];
+  
+  if (rows.length < 2) {
+    errors.push({ row: 0, message: 'File is empty or has no data rows' });
+    return { success: false, data: [], errors };
+  }
+  
+  const headers = rows[0].map((h: any) => String(h || '').toLowerCase().trim());
+  const headerMap: Record<number, string> = {};
+  headers.forEach((header, index) => {
+    const mappedKey = CUSTOMER_HEADERS_MAP[header];
+    if (mappedKey) headerMap[index] = mappedKey;
+  });
+  
+  const mappedHeaders = Object.values(headerMap);
+  if (!mappedHeaders.includes('customer_name')) {
+    errors.push({ row: 1, message: 'Missing required column: Nama Customer' });
+    return { success: false, data: [], errors };
+  }
+  
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.every((cell: any) => cell === null || cell === undefined || cell === '')) continue;
+    
+    const rowData: Record<string, any> = {};
+    Object.entries(headerMap).forEach(([colIndex, key]) => {
+      rowData[key] = row[parseInt(colIndex)];
+    });
+    
+    const customerName = rowData.customer_name ? String(rowData.customer_name).trim() : '';
+    if (!customerName) {
+      errors.push({ row: i + 1, column: 'Nama Customer', message: 'Nama customer wajib diisi' });
+      continue;
+    }
+    
+    data.push({
+      customer_name: customerName,
+      address: rowData.address ? String(rowData.address).trim() : null,
+      phone: rowData.phone ? String(rowData.phone).trim() : null,
+      billing_email: rowData.billing_email ? String(rowData.billing_email).trim() : null,
+      is_active: true,
+    });
+  }
+  
+  return { success: errors.length === 0, data, errors };
 };

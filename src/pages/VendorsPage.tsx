@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { Plus, Search, Edit, Trash2, MoreHorizontal } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, MoreHorizontal, Upload, FileDown, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +21,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
+import { parseExcelFile, validateAndMapVendorData, generateVendorTemplate } from '@/lib/importUtils';
 
 type Vendor = Tables<'vendors'>;
 
@@ -31,6 +32,8 @@ export default function VendorsPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingVendor, setEditingVendor] = useState<Vendor | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [formName, setFormName] = useState('');
   const [formAddress, setFormAddress] = useState('');
@@ -148,6 +151,41 @@ export default function VendorsPage() {
     }
   };
 
+  const handleImportFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsImporting(true);
+    try {
+      const rows = await parseExcelFile(file);
+      const result = validateAndMapVendorData(rows);
+      
+      if (result.errors.length > 0) {
+        toast({
+          title: 'Error',
+          description: result.errors.map(err => `Baris ${err.row}: ${err.message}`).join('\n'),
+          variant: 'destructive',
+        });
+      }
+      
+      if (result.data.length > 0) {
+        const { error } = await supabase.from('vendors').insert(result.data);
+        if (error) throw error;
+        queryClient.invalidateQueries({ queryKey: ['vendors'] });
+        toast({
+          title: language === 'en' ? 'Success' : 'Berhasil',
+          description: language === 'en' 
+            ? `${result.data.length} vendors imported successfully` 
+            : `${result.data.length} vendor berhasil diimport`,
+        });
+      }
+    } catch (error: any) {
+      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+    } finally {
+      setIsImporting(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
   const filtered = vendors.filter(v =>
     v.vendor_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -163,10 +201,27 @@ export default function VendorsPage() {
             {language === 'en' ? 'Manage vendor master data' : 'Kelola data master vendor'}
           </p>
         </div>
-        <Button className="gap-2" onClick={openCreate}>
-          <Plus className="w-4 h-4" />
-          {language === 'en' ? 'Add Vendor' : 'Tambah Vendor'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={handleImportFile}
+          />
+          <Button variant="outline" size="sm" onClick={() => generateVendorTemplate()}>
+            <FileDown className="w-4 h-4 mr-2" />
+            Template
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => fileInputRef.current?.click()} disabled={isImporting}>
+            {isImporting ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+            Import
+          </Button>
+          <Button className="gap-2" onClick={openCreate}>
+            <Plus className="w-4 h-4" />
+            {language === 'en' ? 'Add Vendor' : 'Tambah Vendor'}
+          </Button>
+        </div>
       </div>
 
       <Card>
