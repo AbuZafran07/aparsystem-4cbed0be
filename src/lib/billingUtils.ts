@@ -196,19 +196,19 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
       break-inside: avoid-page !important;
     }
     .footer {
-      margin-top: 40px;
+      margin-top: 20px;
       page-break-inside: avoid !important;
       break-inside: avoid-page !important;
     }
     .signature {
-      margin-top: 60px;
+      margin-top: 5px;
       page-break-inside: avoid !important;
       break-inside: avoid-page !important;
     }
     .signature-line {
       border-top: 1px solid #333;
       width: 200px;
-      margin-top: 60px;
+      margin-top: 30px;
       padding-top: 5px;
     }
     table, thead, tbody, tr, td, th {
