@@ -94,8 +94,8 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
       background: #ffffff;
     }
     .pdf-page {
-      width: 210mm;
-      min-height: 297mm;
+      width: 794px;
+      height: 1123px;
       margin: 0 auto;
       background: #ffffff;
       position: relative;
@@ -120,7 +120,7 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
     .pdf-content {
       position: relative;
       z-index: 1;
-      padding: 130px 80px 180px 60px;
+      padding: 130px 80px 0 60px;
     }
     .doc-info {
       text-align: right;
