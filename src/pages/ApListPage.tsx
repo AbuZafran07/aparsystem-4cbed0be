@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { Plus, Search, Filter, Eye, Edit, Trash2, Check, X, MoreHorizontal, Loader2, Download, Upload, CreditCard, FileDown, Printer } from 'lucide-react';
 import { InvoiceScanButton } from '@/components/InvoiceScanButton';
 import { exportToCSV, exportToExcel, formatCurrencyForExport, formatDateForExport, ExportColumn } from '@/lib/exportUtils';
@@ -624,6 +625,15 @@ export default function ApListPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const {
+    paginatedItems: paginatedInvoices,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filteredInvoices);
+
   const getTabCount = (statuses: InvoiceStatus[]) => {
     return invoices.filter(inv => statuses.includes(inv.status)).length;
   };
@@ -927,7 +937,7 @@ export default function ApListPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredInvoices.map((invoice) => (
+                paginatedInvoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">{invoice.vendor_name}</TableCell>
                     <TableCell>
@@ -1034,6 +1044,13 @@ export default function ApListPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 

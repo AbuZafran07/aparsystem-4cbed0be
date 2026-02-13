@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -85,6 +86,15 @@ export default function AuditLogsPage() {
     return matchesSearch && matchesAction && matchesEntity;
   });
 
+  const {
+    paginatedItems: paginatedLogs,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filteredLogs, 25);
+
   const handleViewDetails = (log: AuditLog) => {
     setSelectedLog(log);
     setIsDetailOpen(true);
@@ -170,7 +180,7 @@ export default function AuditLogsPage() {
         <CardHeader>
           <CardTitle className="flex items-center justify-between">
             <span>{t('auditLogs.recentActivity') || 'Recent Activity'}</span>
-            <Badge variant="secondary">{filteredLogs.length} records</Badge>
+            <Badge variant="secondary">{totalItems} records</Badge>
           </CardTitle>
         </CardHeader>
         <CardContent>
@@ -179,85 +189,94 @@ export default function AuditLogsPage() {
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
           ) : (
-            <div className="rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-[180px]">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="w-4 h-4" />
-                        {t('auditLogs.timestamp') || 'Timestamp'}
-                      </div>
-                    </TableHead>
-                    <TableHead>{t('auditLogs.action') || 'Action'}</TableHead>
-                    <TableHead>{t('auditLogs.entity') || 'Entity'}</TableHead>
-                    <TableHead>
-                      <div className="flex items-center gap-1">
-                        <User className="w-4 h-4" />
-                        {t('auditLogs.actor') || 'Actor'}
-                      </div>
-                    </TableHead>
-                    <TableHead>{t('auditLogs.role') || 'Role'}</TableHead>
-                    <TableHead className="w-[100px]">{t('common.actions')}</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredLogs.length === 0 ? (
+            <>
+              <div className="rounded-md border">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                        {t('auditLogs.noLogs') || 'No audit logs found'}
-                      </TableCell>
+                      <TableHead className="w-[180px]">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="w-4 h-4" />
+                          {t('auditLogs.timestamp') || 'Timestamp'}
+                        </div>
+                      </TableHead>
+                      <TableHead>{t('auditLogs.action') || 'Action'}</TableHead>
+                      <TableHead>{t('auditLogs.entity') || 'Entity'}</TableHead>
+                      <TableHead>
+                        <div className="flex items-center gap-1">
+                          <User className="w-4 h-4" />
+                          {t('auditLogs.actor') || 'Actor'}
+                        </div>
+                      </TableHead>
+                      <TableHead>{t('auditLogs.role') || 'Role'}</TableHead>
+                      <TableHead className="w-[100px]">{t('common.actions')}</TableHead>
                     </TableRow>
-                  ) : (
-                    filteredLogs.map((log) => (
-                      <TableRow key={log.id}>
-                        <TableCell className="font-mono text-xs">
-                          {formatDate(log.created_at)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge 
-                            variant="outline" 
-                            className={actionColors[log.action] || 'bg-gray-500/10 text-gray-500'}
-                          >
-                            {log.action}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex flex-col">
-                            <span className="font-medium text-sm">{log.entity_type || '-'}</span>
-                            <span className="text-xs text-muted-foreground truncate max-w-[200px]">
-                              {log.entity_id || '-'}
-                            </span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="font-mono text-xs truncate max-w-[150px]">
-                          {log.actor_id}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="text-xs">
-                            {log.actor_role}
-                          </Badge>
-                          {log.is_super_admin_action && (
-                            <Badge variant="destructive" className="ml-1 text-xs">
-                              SA
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleViewDetails(log)}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
+                  </TableHeader>
+                  <TableBody>
+                    {paginatedLogs.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                          {t('auditLogs.noLogs') || 'No audit logs found'}
                         </TableCell>
                       </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    ) : (
+                      paginatedLogs.map((log) => (
+                        <TableRow key={log.id}>
+                          <TableCell className="font-mono text-xs">
+                            {formatDate(log.created_at)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge 
+                              variant="outline" 
+                              className={actionColors[log.action] || 'bg-gray-500/10 text-gray-500'}
+                            >
+                              {log.action}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium text-sm">{log.entity_type || '-'}</span>
+                              <span className="text-xs text-muted-foreground truncate max-w-[200px]">
+                                {log.entity_id || '-'}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-mono text-xs truncate max-w-[150px]">
+                            {log.actor_id}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary" className="text-xs">
+                              {log.actor_role}
+                            </Badge>
+                            {log.is_super_admin_action && (
+                              <Badge variant="destructive" className="ml-1 text-xs">
+                                SA
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleViewDetails(log)}
+                            >
+                              <Eye className="w-4 h-4" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+              <TablePagination
+                currentPage={currentPage}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
+            </>
           )}
         </CardContent>
       </Card>
