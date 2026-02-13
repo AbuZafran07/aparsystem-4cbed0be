@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { Plus, Search, Filter, Eye, Edit, Trash2, Mail, FileText, MoreHorizontal, Loader2, Check, X, Download, Upload, CreditCard, FileDown, MessageCircle, Phone, Send } from 'lucide-react';
 import { InvoiceScanButton } from '@/components/InvoiceScanButton';
 import { Card, CardContent } from '@/components/ui/card';
@@ -516,6 +517,15 @@ export default function ArListPage() {
     
     return matchesSearch && matchesStatus;
   });
+
+  const {
+    paginatedItems: paginatedInvoices,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filteredInvoices);
 
   const getTabCount = (tab: StatusTab, statuses: InvoiceStatus[]) => {
     if (tab === 'APPROVED') {
@@ -1067,7 +1077,7 @@ export default function ArListPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredInvoices.map((invoice) => (
+                paginatedInvoices.map((invoice) => (
                   <TableRow key={invoice.id}>
                     <TableCell className="font-medium">
                       <div>
@@ -1203,6 +1213,13 @@ export default function ArListPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 

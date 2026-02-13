@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { parseExcelFile, validateAndMapCustomerData, generateCustomerTemplate } from '@/lib/importUtils';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 
 type Customer = Tables<'customers'>;
 
@@ -179,6 +180,15 @@ export default function CustomersPage() {
     c.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const {
+    paginatedItems,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filtered);
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -243,10 +253,10 @@ export default function CustomersPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-8">{language === 'en' ? 'Loading...' : 'Memuat...'}</TableCell></TableRow>
-              ) : filtered.length === 0 ? (
+              ) : paginatedItems.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{language === 'en' ? 'No customers found' : 'Tidak ada pelanggan'}</TableCell></TableRow>
               ) : (
-                filtered.map((customer) => (
+                paginatedItems.map((customer) => (
                   <TableRow key={customer.id}>
                     <TableCell className="font-medium">{customer.customer_name}</TableCell>
                     <TableCell className="max-w-[200px] truncate">{customer.address || '-'}</TableCell>
@@ -277,6 +287,13 @@ export default function CustomersPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 

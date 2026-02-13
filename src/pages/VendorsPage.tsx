@@ -22,6 +22,7 @@ import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import type { Tables } from '@/integrations/supabase/types';
 import { parseExcelFile, validateAndMapVendorData, generateVendorTemplate } from '@/lib/importUtils';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 
 type Vendor = Tables<'vendors'>;
 
@@ -190,6 +191,15 @@ export default function VendorsPage() {
     v.vendor_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const {
+    paginatedItems,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filtered);
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -254,10 +264,10 @@ export default function VendorsPage() {
             <TableBody>
               {isLoading ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-8">{language === 'en' ? 'Loading...' : 'Memuat...'}</TableCell></TableRow>
-              ) : filtered.length === 0 ? (
+              ) : paginatedItems.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{language === 'en' ? 'No vendors found' : 'Tidak ada vendor'}</TableCell></TableRow>
               ) : (
-                filtered.map((vendor) => (
+                paginatedItems.map((vendor) => (
                   <TableRow key={vendor.id}>
                     <TableCell className="font-medium">{vendor.vendor_name}</TableCell>
                     <TableCell className="max-w-[200px] truncate">{vendor.address || '-'}</TableCell>
@@ -288,6 +298,13 @@ export default function VendorsPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 

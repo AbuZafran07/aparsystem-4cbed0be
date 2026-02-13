@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { Plus, Search, Edit, Trash2, Loader2, MoreHorizontal } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -188,6 +189,15 @@ export default function SalesPage() {
       (s.email && s.email.toLowerCase().includes(searchQuery.toLowerCase()))
   );
 
+  const {
+    paginatedItems,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filteredSales);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -245,14 +255,14 @@ export default function SalesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredSales.length === 0 ? (
+              {paginatedItems.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                     {language === 'en' ? 'No sales found' : 'Tidak ada sales ditemukan'}
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredSales.map((sales) => (
+                paginatedItems.map((sales) => (
                   <TableRow key={sales.id}>
                     <TableCell className="font-medium">{sales.sales_name}</TableCell>
                     <TableCell>{sales.email || '-'}</TableCell>
@@ -296,6 +306,13 @@ export default function SalesPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 
