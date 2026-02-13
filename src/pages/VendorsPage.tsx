@@ -168,7 +168,7 @@ export default function VendorsPage() {
       }
       
       if (result.data.length > 0) {
-        const { error } = await supabase.from('vendors').insert(result.data);
+        const { error } = await supabase.from('vendors').upsert(result.data, { onConflict: 'vendor_name' });
         if (error) throw error;
         queryClient.invalidateQueries({ queryKey: ['vendors'] });
         toast({
