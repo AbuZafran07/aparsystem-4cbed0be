@@ -157,7 +157,7 @@ export default function CustomersPage() {
       }
       
       if (result.data.length > 0) {
-        const { error } = await supabase.from('customers').insert(result.data);
+        const { error } = await supabase.from('customers').upsert(result.data, { onConflict: 'customer_name' });
         if (error) throw error;
         queryClient.invalidateQueries({ queryKey: ['customers'] });
         toast({
