@@ -118,6 +118,7 @@ const statusConfig: Record<InvoiceStatus, { label: { en: string; id: string }; c
   PARTIAL: { label: { en: 'Partial', id: 'Sebagian' }, className: 'badge-partial' },
   PAID: { label: { en: 'Paid', id: 'Lunas' }, className: 'badge-paid' },
   CANCELLED: { label: { en: 'Cancelled', id: 'Dibatalkan' }, className: 'badge-rejected' },
+  REVISION_REQUESTED: { label: { en: 'Revision Requested', id: 'Minta Revisi' }, className: 'badge-submitted' },
 };
 
 const formatCurrency = (amount: number) => {
@@ -136,9 +137,9 @@ const formatDate = (dateString: string) => {
 type StatusTab = 'ALL' | 'DRAFT' | 'SUBMITTED' | 'APPROVED' | 'PAID';
 
 const statusTabs: { value: StatusTab; label: { en: string; id: string }; statuses: InvoiceStatus[] }[] = [
-  { value: 'ALL', label: { en: 'All', id: 'Semua' }, statuses: ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'PARTIAL', 'PAID', 'CANCELLED'] },
+  { value: 'ALL', label: { en: 'All', id: 'Semua' }, statuses: ['DRAFT', 'SUBMITTED', 'APPROVED', 'REJECTED', 'PARTIAL', 'PAID', 'CANCELLED', 'REVISION_REQUESTED'] },
   { value: 'DRAFT', label: { en: 'Draft', id: 'Draft' }, statuses: ['DRAFT', 'REJECTED'] },
-  { value: 'SUBMITTED', label: { en: 'Submitted', id: 'Diajukan' }, statuses: ['SUBMITTED'] },
+  { value: 'SUBMITTED', label: { en: 'Submitted', id: 'Diajukan' }, statuses: ['SUBMITTED', 'REVISION_REQUESTED'] },
   { value: 'APPROVED', label: { en: 'Approved', id: 'Disetujui' }, statuses: ['APPROVED', 'PARTIAL'] },
   { value: 'PAID', label: { en: 'Paid', id: 'Lunas' }, statuses: ['PAID'] },
 ];
@@ -161,6 +162,8 @@ export default function ApListPage() {
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [isPaymentRequestDialogOpen, setIsPaymentRequestDialogOpen] = useState(false);
+  const [isRevisionDialogOpen, setIsRevisionDialogOpen] = useState(false);
+  const [revisionReason, setRevisionReason] = useState('');
   const [selectedInvoice, setSelectedInvoice] = useState<ApInvoice | null>(null);
   const [rejectReason, setRejectReason] = useState('');
   const [saving, setSaving] = useState(false);
@@ -659,6 +662,76 @@ export default function ApListPage() {
     return status === 'SUBMITTED' || status === 'APPROVED';
   };
 
+  const canRequestRevision = (status: InvoiceStatus) => {
+    return (status === 'APPROVED' || status === 'PARTIAL') && (isPurchasing || isFinance || isAdmin);
+  };
+
+  const canApproveRevision = (status: InvoiceStatus) => {
+    return status === 'REVISION_REQUESTED' && isAdmin;
+  };
+
+  const handleRequestRevision = async () => {
+    if (!selectedInvoice || !revisionReason.trim()) {
+      toast.error(language === 'en' ? 'Please provide revision reason' : 'Mohon berikan alasan revisi');
+      return;
+    }
+    try {
+      const { error } = await supabase
+        .from('ap_invoices')
+        .update({ status: 'REVISION_REQUESTED' as any, rejected_reason: revisionReason })
+        .eq('id', selectedInvoice.id);
+      if (error) throw error;
+
+      await supabase.from('audit_logs').insert({
+        action: 'REQUEST_REVISION',
+        actor_id: user?.id || '',
+        actor_role: user?.role || 'PURCHASING',
+        entity_type: 'ap_invoice',
+        entity_id: selectedInvoice.id,
+        reason: revisionReason,
+      });
+
+      toast.success(language === 'en' ? 'Revision requested' : 'Permintaan revisi berhasil diajukan');
+      setIsRevisionDialogOpen(false);
+      setRevisionReason('');
+      setSelectedInvoice(null);
+      fetchData();
+    } catch (error: any) {
+      console.error('Error requesting revision:', error);
+      toast.error(language === 'en' ? 'Failed to request revision' : 'Gagal mengajukan revisi');
+    }
+  };
+
+  const handleApproveRevision = async (invoice: ApInvoice) => {
+    try {
+      const { error } = await supabase
+        .from('ap_invoices')
+        .update({ 
+          status: 'DRAFT' as any, 
+          approved_by: null, 
+          approved_at: null,
+          rejected_reason: null,
+        })
+        .eq('id', invoice.id);
+      if (error) throw error;
+
+      await supabase.from('audit_logs').insert({
+        action: 'APPROVE_REVISION',
+        actor_id: user?.id || '',
+        actor_role: user?.role || 'ADMIN',
+        entity_type: 'ap_invoice',
+        entity_id: invoice.id,
+        reason: 'Revision approved, reverted to DRAFT',
+      });
+
+      toast.success(language === 'en' ? 'Revision approved, invoice reverted to Draft' : 'Revisi disetujui, invoice kembali ke Draft');
+      fetchData();
+    } catch (error: any) {
+      console.error('Error approving revision:', error);
+      toast.error(language === 'en' ? 'Failed to approve revision' : 'Gagal menyetujui revisi');
+    }
+  };
+
   const handleOpenPaymentRequest = (invoice: ApInvoice) => {
     setSelectedInvoice(invoice);
     setPaymentRequestData({
@@ -1024,6 +1097,37 @@ export default function ApListPage() {
                               {t('btn.recordPayment')}
                             </DropdownMenuItem>
                           )}
+                          {canRequestRevision(invoice.status) && (
+                            <DropdownMenuItem 
+                              className="gap-2 text-orange-600" 
+                              onClick={() => {
+                                setSelectedInvoice(invoice);
+                                setRevisionReason('');
+                                setIsRevisionDialogOpen(true);
+                              }}
+                            >
+                              <Edit className="w-4 h-4" />
+                              {language === 'en' ? 'Request Revision' : 'Minta Revisi'}
+                            </DropdownMenuItem>
+                          )}
+                          {canApproveRevision(invoice.status) && (
+                            <>
+                              <DropdownMenuItem className="gap-2 text-success" onClick={() => handleApproveRevision(invoice)}>
+                                <Check className="w-4 h-4" />
+                                {language === 'en' ? 'Approve Revision' : 'Setujui Revisi'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem 
+                                className="gap-2 text-destructive" 
+                                onClick={() => {
+                                  setSelectedInvoice(invoice);
+                                  setIsRejectDialogOpen(true);
+                                }}
+                              >
+                                <X className="w-4 h-4" />
+                                {language === 'en' ? 'Reject Revision' : 'Tolak Revisi'}
+                              </DropdownMenuItem>
+                            </>
+                          )}
                           {canDelete(invoice.status) && (
                             <DropdownMenuItem 
                               className="gap-2 text-destructive"
@@ -1330,6 +1434,39 @@ export default function ApListPage() {
             </Button>
             <Button variant="destructive" onClick={handleReject}>
               {t('btn.reject')}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Revision Request Dialog */}
+      <Dialog open={isRevisionDialogOpen} onOpenChange={setIsRevisionDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'en' ? 'Request Revision' : 'Minta Revisi'}
+            </DialogTitle>
+            <DialogDescription>
+              {language === 'en' 
+                ? 'Please provide a reason for revision request. After admin approval, the invoice will revert to Draft.' 
+                : 'Mohon berikan alasan permintaan revisi. Setelah disetujui admin, invoice akan kembali ke Draft.'}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label>{language === 'en' ? 'Revision Reason' : 'Alasan Revisi'} *</Label>
+            <Textarea 
+              value={revisionReason} 
+              onChange={(e) => setRevisionReason(e.target.value)}
+              rows={3}
+              placeholder={language === 'en' ? 'Enter revision reason...' : 'Masukkan alasan revisi...'}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsRevisionDialogOpen(false)}>
+              {t('btn.cancel')}
+            </Button>
+            <Button onClick={handleRequestRevision}>
+              {language === 'en' ? 'Submit Request' : 'Ajukan Revisi'}
             </Button>
           </DialogFooter>
         </DialogContent>

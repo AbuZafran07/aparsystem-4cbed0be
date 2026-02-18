@@ -1,0 +1,3 @@
+
+-- Add REVISION_REQUESTED to record_status enum
+ALTER TYPE public.record_status ADD VALUE IF NOT EXISTS 'REVISION_REQUESTED' AFTER 'CANCELLED';
