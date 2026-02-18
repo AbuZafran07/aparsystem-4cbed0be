@@ -57,6 +57,7 @@ const statusConfig: Record<InvoiceStatus, { label: { en: string; id: string }; c
   PARTIAL: { label: { en: 'Partial', id: 'Sebagian' }, className: 'badge-partial' },
   PAID: { label: { en: 'Paid', id: 'Lunas' }, className: 'badge-paid' },
   CANCELLED: { label: { en: 'Cancelled', id: 'Dibatalkan' }, className: 'badge-rejected' },
+  REVISION_REQUESTED: { label: { en: 'Revision Requested', id: 'Minta Revisi' }, className: 'badge-submitted' },
 };
 
 const formatCurrency = (amount: number) => {

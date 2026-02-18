@@ -944,6 +944,7 @@ export type Database = {
         | "PARTIAL"
         | "PAID"
         | "CANCELLED"
+        | "REVISION_REQUESTED"
       user_role: "PURCHASING" | "FINANCE" | "ADMIN" | "SUPER_ADMIN"
     }
     CompositeTypes: {
@@ -1081,6 +1082,7 @@ export const Constants = {
         "PARTIAL",
         "PAID",
         "CANCELLED",
+        "REVISION_REQUESTED",
       ],
       user_role: ["PURCHASING", "FINANCE", "ADMIN", "SUPER_ADMIN"],
     },
