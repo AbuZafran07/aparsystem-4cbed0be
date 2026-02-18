@@ -691,6 +691,29 @@ export default function ApListPage() {
         reason: revisionReason,
       });
 
+      // Send notification to all ADMIN and SUPER_ADMIN users
+      const { data: adminRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .in('role', ['ADMIN', 'SUPER_ADMIN']);
+      
+      if (adminRoles && adminRoles.length > 0) {
+        const vendor = vendors.find(v => v.id === selectedInvoice.vendor_id);
+        const notifications = adminRoles
+          .filter(r => r.user_id !== user?.id)
+          .map(r => ({
+            user_id: r.user_id,
+            title: 'Permintaan Revisi AP',
+            message: `${user?.name} mengajukan revisi untuk invoice AP ${selectedInvoice.vendor_invoice_number} (${vendor?.vendor_name || 'Unknown'}). Alasan: ${revisionReason}`,
+            type: 'revision_request',
+            entity_type: 'ap_invoice',
+            entity_id: selectedInvoice.id,
+          }));
+        if (notifications.length > 0) {
+          await supabase.from('notifications').insert(notifications);
+        }
+      }
+
       toast.success(language === 'en' ? 'Revision requested' : 'Permintaan revisi berhasil diajukan');
       setIsRevisionDialogOpen(false);
       setRevisionReason('');
