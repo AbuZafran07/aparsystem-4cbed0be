@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { LogOut, User, Menu } from 'lucide-react';
+import NotificationBell from '@/components/NotificationBell';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -90,6 +91,9 @@ export default function AppTopbar({ pageTitle, onMenuToggle }: AppTopbarProps) {
           <span className="text-muted-foreground/50">|</span>
           <span className={cn(language === 'id' && 'text-foreground font-semibold')}>ID</span>
         </button>
+
+        {/* Notifications */}
+        <NotificationBell />
 
         {/* User Info with Dropdown */}
         <DropdownMenu>
