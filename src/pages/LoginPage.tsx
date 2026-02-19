@@ -62,8 +62,8 @@ export default function LoginPage() {
         <div className="relative z-10">
           {/* Logo and Brand */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-primary-foreground/10 rounded-xl flex items-center justify-center">
-              <FileText className="w-6 h-6 text-primary-foreground" />
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
+              <img src="/logo-kemika-new.png" alt="Kemika Logo" className="w-full h-full object-contain" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-primary-foreground">PT KEMIKA KARYA PRATAMA </h1>
