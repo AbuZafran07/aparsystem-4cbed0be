@@ -21,13 +21,13 @@ interface CreateUserPayload {
   email: string;
   password: string;
   fullName: string;
-  role: 'PURCHASING' | 'FINANCE' | 'ADMIN';
+  role: 'PURCHASING' | 'FINANCE' | 'ADMIN' | 'SUPER_ADMIN';
 }
 
 interface UpdateUserPayload {
   userId: string;
   fullName?: string;
-  role?: 'PURCHASING' | 'FINANCE' | 'ADMIN';
+  role?: 'PURCHASING' | 'FINANCE' | 'ADMIN' | 'SUPER_ADMIN';
   isActive?: boolean;
 }
 
@@ -36,7 +36,7 @@ interface DeleteUserPayload {
 }
 
 // Validation helpers
-const VALID_ROLES = ['PURCHASING', 'FINANCE', 'ADMIN'] as const;
+const VALID_ROLES = ['PURCHASING', 'FINANCE', 'ADMIN', 'SUPER_ADMIN'] as const;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_NAME_LENGTH = 100;
@@ -331,10 +331,9 @@ Deno.serve(async (req) => {
         );
     }
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error:', error);
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: 'An internal error occurred. Please try again.' }),
       { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
     );
   }

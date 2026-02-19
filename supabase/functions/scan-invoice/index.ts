@@ -83,6 +83,15 @@ serve(async (req) => {
       });
     }
 
+    // Validate base64 structure
+    const base64Regex = /^[A-Za-z0-9+/]*={0,2}$/;
+    if (!base64Regex.test(image_base64)) {
+      return new Response(JSON.stringify({ error: "Invalid base64 encoding" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) throw new Error("LOVABLE_API_KEY is not configured");
 
@@ -202,7 +211,7 @@ Extract these AP invoice fields:
   } catch (e) {
     console.error("scan-invoice error:", e);
     return new Response(
-      JSON.stringify({ error: e instanceof Error ? e.message : "Unknown error" }),
+      JSON.stringify({ error: "An internal error occurred. Please try again." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
