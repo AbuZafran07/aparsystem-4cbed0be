@@ -396,6 +396,7 @@ export default function UserManagementPage() {
                   <SelectItem value="PURCHASING">Purchasing</SelectItem>
                   <SelectItem value="FINANCE">Finance</SelectItem>
                   <SelectItem value="ADMIN">Admin</SelectItem>
+                  <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -440,6 +441,7 @@ export default function UserManagementPage() {
                   <SelectItem value="PURCHASING">Purchasing</SelectItem>
                   <SelectItem value="FINANCE">Finance</SelectItem>
                   <SelectItem value="ADMIN">Admin</SelectItem>
+                  <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
                 </SelectContent>
               </Select>
             </div>
