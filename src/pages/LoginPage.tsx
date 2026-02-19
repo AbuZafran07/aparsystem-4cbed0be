@@ -62,7 +62,7 @@ export default function LoginPage() {
         <div className="relative z-10">
           {/* Logo and Brand */}
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
+            <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden bg-white">
               <img src="/logo-kemika-new.png" alt="Kemika Logo" className="w-full h-full object-contain border-primary-foreground" />
             </div>
             <div>
