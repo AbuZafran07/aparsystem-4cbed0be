@@ -33,8 +33,8 @@ Deno.serve(async (req) => {
   try {
     console.log('Starting seed-admin function...');
 
-    // Require a secret seed token to prevent unauthorized access
-    const SEED_TOKEN = Deno.env.get('SUPER_ADMIN_PASSWORD');
+    // Require a separate seed token to prevent credential reuse
+    const SEED_TOKEN = Deno.env.get('SEED_TOKEN') || Deno.env.get('SUPER_ADMIN_PASSWORD');
     const providedToken = req.headers.get('x-seed-token');
     if (!providedToken || providedToken !== SEED_TOKEN) {
       return new Response(
@@ -176,12 +176,11 @@ Deno.serve(async (req) => {
     );
 
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Seed admin error:', error);
     return new Response(
       JSON.stringify({ 
         success: false, 
-        error: errorMessage 
+        error: 'An internal error occurred. Please try again.' 
       }),
       { 
         status: 500,
