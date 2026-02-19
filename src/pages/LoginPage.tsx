@@ -63,7 +63,7 @@ export default function LoginPage() {
           {/* Logo and Brand */}
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 rounded-xl flex items-center justify-center overflow-hidden">
-              <img src="/logo-kemika-new.png" alt="Kemika Logo" className="w-full h-full object-contain" />
+              <img src="/logo-kemika-new.png" alt="Kemika Logo" className="w-full h-full object-contain border-primary-foreground" />
             </div>
             <div>
               <h1 className="text-xl font-bold text-primary-foreground">PT KEMIKA KARYA PRATAMA </h1>
@@ -137,7 +137,7 @@ export default function LoginPage() {
                 </label>
                 <div className="relative">
                   <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="email" type="email" placeholder={t('login.emailPlaceholder')} value={email} onChange={e => setEmail(e.target.value)} className="pl-10 h-11" />
+                  <Input id="email" type="email" placeholder={t('login.emailPlaceholder')} value={email} onChange={(e) => setEmail(e.target.value)} className="pl-10 h-11" />
                 </div>
               </div>
 
@@ -148,7 +148,7 @@ export default function LoginPage() {
                 </label>
                 <div className="relative">
                   <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                  <Input id="password" type={showPassword ? 'text' : 'password'} placeholder={t('login.passwordPlaceholder')} value={password} onChange={e => setPassword(e.target.value)} className="pl-10 pr-10 h-11" />
+                  <Input id="password" type={showPassword ? 'text' : 'password'} placeholder={t('login.passwordPlaceholder')} value={password} onChange={(e) => setPassword(e.target.value)} className="pl-10 pr-10 h-11" />
                   <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
                     {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
