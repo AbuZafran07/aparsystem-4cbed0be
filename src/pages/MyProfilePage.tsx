@@ -128,27 +128,18 @@ export default function MyProfilePage() {
     
     setIsChangingPassword(true);
     try {
-      // First verify current password by re-authenticating
-      const { error: signInError } = await supabase.auth.signInWithPassword({
-        email: email,
-        password: currentPassword,
-      });
-      
-      if (signInError) {
-        toast({
-          title: language === 'id' ? 'Password saat ini salah' : 'Current password is incorrect',
-          variant: 'destructive',
-        });
-        setIsChangingPassword(false);
-        return;
-      }
-      
-      // Update password
+      // Directly update password via Supabase Auth (operates on current session)
       const { error } = await supabase.auth.updateUser({
         password: newPassword,
       });
       
-      if (error) throw error;
+      if (error) {
+        toast({
+          title: language === 'id' ? 'Gagal mengubah password' : 'Failed to change password',
+          variant: 'destructive',
+        });
+        return;
+      }
       
       toast({
         title: language === 'id' ? 'Password berhasil diubah' : 'Password changed successfully',
@@ -159,9 +150,9 @@ export default function MyProfilePage() {
       setNewPassword('');
       setConfirmPassword('');
     } catch (error: any) {
+      console.error('Password change error:', error);
       toast({
         title: language === 'id' ? 'Gagal mengubah password' : 'Failed to change password',
-        description: error.message,
         variant: 'destructive',
       });
     } finally {
