@@ -99,6 +99,7 @@ Extract these AR invoice fields:
 - notes: Any additional notes
 ` : `
 Extract these AP invoice fields:
+- vendor_name: The vendor/supplier company name
 - vendor_invoice_number: The vendor's invoice number
 - po_number: The PO number
 - product_name: Product/service description
@@ -118,6 +119,7 @@ Extract these AP invoice fields:
           notes: { type: "string" },
         }
       : {
+          vendor_name: { type: "string", description: "Vendor/supplier company name" },
           vendor_invoice_number: { type: "string" },
           po_number: { type: "string" },
           product_name: { type: "string" },
