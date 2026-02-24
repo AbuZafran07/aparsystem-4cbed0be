@@ -1,20 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// Allowed origins for CORS - restrict to known frontend domains
-const allowedOrigins = [
-  'https://aparsystem.lovable.app',
-  'https://id-preview--33a78b09-aa11-45a9-b298-7040a810eb4c.lovable.app',
-  'http://localhost:5173',
-  'http://localhost:8080',
-];
-
-const getCorsHeaders = (req: Request) => {
-  const origin = req.headers.get('Origin') || '';
-  const allowedOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-  };
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 interface CreateUserPayload {
@@ -64,7 +52,7 @@ function isValidPassword(password: string): boolean {
 }
 
 Deno.serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req);
+  // corsHeaders already defined at top level
   
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -334,7 +322,7 @@ Deno.serve(async (req) => {
     console.error('Error:', error);
     return new Response(
       JSON.stringify({ error: 'An internal error occurred. Please try again.' }),
-      { status: 500, headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
 });

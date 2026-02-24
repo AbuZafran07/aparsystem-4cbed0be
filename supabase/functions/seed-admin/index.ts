@@ -1,20 +1,8 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 
-// Allowed origins for CORS - restrict to known frontend domains
-const allowedOrigins = [
-  'https://aparsystem.lovable.app',
-  'https://id-preview--33a78b09-aa11-45a9-b298-7040a810eb4c.lovable.app',
-  'http://localhost:5173',
-  'http://localhost:8080',
-];
-
-const getCorsHeaders = (req: Request) => {
-  const origin = req.headers.get('Origin') || '';
-  const allowedOrigin = allowedOrigins.includes(origin) ? origin : allowedOrigins[0];
-  return {
-    'Access-Control-Allow-Origin': allowedOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-seed-token',
-  };
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-seed-token, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version',
 };
 
 // Read credentials from environment variables (set via Lovable Cloud secrets)
@@ -23,7 +11,7 @@ const SUPER_ADMIN_PASSWORD = Deno.env.get('SUPER_ADMIN_PASSWORD');
 const SUPER_ADMIN_NAME = 'Ferry Kemika';
 
 Deno.serve(async (req) => {
-  const corsHeaders = getCorsHeaders(req);
+  // corsHeaders already defined at top level
   
   // Handle CORS preflight
   if (req.method === 'OPTIONS') {
@@ -184,7 +172,7 @@ Deno.serve(async (req) => {
       }),
       { 
         status: 500,
-        headers: { ...getCorsHeaders(req), 'Content-Type': 'application/json' } 
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
   }
