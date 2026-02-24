@@ -1,11 +1,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TablePagination, usePagination } from '@/components/TablePagination';
-import { Plus, Search, Filter, Eye, Edit, Trash2, Check, X, MoreHorizontal, Loader2, Download, Upload, CreditCard, FileDown, Printer } from 'lucide-react';
+import { Plus, Search, Filter, Eye, Edit, Trash2, Check, X, MoreHorizontal, Loader2, Download, Upload, CreditCard, FileDown, Printer, ChevronsUpDown } from 'lucide-react';
 import { InvoiceScanButton } from '@/components/InvoiceScanButton';
 import { exportToCSV, exportToExcel, formatCurrencyForExport, formatDateForExport, ExportColumn } from '@/lib/exportUtils';
 import { parseExcelFile, validateAndMapApData, generateApTemplate, ImportError } from '@/lib/importUtils';
 import { generatePaymentRequestHTML, downloadPaymentRequestPDF, PaymentRequestData } from '@/lib/paymentRequestUtils';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -1212,6 +1214,20 @@ export default function ApListPage() {
                     invoice_amount: data.invoice_amount ? String(data.invoice_amount) : prev.invoice_amount,
                     notes: data.notes || prev.notes,
                   }));
+                  // Auto-match vendor by name
+                  if (data.vendor_name) {
+                    const vendorNameLower = data.vendor_name.toLowerCase();
+                    const matched = vendors.find(v => 
+                      v.vendor_name.toLowerCase().includes(vendorNameLower) ||
+                      vendorNameLower.includes(v.vendor_name.toLowerCase())
+                    );
+                    if (matched) {
+                      setFormData(prev => ({ ...prev, vendor_id: matched.id }));
+                      toast.success(language === 'en' ? `Vendor matched: ${matched.vendor_name}` : `Vendor ditemukan: ${matched.vendor_name}`);
+                    } else {
+                      toast.info(language === 'en' ? `Vendor "${data.vendor_name}" not found in database. Please select manually.` : `Vendor "${data.vendor_name}" tidak ditemukan di database. Silakan pilih manual.`);
+                    }
+                  }
                 }}
               />
               <span className="text-sm text-muted-foreground">
@@ -1223,16 +1239,38 @@ export default function ApListPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{language === 'en' ? 'Vendor' : 'Vendor'} *</Label>
-              <Select value={formData.vendor_id} onValueChange={(v) => setFormData({...formData, vendor_id: v})}>
-                <SelectTrigger>
-                  <SelectValue placeholder={language === 'en' ? 'Select vendor' : 'Pilih vendor'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {vendors.map((v) => (
-                    <SelectItem key={v.id} value={v.id}>{v.vendor_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+                    {formData.vendor_id
+                      ? vendors.find(v => v.id === formData.vendor_id)?.vendor_name
+                      : (language === 'en' ? 'Select vendor' : 'Pilih vendor')}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder={language === 'en' ? 'Search vendor...' : 'Cari vendor...'} />
+                    <CommandList>
+                      <CommandEmpty>{language === 'en' ? 'No vendor found.' : 'Vendor tidak ditemukan.'}</CommandEmpty>
+                      <CommandGroup>
+                        {vendors.map((v) => (
+                          <CommandItem
+                            key={v.id}
+                            value={v.vendor_name}
+                            onSelect={() => {
+                              setFormData(prev => ({ ...prev, vendor_id: v.id }));
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", formData.vendor_id === v.id ? "opacity-100" : "opacity-0")} />
+                            {v.vendor_name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
             
             <div className="space-y-2">
