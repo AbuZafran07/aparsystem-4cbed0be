@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { TablePagination, usePagination } from '@/components/TablePagination';
-import { Plus, Search, Filter, Eye, Edit, Trash2, Mail, FileText, MoreHorizontal, Loader2, Check, X, Download, Upload, CreditCard, FileDown, MessageCircle, Phone, Send } from 'lucide-react';
+import { Plus, Search, Filter, Eye, Edit, Trash2, Mail, FileText, MoreHorizontal, Loader2, Check, X, Download, Upload, CreditCard, FileDown, MessageCircle, Phone, Send, ChevronsUpDown } from 'lucide-react';
 import { InvoiceScanButton } from '@/components/InvoiceScanButton';
 import { Card, CardContent } from '@/components/ui/card';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -1391,16 +1393,38 @@ export default function ArListPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>{language === 'en' ? 'Customer' : 'Customer'} *</Label>
-              <Select value={formData.customer_id} onValueChange={(v) => setFormData({ ...formData, customer_id: v })}>
-                <SelectTrigger>
-                  <SelectValue placeholder={language === 'en' ? 'Select customer' : 'Pilih customer'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {customers.map((c) => (
-                    <SelectItem key={c.id} value={c.id}>{c.customer_name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button variant="outline" role="combobox" className="w-full justify-between font-normal">
+                    {formData.customer_id
+                      ? customers.find(c => c.id === formData.customer_id)?.customer_name
+                      : (language === 'en' ? 'Select customer' : 'Pilih customer')}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                  <Command>
+                    <CommandInput placeholder={language === 'en' ? 'Search customer...' : 'Cari customer...'} />
+                    <CommandList>
+                      <CommandEmpty>{language === 'en' ? 'No customer found.' : 'Customer tidak ditemukan.'}</CommandEmpty>
+                      <CommandGroup>
+                        {customers.map((c) => (
+                          <CommandItem
+                            key={c.id}
+                            value={c.customer_name}
+                            onSelect={() => {
+                              setFormData(prev => ({ ...prev, customer_id: c.id }));
+                            }}
+                          >
+                            <Check className={cn("mr-2 h-4 w-4", formData.customer_id === c.id ? "opacity-100" : "opacity-0")} />
+                            {c.customer_name}
+                          </CommandItem>
+                        ))}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
             </div>
 
             <div className="space-y-2">
