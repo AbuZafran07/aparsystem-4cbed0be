@@ -246,6 +246,20 @@ export default function PaymentRequestsPage() {
       toast.error(language === 'en' ? 'Please enter approved amount' : 'Mohon masukkan nilai yang disetujui');
       return;
     }
+    // Validate: approved amount cannot exceed submitted amount
+    if (amount > selectedRequest.submitted_amount) {
+      toast.error(language === 'en' 
+        ? 'Approved amount cannot exceed submitted amount' 
+        : 'Nilai approved tidak boleh melebihi nilai pengajuan');
+      return;
+    }
+    // Validate: approved amount cannot exceed outstanding amount
+    if (amount > selectedRequest.outstanding_amount) {
+      toast.error(language === 'en' 
+        ? 'Approved amount cannot exceed outstanding amount' 
+        : 'Nilai approved tidak boleh melebihi sisa outstanding');
+      return;
+    }
     try {
       setProcessing(true);
       const { error } = await supabase
@@ -524,6 +538,7 @@ export default function PaymentRequestsPage() {
                 <TableHead>{language === 'en' ? 'Date' : 'Tanggal'}</TableHead>
                 <TableHead>{language === 'en' ? 'Vendor' : 'Vendor'}</TableHead>
                 <TableHead>{language === 'en' ? 'Invoice' : 'Invoice'}</TableHead>
+                <TableHead>{language === 'en' ? 'Cost Description' : 'Keterangan Biaya'}</TableHead>
                 <TableHead className="text-right">{language === 'en' ? 'Invoice Amount' : 'Nilai Invoice'}</TableHead>
                 <TableHead className="text-right">{language === 'en' ? 'Submitted Amount' : 'Nilai Pengajuan'}</TableHead>
                 <TableHead className="text-right">{language === 'en' ? 'Approved Amount' : 'Nilai Approved'}</TableHead>
@@ -535,7 +550,7 @@ export default function PaymentRequestsPage() {
             <TableBody>
               {filteredRequests.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={11} className="text-center py-8 text-muted-foreground">
                     {language === 'en' ? 'No data found' : 'Tidak ada data'}
                   </TableCell>
                 </TableRow>
@@ -555,6 +570,9 @@ export default function PaymentRequestsPage() {
                         <p className="font-medium">{request.vendor_invoice_number}</p>
                         <p className="text-xs text-muted-foreground">{request.po_number}</p>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <span className="text-sm">{request.notes || '-'}</span>
                     </TableCell>
                     <TableCell className="text-right font-medium">
                       {formatCurrency(request.invoice_amount)}
@@ -886,13 +904,16 @@ export default function PaymentRequestsPage() {
                 value={approveAmount}
                 onChange={(e) => setApproveAmount(e.target.value)}
                 placeholder="0"
+                max={selectedRequest ? Math.min(selectedRequest.submitted_amount, selectedRequest.outstanding_amount) : undefined}
                 className="mt-1"
               />
-              <p className="text-xs text-muted-foreground mt-1">
-                {language === 'en' 
-                  ? 'Enter the amount approved for payment (can be different from submitted amount for partial/DP payments)'
-                  : 'Masukkan nilai yang disetujui untuk dibayarkan (bisa berbeda dari nilai pengajuan untuk pembayaran DP/bertahap)'}
-              </p>
+              {selectedRequest && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  {language === 'en' 
+                    ? `Max: ${formatCurrency(Math.min(selectedRequest.submitted_amount, selectedRequest.outstanding_amount))} (cannot exceed submitted or outstanding amount)`
+                    : `Maks: ${formatCurrency(Math.min(selectedRequest.submitted_amount, selectedRequest.outstanding_amount))} (tidak boleh melebihi nilai pengajuan atau outstanding)`}
+                </p>
+              )}
             </div>
           </div>
           <DialogFooter>
