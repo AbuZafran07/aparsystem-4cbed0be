@@ -643,6 +643,31 @@ export default function ArListPage() {
     return isFinance && (status === 'APPROVED' || status === 'PARTIAL') && outstanding > 0;
   };
 
+  const canMarkAsPaid = (status: InvoiceStatus, outstanding: number, invoiceAmount: number) => {
+    return isFinance && (status === 'APPROVED' || status === 'PARTIAL') && outstanding === 0 && invoiceAmount === 0;
+  };
+
+  const handleMarkAsPaid = async (invoice: ArInvoice) => {
+    try {
+      setSaving(true);
+      const { error } = await supabase
+        .from('ar_invoices')
+        .update({
+          status: 'PAID',
+          paid_date: new Date().toISOString().split('T')[0],
+        })
+        .eq('id', invoice.id);
+      if (error) throw error;
+      toast.success(language === 'en' ? 'Invoice marked as paid' : 'Invoice ditandai lunas');
+      fetchData();
+    } catch (error: any) {
+      console.error('Error marking as paid:', error);
+      toast.error(language === 'en' ? 'Failed to mark as paid' : 'Gagal menandai lunas');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const canRequestRevision = (status: InvoiceStatus) => {
     return (status === 'APPROVED' || status === 'PARTIAL') && (isFinance || isAdmin);
   };
@@ -1289,6 +1314,12 @@ export default function ArListPage() {
                             <DropdownMenuItem className="gap-2" onClick={() => handleOpenReceipt(invoice)}>
                               <CreditCard className="w-4 h-4" />
                               {t('btn.recordReceipt')}
+                            </DropdownMenuItem>
+                          )}
+                          {canMarkAsPaid(invoice.status, invoice.outstanding_amount, invoice.invoice_amount) && (
+                            <DropdownMenuItem className="gap-2" onClick={() => handleMarkAsPaid(invoice)}>
+                              <Check className="w-4 h-4" />
+                              {language === 'en' ? 'Mark as Paid' : 'Tandai Lunas'}
                             </DropdownMenuItem>
                           )}
                           {canRequestRevision(invoice.status) && (
