@@ -752,6 +752,7 @@ export type Database = {
       payment_requests: {
         Row: {
           ap_invoice_id: string
+          approved_amount: number | null
           approved_at: string | null
           approved_by: string | null
           created_at: string
@@ -762,10 +763,12 @@ export type Database = {
           request_no: string
           requested_by: string
           status: string
+          submitted_amount: number
           updated_at: string
         }
         Insert: {
           ap_invoice_id: string
+          approved_amount?: number | null
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
@@ -776,10 +779,12 @@ export type Database = {
           request_no: string
           requested_by: string
           status?: string
+          submitted_amount?: number
           updated_at?: string
         }
         Update: {
           ap_invoice_id?: string
+          approved_amount?: number | null
           approved_at?: string | null
           approved_by?: string | null
           created_at?: string
@@ -790,6 +795,7 @@ export type Database = {
           request_no?: string
           requested_by?: string
           status?: string
+          submitted_amount?: number
           updated_at?: string
         }
         Relationships: [
