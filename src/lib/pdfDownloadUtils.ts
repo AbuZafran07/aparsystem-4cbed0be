@@ -95,14 +95,15 @@ export const downloadPdfFromHtml = async ({
 
   iframe.style.cssText = [
     'position: fixed',
-    'left: -10000px',
+    'left: 0',
     'top: 0',
     `width: ${viewportWidthPx}px`,
     'height: 1123px',
     'border: 0',
     'background: white',
     'pointer-events: none',
-    'z-index: -1',
+    'z-index: -9999',
+    'opacity: 0.01',
   ].join(';');
 
   document.body.appendChild(iframe);
@@ -127,8 +128,15 @@ export const downloadPdfFromHtml = async ({
     const html2canvas = (await import('html2canvas')).default;
     const { jsPDF } = await import('jspdf');
 
+    // Extra delay to ensure CSS layout is fully computed (grid/flex)
+    await new Promise<void>((r) => setTimeout(r, 300));
+    await raf();
+
     // Capture the .pdf-page wrapper (fixed 794px width = exact A4 ratio)
     const captureEl = doc.querySelector('.pdf-page') as HTMLElement || doc.body;
+
+    // Force a reflow so scrollHeight is accurate
+    captureEl.getBoundingClientRect();
     const captureHeight = Math.max(captureEl.scrollHeight, 1123);
 
     const canvas = await html2canvas(captureEl, {
@@ -142,7 +150,7 @@ export const downloadPdfFromHtml = async ({
       windowWidth: viewportWidthPx,
       scrollX: 0,
       scrollY: 0,
-    });
+    } as any);
 
     const pdf = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
     const pageWidth = pdf.internal.pageSize.getWidth();  // 210mm
