@@ -64,6 +64,8 @@ interface PaymentRequest {
   paid_at: string | null;
   notes: string | null;
   created_at: string;
+  submitted_amount: number;
+  approved_amount: number | null;
   // Joined data
   vendor_name: string;
   vendor_invoice_number: string;
@@ -71,9 +73,12 @@ interface PaymentRequest {
   product_name: string | null;
   invoice_amount: number;
   outstanding_amount: number;
+  due_date: string;
   invoice_status: string;
   requester_name: string;
   approver_name: string | null;
+  vendor_bank_name: string | null;
+  vendor_bank_account_no: string | null;
 }
 
 interface CompanyProfile {
@@ -126,6 +131,8 @@ export default function PaymentRequestsPage() {
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [approveAmount, setApproveAmount] = useState('');
   const [selectedRequest, setSelectedRequest] = useState<PaymentRequest | null>(null);
   const [processing, setProcessing] = useState(false);
   const [previewHtml, setPreviewHtml] = useState<string>('');
@@ -152,8 +159,9 @@ export default function PaymentRequestsPage() {
             product_name,
             invoice_amount,
             outstanding_amount,
+            due_date,
             status,
-            vendors (vendor_name)
+            vendors (vendor_name, bank_name, bank_account_no)
           )
         `)
         .order('created_at', { ascending: false });
@@ -190,15 +198,20 @@ export default function PaymentRequestsPage() {
         paid_at: req.paid_at,
         notes: req.notes,
         created_at: req.created_at,
+        submitted_amount: req.submitted_amount || 0,
+        approved_amount: req.approved_amount ?? null,
         vendor_name: req.ap_invoices?.vendors?.vendor_name || 'Unknown',
         vendor_invoice_number: req.ap_invoices?.vendor_invoice_number || '',
         po_number: req.ap_invoices?.po_number || '',
         product_name: req.ap_invoices?.product_name,
         invoice_amount: req.ap_invoices?.invoice_amount || 0,
         outstanding_amount: req.ap_invoices?.outstanding_amount || 0,
+        due_date: req.ap_invoices?.due_date || req.request_date,
         invoice_status: req.ap_invoices?.status || '',
         requester_name: profilesMap[req.requested_by] || 'Unknown',
         approver_name: req.approved_by ? profilesMap[req.approved_by] || 'Unknown' : null,
+        vendor_bank_name: req.ap_invoices?.vendors?.bank_name || null,
+        vendor_bank_account_no: req.ap_invoices?.vendors?.bank_account_no || null,
       }));
 
       setRequests(formattedRequests);
@@ -220,7 +233,19 @@ export default function PaymentRequestsPage() {
     }
   };
 
-  const handleApprove = async (request: PaymentRequest) => {
+  const openApproveDialog = (request: PaymentRequest) => {
+    setSelectedRequest(request);
+    setApproveAmount(request.submitted_amount.toString());
+    setIsApproveDialogOpen(true);
+  };
+
+  const handleApprove = async () => {
+    if (!selectedRequest) return;
+    const amount = parseFloat(approveAmount) || 0;
+    if (amount <= 0) {
+      toast.error(language === 'en' ? 'Please enter approved amount' : 'Mohon masukkan nilai yang disetujui');
+      return;
+    }
     try {
       setProcessing(true);
       const { error } = await supabase
@@ -229,11 +254,13 @@ export default function PaymentRequestsPage() {
           status: 'APPROVED',
           approved_by: user?.id,
           approved_at: new Date().toISOString(),
-        })
-        .eq('id', request.id);
+          approved_amount: amount,
+        } as any)
+        .eq('id', selectedRequest.id);
 
       if (error) throw error;
       toast.success(language === 'en' ? 'Payment request approved' : 'Pengajuan pembayaran disetujui');
+      setIsApproveDialogOpen(false);
       fetchData();
     } catch (error: any) {
       console.error('Error approving:', error);
@@ -294,7 +321,7 @@ export default function PaymentRequestsPage() {
       productName: request.product_name || undefined,
       spPoDate: request.request_date,
       invoiceDate: request.request_date,
-      dueDate: request.request_date,
+      dueDate: request.due_date || request.request_date,
       invoiceAmount: request.invoice_amount,
       outstandingAmount: request.outstanding_amount,
       overdueDays: 0,
@@ -306,6 +333,11 @@ export default function PaymentRequestsPage() {
       companyLogoUrl: companyProfile?.logo_url || undefined,
       requestedBy: request.requester_name,
       status: request.status,
+      submittedAmount: request.submitted_amount,
+      approvedAmount: request.approved_amount ?? undefined,
+      bankName: request.vendor_bank_name || undefined,
+      bankAccountNo: request.vendor_bank_account_no || undefined,
+      transferAmount: request.approved_amount || request.submitted_amount,
     };
   };
 
@@ -492,7 +524,9 @@ export default function PaymentRequestsPage() {
                 <TableHead>{language === 'en' ? 'Date' : 'Tanggal'}</TableHead>
                 <TableHead>{language === 'en' ? 'Vendor' : 'Vendor'}</TableHead>
                 <TableHead>{language === 'en' ? 'Invoice' : 'Invoice'}</TableHead>
-                <TableHead className="text-right">{language === 'en' ? 'Amount' : 'Jumlah'}</TableHead>
+                <TableHead className="text-right">{language === 'en' ? 'Invoice Amount' : 'Nilai Invoice'}</TableHead>
+                <TableHead className="text-right">{language === 'en' ? 'Submitted Amount' : 'Nilai Pengajuan'}</TableHead>
+                <TableHead className="text-right">{language === 'en' ? 'Approved Amount' : 'Nilai Approved'}</TableHead>
                 <TableHead>{language === 'en' ? 'Requested By' : 'Diajukan Oleh'}</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[100px]">{language === 'en' ? 'Actions' : 'Aksi'}</TableHead>
@@ -501,7 +535,7 @@ export default function PaymentRequestsPage() {
             <TableBody>
               {filteredRequests.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                     {language === 'en' ? 'No data found' : 'Tidak ada data'}
                   </TableCell>
                 </TableRow>
@@ -524,6 +558,12 @@ export default function PaymentRequestsPage() {
                     </TableCell>
                     <TableCell className="text-right font-medium">
                       {formatCurrency(request.invoice_amount)}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {request.submitted_amount > 0 ? formatCurrency(request.submitted_amount) : '-'}
+                    </TableCell>
+                    <TableCell className="text-right font-medium">
+                      {request.approved_amount !== null && request.approved_amount !== undefined ? formatCurrency(request.approved_amount) : '-'}
                     </TableCell>
                     <TableCell>{request.requester_name}</TableCell>
                     <TableCell>
@@ -565,7 +605,7 @@ export default function PaymentRequestsPage() {
                             <>
                               <DropdownMenuItem
                                 className="gap-2 text-success"
-                                onClick={() => handleApprove(request)}
+                                onClick={() => openApproveDialog(request)}
                                 disabled={processing}
                               >
                                 <Check className="w-4 h-4" />
@@ -655,8 +695,20 @@ export default function PaymentRequestsPage() {
                     <p className="font-medium">{selectedRequest.po_number}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">{language === 'en' ? 'Amount' : 'Jumlah'}</p>
+                    <p className="text-sm text-muted-foreground">{language === 'en' ? 'Invoice Amount' : 'Nilai Invoice'}</p>
                     <p className="font-medium">{formatCurrency(selectedRequest.invoice_amount)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">{language === 'en' ? 'Submitted Amount' : 'Nilai Pengajuan'}</p>
+                    <p className="font-medium">{formatCurrency(selectedRequest.submitted_amount)}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">{language === 'en' ? 'Approved Amount' : 'Nilai Approved'}</p>
+                    <p className="font-medium">
+                      {selectedRequest.approved_amount !== null && selectedRequest.approved_amount !== undefined 
+                        ? formatCurrency(selectedRequest.approved_amount) 
+                        : '-'}
+                    </p>
                   </div>
                 </div>
               </div>
@@ -792,6 +844,69 @@ export default function PaymentRequestsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Approve Dialog with Amount Input */}
+      <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {language === 'en' ? 'Approve Payment Request' : 'Setujui Pengajuan Pembayaran'}
+            </DialogTitle>
+            <DialogDescription>
+              {selectedRequest?.request_no} - {selectedRequest?.vendor_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">
+                {language === 'en' ? 'Invoice Amount' : 'Nilai Invoice'}
+              </p>
+              <p className="font-medium">{selectedRequest ? formatCurrency(selectedRequest.invoice_amount) : '-'}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">
+                {language === 'en' ? 'Submitted Amount' : 'Nilai Pengajuan'}
+              </p>
+              <p className="font-medium">{selectedRequest ? formatCurrency(selectedRequest.submitted_amount) : '-'}</p>
+            </div>
+            {selectedRequest?.notes && (
+              <div>
+                <p className="text-sm text-muted-foreground mb-1">
+                  {language === 'en' ? 'Cost Description' : 'Keterangan Biaya'}
+                </p>
+                <p className="text-sm">{selectedRequest.notes}</p>
+              </div>
+            )}
+            <div>
+              <label className="text-sm font-medium">
+                {language === 'en' ? 'Approved Amount' : 'Nilai yang Disetujui'}
+              </label>
+              <Input
+                type="number"
+                value={approveAmount}
+                onChange={(e) => setApproveAmount(e.target.value)}
+                placeholder="0"
+                className="mt-1"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                {language === 'en' 
+                  ? 'Enter the amount approved for payment (can be different from submitted amount for partial/DP payments)'
+                  : 'Masukkan nilai yang disetujui untuk dibayarkan (bisa berbeda dari nilai pengajuan untuk pembayaran DP/bertahap)'}
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsApproveDialogOpen(false)} disabled={processing}>
+              {language === 'en' ? 'Cancel' : 'Batal'}
+            </Button>
+            <Button onClick={handleApprove} disabled={processing}>
+              {processing && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              <Check className="w-4 h-4 mr-2" />
+              {language === 'en' ? 'Approve' : 'Setujui'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

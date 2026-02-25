@@ -843,6 +843,9 @@ export default function ApListPage() {
 
       const requestNo = `${prefix}${String(nextNum).padStart(4, '0')}`;
 
+      // Calculate submitted amount
+      const submittedAmount = transferAmount + cashAmount;
+
       // Save to database
       const { error: insertError } = await supabase
         .from('payment_requests')
@@ -853,7 +856,8 @@ export default function ApListPage() {
           requested_by: user?.id || '',
           status: 'PENDING',
           notes: paymentRequestData.notes,
-        });
+          submitted_amount: submittedAmount,
+        } as any);
 
       if (insertError) throw insertError;
 
@@ -886,6 +890,7 @@ export default function ApListPage() {
         bankAccountNo: vendor?.bank_account_no || undefined,
         transferAmount: transferAmount > 0 ? transferAmount : undefined,
         cashAmount: cashAmount > 0 ? cashAmount : undefined,
+        submittedAmount: submittedAmount,
       };
 
       const html = generatePaymentRequestHTML(requestData);

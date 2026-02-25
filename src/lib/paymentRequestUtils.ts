@@ -27,6 +27,8 @@ export interface PaymentRequestData {
   bankAccountNo?: string;
   transferAmount?: number;
   cashAmount?: number;
+  submittedAmount?: number;
+  approvedAmount?: number;
 }
 
 // HTML escape function to prevent XSS attacks
@@ -95,6 +97,8 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
     bankAccountNo: escapeHtml(data.bankAccountNo),
     transferAmount: data.transferAmount || data.outstandingAmount,
     cashAmount: data.cashAmount || 0,
+    submittedAmount: data.submittedAmount || data.outstandingAmount,
+    approvedAmount: data.approvedAmount,
   };
 
   const printDateTime = new Date().toLocaleString('id-ID', {
@@ -473,9 +477,9 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
     <tbody>
       <tr>
         <td class="col-no">1</td>
-        <td class="col-desc">${safeData.productName || `Pembayaran Invoice ${safeData.vendorInvoiceNumber}`}</td>
-        <td class="col-amount">${formatRupiah(safeData.outstandingAmount)}</td>
-        <td class="col-amount">${formatRupiah(safeData.outstandingAmount)}</td>
+        <td class="col-desc">${safeData.notes || safeData.productName || `Pembayaran Invoice ${safeData.vendorInvoiceNumber}`}</td>
+        <td class="col-amount">${formatRupiah(safeData.submittedAmount)}</td>
+        <td class="col-amount">${safeData.approvedAmount !== undefined && safeData.approvedAmount !== null ? formatRupiah(safeData.approvedAmount) : '-'}</td>
       </tr>
     </tbody>
   </table>
