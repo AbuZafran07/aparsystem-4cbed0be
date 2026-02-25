@@ -127,10 +127,16 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
       font-size: 10pt; 
       line-height: 1.4;
       color: #333;
-      padding: 30px;
-      max-width: 850px;
-      margin: 0 auto;
       background: white;
+      margin: 0;
+      padding: 0;
+    }
+    .pdf-page {
+      width: 794px;
+      min-height: 1123px;
+      padding: 30px;
+      background: white;
+      margin: 0;
     }
     
     .header {
@@ -397,6 +403,7 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
   </style>
 </head>
 <body>
+<div class="pdf-page">
   <div class="header">
     <div class="logo-container">
       ${safeData.companyLogoUrl ? 
@@ -540,6 +547,7 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
   <div class="footer">
     Dokumen ini dicetak pada ${printDateTime} | ${safeData.companyName} - Enterprise AP/AR System
   </div>
+</div>
 </body>
 </html>
   `;

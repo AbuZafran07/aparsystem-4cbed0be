@@ -127,8 +127,9 @@ export const downloadPdfFromHtml = async ({
     const html2canvas = (await import('html2canvas')).default;
     const { jsPDF } = await import('jspdf');
 
-    // Capture the .pdf-page wrapper (fixed 794x1123 = exact A4 ratio)
+    // Capture the .pdf-page wrapper (fixed 794px width = exact A4 ratio)
     const captureEl = doc.querySelector('.pdf-page') as HTMLElement || doc.body;
+    const captureHeight = Math.max(captureEl.scrollHeight, 1123);
 
     const canvas = await html2canvas(captureEl, {
       scale,
@@ -137,7 +138,7 @@ export const downloadPdfFromHtml = async ({
       logging: false,
       backgroundColor: '#ffffff',
       width: 794,
-      height: 1123,
+      height: captureHeight,
       windowWidth: viewportWidthPx,
       scrollX: 0,
       scrollY: 0,
