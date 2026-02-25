@@ -261,9 +261,9 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
       border: 1px solid #ddd;
     }
     
-    .items-table .col-no { width: 40px; text-align: center; }
+    .items-table .col-no { width: 35px; text-align: center; }
     .items-table .col-desc { text-align: left; }
-    .items-table .col-amount { text-align: right; width: 150px; }
+    .items-table .col-amount { text-align: right; width: 130px; }
     
     .payment-section {
       display: grid;
@@ -470,6 +470,7 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
       <tr>
         <th class="col-no">No.</th>
         <th class="col-desc">Keterangan Biaya</th>
+        <th class="col-amount">Nilai Invoice</th>
         <th class="col-amount">Nilai Pengajuan</th>
         <th class="col-amount">Nilai Approved</th>
       </tr>
@@ -478,6 +479,7 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
       <tr>
         <td class="col-no">1</td>
         <td class="col-desc">${safeData.notes || safeData.productName || `Pembayaran Invoice ${safeData.vendorInvoiceNumber}`}</td>
+        <td class="col-amount">${formatRupiah(safeData.invoiceAmount)}</td>
         <td class="col-amount">${formatRupiah(safeData.submittedAmount)}</td>
         <td class="col-amount">${safeData.approvedAmount !== undefined && safeData.approvedAmount !== null ? formatRupiah(safeData.approvedAmount) : '-'}</td>
       </tr>
