@@ -14,6 +14,7 @@ import ArListPage from "@/pages/ArListPage";
 import ApPaymentsPage from "@/pages/ApPaymentsPage";
 import ArReceiptsPage from "@/pages/ArReceiptsPage";
 import BillingLettersPage from "@/pages/BillingLettersPage";
+import BillingLetterDetailPage from "@/pages/BillingLetterDetailPage";
 import BillingEmailLogsPage from "@/pages/BillingEmailLogsPage";
 import SalesPage from "@/pages/SalesPage";
 import UserManagementPage from "@/pages/UserManagementPage";
@@ -64,6 +65,7 @@ const App = () => (
                 
                 {/* Billing */}
                 <Route path="/billing-letters" element={<BillingLettersPage />} />
+                <Route path="/billing-letters/:id" element={<BillingLetterDetailPage />} />
                 <Route path="/billing-email-logs" element={<BillingEmailLogsPage />} />
                 
                 {/* Master Data */}

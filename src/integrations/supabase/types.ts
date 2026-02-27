@@ -532,6 +532,38 @@ export type Database = {
           },
         ]
       }
+      billing_letter_comments: {
+        Row: {
+          billing_letter_id: string
+          comment: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          billing_letter_id: string
+          comment: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          billing_letter_id?: string
+          comment?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "billing_letter_comments_billing_letter_id_fkey"
+            columns: ["billing_letter_id"]
+            isOneToOne: false
+            referencedRelation: "billing_letters"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_letters: {
         Row: {
           ar_invoice_id: string
