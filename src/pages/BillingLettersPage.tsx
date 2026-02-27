@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Search, Eye, Printer, Trash2, Loader2, FileText, Plus, Download, MessageCircle, Users } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -137,13 +138,13 @@ const formatDate = (dateString: string) => {
 export default function BillingLettersPage() {
   const { user } = useAuth();
   const { t, language } = useLanguage();
+  const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [letters, setLetters] = useState<BillingLetter[]>([]);
   const [arInvoices, setArInvoices] = useState<ArInvoice[]>([]);
   const [companyProfile, setCompanyProfile] = useState<CompanyProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedLetter, setSelectedLetter] = useState<BillingLetter | null>(null);
@@ -312,8 +313,7 @@ export default function BillingLettersPage() {
     .reduce((sum, inv) => sum + inv.outstanding_amount, 0);
 
   const handleView = (letter: BillingLetter) => {
-    setSelectedLetter(letter);
-    setIsViewDialogOpen(true);
+    navigate(`/billing-letters/${letter.id}`);
   };
 
   const getBillingData = (letter: BillingLetter): BillingLetterData | null => {
@@ -558,16 +558,7 @@ export default function BillingLettersPage() {
     return isSuperAdmin || (isFinance && status === 'DRAFT');
   };
 
-  // Generate preview HTML for view dialog
-  const [previewHtml, setPreviewHtml] = useState('');
-  useEffect(() => {
-    if (selectedLetter && isViewDialogOpen && companyProfile) {
-      (async () => {
-        const html = await getLetterHtml(selectedLetter);
-        setPreviewHtml(html ? sanitizePrintableHtml(html) : '');
-      })();
-    }
-  }, [selectedLetter, isViewDialogOpen]);
+  // Preview HTML removed - detail page is now used instead
 
   if (loading) {
     return (
@@ -886,73 +877,7 @@ export default function BillingLettersPage() {
         </DialogContent>
       </Dialog>
 
-      {/* View Dialog with Preview */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              {language === 'en' ? 'Billing Letter Preview' : 'Preview Surat Tagihan'}
-            </DialogTitle>
-            <DialogDescription>
-              {selectedLetter?.letter_no}
-              {selectedLetter?.is_multi && (
-                <Badge variant="secondary" className="ml-2">Multi-Invoice</Badge>
-              )}
-            </DialogDescription>
-          </DialogHeader>
-          
-          {selectedLetter && companyProfile && (
-            <div className="flex-1 overflow-hidden flex flex-col gap-4">
-              <div className="flex-1 overflow-auto border rounded-lg bg-white min-h-[400px]">
-                <iframe
-                  srcDoc={previewHtml}
-                  className="w-full h-full min-h-[500px]"
-                  title="Billing Letter Preview"
-                  sandbox="allow-same-origin"
-                />
-              </div>
 
-              <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-4 bg-muted/50 rounded-lg">
-                <div>
-                  <p className="text-xs text-muted-foreground">Customer</p>
-                  <p className="font-medium text-sm">{selectedLetter.customer_name}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">{t('table.outstanding')}</p>
-                  <p className="font-medium text-sm text-destructive">
-                    {formatCurrencyIDR(selectedLetter.is_multi ? selectedLetter.total_outstanding : selectedLetter.outstanding_amount)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-muted-foreground">Tipe</p>
-                  <p className="font-medium text-sm">
-                    {selectedLetter.is_multi ? `${selectedLetter.ar_invoice_ids?.length} Invoice` : selectedLetter.invoice_number}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2 border-t">
-                <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>
-                  {t('btn.close')}
-                </Button>
-                <Button variant="outline" onClick={() => handleSendWhatsApp(selectedLetter)} disabled={!selectedLetter.customer_phone}>
-                  <MessageCircle className="h-4 w-4 mr-2" />
-                  WhatsApp
-                </Button>
-                <Button variant="outline" onClick={() => handleDownloadPDF(selectedLetter)}>
-                  <Download className="h-4 w-4 mr-2" />
-                  Unduh PDF
-                </Button>
-                <Button onClick={() => handlePrint(selectedLetter)}>
-                  <Printer className="h-4 w-4 mr-2" />
-                  Cetak
-                </Button>
-              </div>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
 
       {/* Delete Confirmation */}
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
