@@ -535,36 +535,45 @@ export type Database = {
       billing_letters: {
         Row: {
           ar_invoice_id: string
+          ar_invoice_ids: string[] | null
           created_at: string
           created_by: string
+          customer_id: string | null
           id: string
           letter_date: string
           letter_no: string
           notes: string | null
           pdf_url: string | null
           status: Database["public"]["Enums"]["record_status"]
+          total_outstanding: number | null
         }
         Insert: {
           ar_invoice_id: string
+          ar_invoice_ids?: string[] | null
           created_at?: string
           created_by: string
+          customer_id?: string | null
           id?: string
           letter_date?: string
           letter_no: string
           notes?: string | null
           pdf_url?: string | null
           status?: Database["public"]["Enums"]["record_status"]
+          total_outstanding?: number | null
         }
         Update: {
           ar_invoice_id?: string
+          ar_invoice_ids?: string[] | null
           created_at?: string
           created_by?: string
+          customer_id?: string | null
           id?: string
           letter_date?: string
           letter_no?: string
           notes?: string | null
           pdf_url?: string | null
           status?: Database["public"]["Enums"]["record_status"]
+          total_outstanding?: number | null
         }
         Relationships: [
           {
@@ -572,6 +581,13 @@ export type Database = {
             columns: ["ar_invoice_id"]
             isOneToOne: false
             referencedRelation: "ar_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "billing_letters_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
             referencedColumns: ["id"]
           },
         ]
