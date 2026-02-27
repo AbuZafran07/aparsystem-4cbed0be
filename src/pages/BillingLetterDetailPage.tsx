@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, FileText, Printer, Download, MessageCircle, Loader2, Send, Users } from 'lucide-react';
+import { ArrowLeft, FileText, Printer, Download, MessageCircle, Loader2, Send, Users, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -238,6 +238,18 @@ export default function BillingLetterDetailPage() {
       toast.error('Gagal menambahkan komentar');
     } finally {
       setSendingComment(false);
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    try {
+      const { error } = await supabase.from('billing_letter_comments').delete().eq('id', commentId);
+      if (error) throw error;
+      setComments(prev => prev.filter(c => c.id !== commentId));
+      toast.success('Komentar dihapus');
+    } catch (error) {
+      console.error('Error deleting comment:', error);
+      toast.error('Gagal menghapus komentar');
     }
   };
 
@@ -611,6 +623,11 @@ export default function BillingLetterDetailPage() {
                     </div>
                     <p className="text-sm text-foreground/80 whitespace-pre-wrap">{comment.comment}</p>
                   </div>
+                  {(comment.user_id === user?.id || user?.role === 'SUPER_ADMIN') && (
+                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => handleDeleteComment(comment.id)}>
+                      <Trash2 className="h-3 w-3 text-muted-foreground" />
+                    </Button>
+                  )}
                 </div>
               ))}
             </div>
