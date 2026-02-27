@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TablePagination, usePagination } from '@/components/TablePagination';
 import { Plus, Search, Filter, Eye, Edit, Trash2, Mail, FileText, MoreHorizontal, Loader2, Check, X, Download, Upload, CreditCard, FileDown, MessageCircle, Phone, Send, ChevronsUpDown } from 'lucide-react';
 import { InvoiceScanButton } from '@/components/InvoiceScanButton';
@@ -161,6 +162,7 @@ const statusTabs: { value: StatusTab; label: { en: string; id: string }; statuse
 ];
 
 export default function ArListPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { t, language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
@@ -317,41 +319,17 @@ export default function ArListPage() {
   };
 
   const handleOpenCreate = () => {
-    setSelectedInvoice(null);
-    setFormData({
-      customer_id: '',
-      sales_id: '',
-      invoice_number: '',
-      order_number: '',
-      sp_po_date: '',
-      invoice_date: '',
-      terms_id: '',
-      invoice_amount: '',
-      notes: '',
-    });
-    setIsDialogOpen(true);
+    navigate('/ar/new');
   };
 
   const handleOpenView = (invoice: ArInvoice) => {
-    setSelectedInvoice(invoice);
-    setIsViewDialogOpen(true);
+    navigate(`/ar/${invoice.id}`);
   };
 
   const handleOpenEdit = (invoice: ArInvoice) => {
-    setSelectedInvoice(invoice);
-    setFormData({
-      customer_id: invoice.customer_id,
-      sales_id: invoice.sales_id || '',
-      invoice_number: invoice.invoice_number,
-      order_number: invoice.order_number,
-      sp_po_date: invoice.sp_po_date,
-      invoice_date: invoice.invoice_date,
-      terms_id: invoice.terms_id || '',
-      invoice_amount: invoice.invoice_amount.toString(),
-      notes: invoice.notes || '',
-    });
-    setIsDialogOpen(true);
+    navigate(`/ar/${invoice.id}/edit`);
   };
+
 
   const handleSave = async () => {
     if (!formData.customer_id || !formData.invoice_number || !formData.order_number ||

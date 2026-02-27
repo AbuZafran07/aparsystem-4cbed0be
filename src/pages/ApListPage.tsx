@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { TablePagination, usePagination } from '@/components/TablePagination';
 import { Plus, Search, Filter, Eye, Edit, Trash2, Check, X, MoreHorizontal, Loader2, Download, Upload, CreditCard, FileDown, Printer, ChevronsUpDown } from 'lucide-react';
 import { InvoiceScanButton } from '@/components/InvoiceScanButton';
@@ -147,6 +148,7 @@ const statusTabs: { value: StatusTab; label: { en: string; id: string }; statuse
 ];
 
 export default function ApListPage() {
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { t, language } = useLanguage();
   const [searchQuery, setSearchQuery] = useState('');
@@ -298,40 +300,15 @@ export default function ApListPage() {
   };
 
   const handleOpenCreate = () => {
-    setSelectedInvoice(null);
-    setFormData({
-      vendor_id: '',
-      vendor_invoice_number: '',
-      po_number: '',
-      product_name: '',
-      sp_po_date: '',
-      invoice_date: '',
-      terms_id: '',
-      invoice_amount: '',
-      notes: '',
-    });
-    setIsDialogOpen(true);
+    navigate('/ap/new');
   };
 
   const handleOpenView = (invoice: ApInvoice) => {
-    setSelectedInvoice(invoice);
-    setIsViewDialogOpen(true);
+    navigate(`/ap/${invoice.id}`);
   };
 
   const handleOpenEdit = (invoice: ApInvoice) => {
-    setSelectedInvoice(invoice);
-    setFormData({
-      vendor_id: invoice.vendor_id,
-      vendor_invoice_number: invoice.vendor_invoice_number,
-      po_number: invoice.po_number,
-      product_name: invoice.product_name || '',
-      sp_po_date: invoice.sp_po_date,
-      invoice_date: invoice.invoice_date,
-      terms_id: invoice.terms_id || '',
-      invoice_amount: invoice.invoice_amount.toString(),
-      notes: invoice.notes || '',
-    });
-    setIsDialogOpen(true);
+    navigate(`/ap/${invoice.id}/edit`);
   };
 
   const handleSave = async () => {
