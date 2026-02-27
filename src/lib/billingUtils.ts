@@ -18,6 +18,29 @@ export interface BillingLetterData {
   companyLogoUrl?: string;
 }
 
+export interface MultiBillingInvoiceItem {
+  invoiceNumber: string;
+  invoiceDate: string;
+  dueDate: string;
+  invoiceAmount: number;
+  outstandingAmount: number;
+  overdueDays: number;
+}
+
+export interface MultiBillingLetterData {
+  letterNo: string;
+  letterDate: string;
+  customerName: string;
+  customerAddress?: string;
+  invoices: MultiBillingInvoiceItem[];
+  totalOutstanding: number;
+  companyName: string;
+  companyAddress?: string;
+  companyPhone?: string;
+  companyEmail?: string;
+  companyLogoUrl?: string;
+}
+
 // HTML escape function to prevent XSS attacks
 export const escapeHtml = (str: string | undefined | null): string => {
   if (!str) return '';
@@ -338,6 +361,212 @@ Finance Department
 `.trim();
 
   return message;
+};
+
+export const generateMultiBillingLetterHTML = (data: MultiBillingLetterData): string => {
+  const safeData = {
+    letterNo: escapeHtml(data.letterNo),
+    letterDate: data.letterDate,
+    customerName: escapeHtml(data.customerName),
+    customerAddress: escapeHtml(data.customerAddress),
+    companyName: escapeHtml(data.companyName),
+    companyLogoUrl: data.companyLogoUrl,
+  };
+
+  const maxOverdue = Math.max(...data.invoices.map(i => i.overdueDays), 0);
+
+  const invoiceRows = data.invoices.map((inv, idx) => `
+    <tr>
+      <td style="text-align:center;">${idx + 1}</td>
+      <td>${escapeHtml(inv.invoiceNumber)}</td>
+      <td style="text-align:center;">${formatDateID(inv.invoiceDate)}</td>
+      <td style="text-align:center;">${formatDateID(inv.dueDate)}</td>
+      <td class="amount">${formatCurrencyIDR(inv.invoiceAmount)}</td>
+      <td class="amount">${formatCurrencyIDR(inv.outstandingAmount)}</td>
+      <td style="text-align:center;">${inv.overdueDays > 0 ? inv.overdueDays + ' hari' : '-'}</td>
+    </tr>
+  `).join('');
+
+  return `
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <title>Surat Tagihan - ${safeData.letterNo}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Times New Roman', serif;
+      font-size: 11pt;
+      line-height: 1.4;
+      color: #333;
+      background: #ffffff;
+    }
+    .pdf-page {
+      width: 794px;
+      min-height: 1123px;
+      margin: 0 auto;
+      background: #ffffff;
+      position: relative;
+      box-sizing: border-box;
+    }
+    .bg-letterhead {
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 0; pointer-events: none;
+    }
+    .bg-letterhead img { width: 100%; height: 100%; display: block; object-fit: fill; }
+    .pdf-content {
+      position: relative; z-index: 1;
+      padding: 130px 60px 80px 60px;
+    }
+    .doc-info {
+      text-align: right; margin-bottom: 25px; font-size: 11pt; padding-right: 10px;
+    }
+    .doc-info-row { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 2px; }
+    .doc-info-label { font-weight: bold; min-width: 35px; text-align: left; }
+    .recipient { margin-bottom: 20px; }
+    .recipient-label { font-weight: bold; margin-bottom: 5px; }
+    .subject {
+      font-weight: bold; text-align: center; margin: 20px 0;
+      text-decoration: underline; font-size: 13pt;
+    }
+    .content { text-align: justify; margin-bottom: 15px; }
+    .invoice-table {
+      width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 10pt;
+    }
+    .invoice-table th, .invoice-table td {
+      border: 1px solid #999; padding: 6px 8px; text-align: left;
+    }
+    .invoice-table th { background-color: #f0f0f0; font-weight: bold; text-align: center; }
+    .amount { text-align: right !important; }
+    .total-row { font-weight: bold; background-color: #fff3cd; }
+    .overdue-notice {
+      background-color: #f8d7da; border: 1px solid #f5c6cb;
+      padding: 10px; border-radius: 4px; margin: 15px 0; color: #721c24; font-size: 10pt;
+    }
+    .footer { margin-top: 20px; }
+    .signature { margin-top: 5px; }
+    .signature-line { border-top: 1px solid #333; width: 200px; margin-top: 30px; padding-top: 5px; }
+    @media print {
+      body { padding: 0; }
+      .pdf-page { width: 210mm; min-height: 297mm; }
+    }
+  </style>
+</head>
+<body>
+  <div class="pdf-page">
+    <div class="bg-letterhead"><img src="/kop-surat-kemika.jpg" crossorigin="anonymous" /></div>
+    <div class="pdf-content">
+      <div class="doc-info">
+        <div class="doc-info-row">
+          <span class="doc-info-label">No.</span>
+          <span>: ${safeData.letterNo}</span>
+        </div>
+        <div class="doc-info-row">
+          <span class="doc-info-label">Tanggal</span>
+          <span>: ${formatDateID(safeData.letterDate)}</span>
+        </div>
+      </div>
+
+      <div class="recipient">
+        <div class="recipient-label">Kepada Yth:</div>
+        <div><strong>${safeData.customerName}</strong></div>
+        ${safeData.customerAddress ? `<div>${safeData.customerAddress}</div>` : ''}
+        <div>Di Tempat</div>
+      </div>
+
+      <div class="subject">SURAT PENAGIHAN PEMBAYARAN</div>
+
+      <div class="content">
+        <p>Dengan hormat,</p>
+        <br>
+        <p>Bersama surat ini kami sampaikan bahwa berdasarkan catatan pembukuan kami,
+        terdapat beberapa tagihan yang belum terbayar atas transaksi sebagai berikut:</p>
+      </div>
+
+      <table class="invoice-table">
+        <thead>
+          <tr>
+            <th style="width:30px;">No</th>
+            <th>No. Invoice</th>
+            <th style="width:110px;">Tgl Invoice</th>
+            <th style="width:110px;">Jatuh Tempo</th>
+            <th style="width:120px;">Nilai Invoice</th>
+            <th style="width:120px;">Outstanding</th>
+            <th style="width:70px;">Overdue</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${invoiceRows}
+          <tr class="total-row">
+            <td colspan="5" style="text-align:right;"><strong>Total Tagihan Belum Terbayar</strong></td>
+            <td class="amount"><strong>${formatCurrencyIDR(data.totalOutstanding)}</strong></td>
+            <td></td>
+          </tr>
+        </tbody>
+      </table>
+
+      ${maxOverdue > 0 ? `
+      <div class="overdue-notice">
+        <strong>⚠️ PERHATIAN:</strong> Terdapat tagihan yang telah melewati jatuh tempo.
+        Mohon segera lakukan pembayaran untuk menghindari tindakan penagihan lebih lanjut.
+      </div>
+      ` : ''}
+
+      <div class="content">
+        <p>Kami mohon kesediaan Bapak/Ibu untuk segera melakukan pembayaran atas tagihan tersebut.
+        Apabila pembayaran sudah dilakukan, mohon abaikan surat ini dan konfirmasi kepada kami
+        dengan menyertakan bukti pembayaran.</p>
+        <br>
+        <p>Atas perhatian dan kerjasamanya, kami ucapkan terima kasih.</p>
+      </div>
+
+      <div class="footer">
+        <p>Hormat kami,</p>
+        <div class="signature">
+          <div class="signature-line">
+            <strong>Finance Department</strong><br>
+            ${safeData.companyName}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+};
+
+export const generateMultiWhatsAppMessage = (data: MultiBillingLetterData): string => {
+  const safeName = String(data.companyName || '').replace(/[*_~`]/g, '');
+  const safeCustomerName = String(data.customerName || '').replace(/[*_~`]/g, '');
+
+  const invoiceList = data.invoices.map((inv, idx) =>
+    `${idx + 1}. ${inv.invoiceNumber} - Outstanding: ${formatCurrencyIDR(inv.outstandingAmount)}${inv.overdueDays > 0 ? ` (${inv.overdueDays} hari overdue)` : ''}`
+  ).join('\n');
+
+  return `
+*SURAT PENAGIHAN - ${safeName}*
+
+Kepada Yth: *${safeCustomerName}*
+
+Dengan hormat,
+
+Kami informasikan bahwa terdapat beberapa tagihan yang belum terbayar:
+
+📄 *Daftar Tagihan:*
+${invoiceList}
+
+💰 *Total Outstanding: ${formatCurrencyIDR(data.totalOutstanding)}*
+
+Mohon segera lakukan pembayaran. Jika sudah dibayar, mohon konfirmasi dengan bukti pembayaran.
+
+Terima kasih atas kerjasamanya.
+
+Hormat kami,
+*${safeName}*
+Finance Department
+`.trim();
 };
 
 export const openWhatsApp = (phoneNumber: string, message: string): void => {
