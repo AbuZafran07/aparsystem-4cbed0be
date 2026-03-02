@@ -20,6 +20,7 @@ import {
   openWhatsApp,
   formatCurrencyIDR,
   formatDateID,
+  calcOverdueDays,
   BillingLetterData,
   MultiBillingLetterData,
 } from '@/lib/billingUtils';
@@ -157,15 +158,18 @@ export default function BillingLetterDetailPage() {
       ]);
 
       if (invoicesRes.data && invoicesRes.data.length > 0) {
-        setInvoices(invoicesRes.data.map((inv: any) => ({
-          invoice_number: inv.invoice_number,
-          invoice_date: inv.invoice_date,
-          due_date: inv.due_date,
-          invoice_amount: inv.invoice_amount,
-          outstanding_amount: inv.outstanding_amount,
-          overdue_days: inv.overdue_days,
-          order_number: inv.order_number,
-        })));
+        setInvoices(invoicesRes.data.map((inv: any) => {
+          const overdueDays = calcOverdueDays(inv.due_date, inv.outstanding_amount);
+          return {
+            invoice_number: inv.invoice_number,
+            invoice_date: inv.invoice_date,
+            due_date: inv.due_date,
+            invoice_amount: inv.invoice_amount,
+            outstanding_amount: inv.outstanding_amount,
+            overdue_days: overdueDays,
+            order_number: inv.order_number,
+          };
+        }));
 
         // Get customer from first invoice
         const firstInv = invoicesRes.data[0] as any;

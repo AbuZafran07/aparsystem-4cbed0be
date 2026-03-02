@@ -78,6 +78,17 @@ export const formatDateID = (dateString: string): string => {
   });
 };
 
+/** Calculate overdue days dynamically from due_date vs today */
+export const calcOverdueDays = (dueDate: string, outstandingAmount: number): number => {
+  if (outstandingAmount <= 0) return 0;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(dueDate);
+  due.setHours(0, 0, 0, 0);
+  const diffMs = today.getTime() - due.getTime();
+  return diffMs > 0 ? Math.floor(diffMs / (1000 * 60 * 60 * 24)) : 0;
+};
+
 export const generateBillingLetterHTML = (data: BillingLetterData): string => {
   // Escape all user-provided data to prevent XSS
   const safeData = {
@@ -634,30 +645,54 @@ export const sanitizePrintableHtml = (html: string): string => {
   }
 };
 
-const safeWindowOpen = (): Window | null => {
-  // noopener/noreferrer prevents reverse-tabnabbing and reduces cross-window attacks
-  const w = window.open('', '_blank', 'noopener,noreferrer');
-  if (w) w.opener = null;
-  return w;
-};
-
 export const printBillingLetter = (html: string): void => {
-  const printWindow = safeWindowOpen();
-  if (!printWindow) return;
-
   const sanitizedHtml = sanitizePrintableHtml(html);
-  printWindow.document.open();
-  printWindow.document.write(sanitizedHtml);
-  printWindow.document.close();
 
-  // Print after a short delay to allow rendering
-  setTimeout(() => {
+  // Use hidden iframe for reliable direct-to-printer behavior
+  const iframe = document.createElement('iframe');
+  iframe.style.position = 'fixed';
+  iframe.style.top = '-10000px';
+  iframe.style.left = '-10000px';
+  iframe.style.width = '210mm';
+  iframe.style.height = '297mm';
+  iframe.style.border = 'none';
+  document.body.appendChild(iframe);
+
+  const iframeDoc = iframe.contentDocument || iframe.contentWindow?.document;
+  if (!iframeDoc) {
+    document.body.removeChild(iframe);
+    return;
+  }
+
+  iframeDoc.open();
+  iframeDoc.write(sanitizedHtml);
+  iframeDoc.close();
+
+  // Wait for content and images to load, then trigger print
+  const triggerPrint = () => {
     try {
-      printWindow.print();
+      iframe.contentWindow?.focus();
+      iframe.contentWindow?.print();
     } catch {
       // ignore
     }
-  }, 250);
+    // Clean up after print dialog closes
+    setTimeout(() => {
+      try { document.body.removeChild(iframe); } catch { /* ignore */ }
+    }, 1000);
+  };
+
+  iframe.onload = () => {
+    // Extra delay for images/fonts
+    setTimeout(triggerPrint, 500);
+  };
+
+  // Fallback if onload doesn't fire
+  setTimeout(() => {
+    if (document.body.contains(iframe)) {
+      triggerPrint();
+    }
+  }, 3000);
 };
 
 export const downloadBillingLetterPDF = async (html: string, filename: string): Promise<void> => {
@@ -675,25 +710,7 @@ export const downloadBillingLetterPDF = async (html: string, filename: string): 
   } catch (error) {
     console.error('PDF generation failed:', error);
     
-    // Fallback to print dialog
-    const printWindow = safeWindowOpen();
-    if (!printWindow) {
-      alert('Tidak dapat membuka window untuk download. Silakan izinkan popup di browser Anda.');
-      return;
-    }
-
-    const sanitizedHtml = sanitizePrintableHtml(html);
-    printWindow.document.open();
-    printWindow.document.write(sanitizedHtml);
-    printWindow.document.close();
-
-    setTimeout(() => {
-      try {
-        printWindow.focus();
-        printWindow.print();
-      } catch {
-        // ignore
-      }
-    }, 500);
+    // Fallback to print dialog using iframe
+    printBillingLetter(html);
   }
 };
