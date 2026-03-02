@@ -120,135 +120,52 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
       font-family: 'Times New Roman', serif;
-      font-size: 12pt;
-      line-height: 1.5;
+      font-size: 11pt;
+      line-height: 1.4;
       color: #333;
-      margin: 0;
-      padding: 0;
       background: #ffffff;
     }
     .pdf-page {
       width: 794px;
-      height: 1123px;
+      min-height: 1123px;
       margin: 0 auto;
       background: #ffffff;
       position: relative;
       box-sizing: border-box;
-      overflow: hidden;
     }
     .bg-letterhead {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 0;
-      pointer-events: none;
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+      z-index: 0; pointer-events: none;
     }
-    .bg-letterhead img {
-      width: 100%;
-      height: 100%;
-      display: block;
-      object-fit: fill;
-    }
+    .bg-letterhead img { width: 100%; height: 100%; display: block; object-fit: fill; }
     .pdf-content {
-      position: relative;
-      z-index: 1;
-      padding: 130px 80px 0 60px;
+      position: relative; z-index: 1;
+      padding: 130px 60px 80px 60px;
     }
     .doc-info {
-      text-align: right;
-      margin-bottom: 30px;
-      font-size: 11pt;
-      padding-right: 10px;
-      page-break-inside: avoid !important;
-      break-inside: avoid-page !important;
+      text-align: right; margin-bottom: 25px; font-size: 11pt; padding-right: 10px;
     }
-    .doc-info-row {
-      display: flex;
-      justify-content: flex-end;
-      gap: 8px;
-      margin-bottom: 2px;
-    }
-    .doc-info-label {
-      font-weight: bold;
-      min-width: 35px;
-      text-align: left;
-    }
-    .recipient {
-      margin-bottom: 25px;
-      page-break-inside: avoid !important;
-      break-inside: avoid-page !important;
-    }
+    .doc-info-row { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 2px; }
+    .doc-info-label { font-weight: bold; min-width: 35px; text-align: left; }
+    .recipient { margin-bottom: 20px; }
     .recipient-label { font-weight: bold; margin-bottom: 5px; }
     .subject {
-      font-weight: bold;
-      text-align: center;
-      margin: 25px 0;
-      text-decoration: underline;
-      font-size: 13pt;
-      page-break-inside: avoid !important;
-      break-inside: avoid-page !important;
+      font-weight: bold; text-align: center; margin: 20px 0;
+      text-decoration: underline; font-size: 13pt;
     }
-    .content {
-      text-align: justify;
-      margin-bottom: 20px;
-      page-break-inside: avoid !important;
-      break-inside: avoid-page !important;
-    }
+    .content { text-align: justify; margin-bottom: 15px; }
     .invoice-table {
-      width: 100%;
-      border-collapse: collapse;
-      margin: 20px 0;
-      page-break-inside: avoid !important;
-      break-inside: avoid-page !important;
+      width: 100%; border-collapse: collapse; margin: 15px 0; font-size: 10pt;
     }
     .invoice-table th, .invoice-table td {
-      border: 1px solid #ddd;
-      padding: 10px;
-      text-align: left;
-      page-break-inside: avoid !important;
-      break-inside: avoid-page !important;
+      border: 1px solid #999; padding: 6px 8px; text-align: left;
     }
-    .invoice-table th {
-      background-color: #f5f5f5;
-      font-weight: bold;
-    }
-    .amount { text-align: right; }
-    .total-row {
-      font-weight: bold;
-      background-color: #fff3cd;
-    }
-    .overdue-notice {
-      background-color: #f8d7da;
-      border: 1px solid #f5c6cb;
-      padding: 15px;
-      border-radius: 5px;
-      margin: 20px 0;
-      color: #721c24;
-      page-break-inside: avoid !important;
-      break-inside: avoid-page !important;
-    }
-    .footer {
-      margin-top: 20px;
-      page-break-inside: avoid !important;
-      break-inside: avoid-page !important;
-    }
-    .signature {
-      margin-top: 5px;
-      page-break-inside: avoid !important;
-      break-inside: avoid-page !important;
-    }
-    .signature-line {
-      border-top: 1px solid #333;
-      width: 200px;
-      margin-top: 30px;
-      padding-top: 5px;
-    }
-    table, thead, tbody, tr, td, th {
-      page-break-inside: avoid !important;
-      break-inside: avoid-page !important;
-    }
+    .invoice-table th { background-color: #f0f0f0; font-weight: bold; text-align: center; }
+    .amount { text-align: right !important; }
+    .total-row { font-weight: bold; background-color: #fff3cd; }
+    .footer { margin-top: 20px; }
+    .signature { margin-top: 5px; }
+    .signature-line { border-top: 1px solid #333; width: 200px; margin-top: 30px; padding-top: 5px; }
     @media print {
       body { padding: 0; }
       .pdf-page { width: 210mm; min-height: 297mm; }
@@ -289,22 +206,29 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
       <table class="invoice-table">
         <thead>
           <tr>
-            <th>Keterangan</th>
-            <th class="amount">Jumlah</th>
+            <th style="width:30px;">No</th>
+            <th>No. Invoice</th>
+            <th style="width:110px;">Tgl Invoice</th>
+            <th style="width:110px;">Jatuh Tempo</th>
+            <th style="width:120px;">Nilai Invoice</th>
+            <th style="width:120px;">Outstanding</th>
+            <th style="width:70px;">Overdue</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>
-              <strong>No. Invoice:</strong> ${safeData.invoiceNumber}<br>
-              <strong>Tanggal Invoice:</strong> ${formatDateID(safeData.invoiceDate)}<br>
-              <strong>Jatuh Tempo:</strong> ${formatDateID(safeData.dueDate)}
-            </td>
+            <td style="text-align:center;">1</td>
+            <td>${safeData.invoiceNumber}</td>
+            <td style="text-align:center;">${formatDateID(safeData.invoiceDate)}</td>
+            <td style="text-align:center;">${formatDateID(safeData.dueDate)}</td>
             <td class="amount">${formatCurrencyIDR(safeData.invoiceAmount)}</td>
+            <td class="amount">${formatCurrencyIDR(safeData.outstandingAmount)}</td>
+            <td style="text-align:center;">${safeData.overdueDays > 0 ? safeData.overdueDays + ' hari' : '-'}</td>
           </tr>
           <tr class="total-row">
-            <td><strong>Total Tagihan Belum Terbayar</strong></td>
+            <td colspan="5" style="text-align:right;"><strong>Total Tagihan Belum Terbayar</strong></td>
             <td class="amount"><strong>${formatCurrencyIDR(safeData.outstandingAmount)}</strong></td>
+            <td></td>
           </tr>
         </tbody>
       </table>
