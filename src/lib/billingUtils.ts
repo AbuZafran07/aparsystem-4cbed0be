@@ -309,12 +309,6 @@ export const generateBillingLetterHTML = (data: BillingLetterData): string => {
         </tbody>
       </table>
 
-      ${safeData.overdueDays > 0 ? `
-      <div class="overdue-notice">
-        <strong>⚠️ PERHATIAN:</strong> Tagihan ini telah melewati jatuh tempo selama <strong>${safeData.overdueDays} hari</strong>.
-        Mohon segera lakukan pembayaran untuk menghindari tindakan penagihan lebih lanjut.
-      </div>
-      ` : ''}
 
       <div class="content">
         <p>Kami mohon kesediaan Bapak/Ibu untuk segera melakukan pembayaran atas tagihan tersebut.
@@ -517,12 +511,6 @@ export const generateMultiBillingLetterHTML = (data: MultiBillingLetterData): st
         </tbody>
       </table>
 
-      ${maxOverdue > 0 ? `
-      <div class="overdue-notice">
-        <strong>⚠️ PERHATIAN:</strong> Terdapat tagihan yang telah melewati jatuh tempo.
-        Mohon segera lakukan pembayaran untuk menghindari tindakan penagihan lebih lanjut.
-      </div>
-      ` : ''}
 
       <div class="content">
         <p>Kami mohon kesediaan Bapak/Ibu untuk segera melakukan pembayaran atas tagihan tersebut.
