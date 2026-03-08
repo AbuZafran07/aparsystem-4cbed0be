@@ -89,6 +89,28 @@ async function fetchAllTables(adminClient: any, tables: string[]) {
   return backupData
 }
 
+async function notifySuperAdmins(adminClient: any, title: string, message: string, type: string) {
+  try {
+    const { data: superAdmins } = await adminClient
+      .from('user_roles')
+      .select('user_id')
+      .eq('role', 'SUPER_ADMIN')
+
+    if (superAdmins && superAdmins.length > 0) {
+      const notifications = superAdmins.map((sa: any) => ({
+        user_id: sa.user_id,
+        title,
+        message,
+        type,
+        entity_type: 'backup',
+      }))
+      await adminClient.from('notifications').insert(notifications)
+    }
+  } catch (e) {
+    console.error('Failed to send notifications:', e)
+  }
+}
+
 async function performAutoBackup() {
   const adminClient = getAdminClient()
 
@@ -135,6 +157,16 @@ async function performAutoBackup() {
       status: 'SUCCESS',
     })
 
+    // Notify Super Admins
+    const totalRows = Object.values(backup.table_counts).reduce((a: number, b: number) => a + b, 0)
+    const sizeMB = (encoded.byteLength / 1024 / 1024).toFixed(2)
+    await notifySuperAdmins(
+      adminClient,
+      '✅ Auto Backup Berhasil',
+      `Backup otomatis selesai: ${totalRows} baris data (${sizeMB} MB) tersimpan di cloud storage.`,
+      'success'
+    )
+
     // Cleanup old backups (keep only last MAX_AUTO_BACKUPS)
     const { data: logs } = await adminClient
       .from('backup_logs')
@@ -161,6 +193,15 @@ async function performAutoBackup() {
       status: 'FAILED',
       error_message: error.message || 'Unknown error',
     })
+
+    // Notify Super Admins about failure
+    await notifySuperAdmins(
+      adminClient,
+      '❌ Auto Backup Gagal',
+      `Backup otomatis gagal. Silakan periksa halaman Backup & Restore untuk detail.`,
+      'error'
+    )
+
     throw error
   }
 }
