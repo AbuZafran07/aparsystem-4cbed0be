@@ -25,7 +25,7 @@ import {
   Settings,
   UserCog,
   ClipboardList,
-  HardDriveDownload,
+  Database,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useRoleAccess } from '@/contexts/AuthContext';
