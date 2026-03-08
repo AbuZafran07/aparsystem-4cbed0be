@@ -45,6 +45,7 @@ const translations: TranslationMap = {
   'menu.auditLogs': { en: 'Audit Logs', id: 'Log Audit' },
   'menu.userManagement': { en: 'User Management', id: 'Manajemen User' },
   'menu.systemSettings': { en: 'System Settings', id: 'Pengaturan Sistem' },
+  'menu.backupRestore': { en: 'Backup & Restore', id: 'Backup & Restore' },
 
   // Common Buttons
   'btn.save': { en: 'Save', id: 'Simpan' },

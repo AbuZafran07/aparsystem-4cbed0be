@@ -34,6 +34,7 @@ import SystemSettingsPage from "@/pages/SystemSettingsPage";
 import ImportExportPage from "@/pages/ImportExportPage";
 import PaymentRequestsPage from "@/pages/PaymentRequestsPage";
 import MyProfilePage from "@/pages/MyProfilePage";
+import BackupRestorePage from "@/pages/BackupRestorePage";
 import NotFound from "@/pages/NotFound";
 const queryClient = new QueryClient();
 
@@ -99,6 +100,7 @@ const App = () => (
                 <Route path="/audit-logs" element={<AuditLogsPage />} />
                 <Route path="/users" element={<UserManagementPage />} />
                 <Route path="/settings" element={<SystemSettingsPage />} />
+                <Route path="/backup-restore" element={<BackupRestorePage />} />
                 
                 {/* User Profile */}
                 <Route path="/my-profile" element={<MyProfilePage />} />

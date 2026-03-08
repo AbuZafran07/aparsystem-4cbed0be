@@ -25,6 +25,7 @@ import {
   Settings,
   UserCog,
   ClipboardList,
+  Database,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useRoleAccess } from '@/contexts/AuthContext';
@@ -95,6 +96,7 @@ const menuStructure: MenuSection[] = [
       { key: 'auditLogs', translationKey: 'menu.auditLogs', icon: ScrollText, path: '/audit-logs' },
       { key: 'userManagement', translationKey: 'menu.userManagement', icon: UserCog, path: '/users' },
       { key: 'systemSettings', translationKey: 'menu.systemSettings', icon: Settings, path: '/settings' },
+      { key: 'backupRestore', translationKey: 'menu.backupRestore', icon: Database, path: '/backup-restore' },
     ],
   },
 ];

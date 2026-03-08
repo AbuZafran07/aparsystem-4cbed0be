@@ -216,12 +216,13 @@ export function useRoleAccess() {
 
     // System menu items
     const systemMenuItems = ['auditLogs', 'userManagement', 'systemSettings'];
+    const superAdminOnly = ['backupRestore'];
 
     const roleMenuAccess: Record<UserRole, string[]> = {
       PURCHASING: [...allMenuItems, 'auditLogs'],
       FINANCE: [...allMenuItems, 'auditLogs'],
       ADMIN: [...allMenuItems, ...systemMenuItems],
-      SUPER_ADMIN: [...allMenuItems, ...systemMenuItems],
+      SUPER_ADMIN: [...allMenuItems, ...systemMenuItems, ...superAdminOnly],
     };
 
     return roleMenuAccess[user.role]?.includes(menuKey) ?? false;
