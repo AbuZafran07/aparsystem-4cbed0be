@@ -96,6 +96,7 @@ const menuStructure: MenuSection[] = [
       { key: 'auditLogs', translationKey: 'menu.auditLogs', icon: ScrollText, path: '/audit-logs' },
       { key: 'userManagement', translationKey: 'menu.userManagement', icon: UserCog, path: '/users' },
       { key: 'systemSettings', translationKey: 'menu.systemSettings', icon: Settings, path: '/settings' },
+      { key: 'backupRestore', translationKey: 'menu.backupRestore', icon: DatabaseBackup, path: '/backup-restore' },
     ],
   },
 ];

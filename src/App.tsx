@@ -100,6 +100,7 @@ const App = () => (
                 <Route path="/audit-logs" element={<AuditLogsPage />} />
                 <Route path="/users" element={<UserManagementPage />} />
                 <Route path="/settings" element={<SystemSettingsPage />} />
+                <Route path="/backup-restore" element={<BackupRestorePage />} />
                 
                 {/* User Profile */}
                 <Route path="/my-profile" element={<MyProfilePage />} />
