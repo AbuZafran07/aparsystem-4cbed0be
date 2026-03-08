@@ -34,6 +34,7 @@ import SystemSettingsPage from "@/pages/SystemSettingsPage";
 import ImportExportPage from "@/pages/ImportExportPage";
 import PaymentRequestsPage from "@/pages/PaymentRequestsPage";
 import MyProfilePage from "@/pages/MyProfilePage";
+import BackupRestorePage from "@/pages/BackupRestorePage";
 import NotFound from "@/pages/NotFound";
 const queryClient = new QueryClient();
 
