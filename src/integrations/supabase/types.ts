@@ -448,6 +448,39 @@ export type Database = {
         }
         Relationships: []
       }
+      backup_logs: {
+        Row: {
+          backup_type: string
+          created_at: string
+          error_message: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          status: string
+          table_counts: Json | null
+        }
+        Insert: {
+          backup_type?: string
+          created_at?: string
+          error_message?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          status?: string
+          table_counts?: Json | null
+        }
+        Update: {
+          backup_type?: string
+          created_at?: string
+          error_message?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          status?: string
+          table_counts?: Json | null
+        }
+        Relationships: []
+      }
       bank_accounts: {
         Row: {
           account_name: string
