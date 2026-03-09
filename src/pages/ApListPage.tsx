@@ -634,11 +634,11 @@ export default function ApListPage() {
   const canDelete = (status: InvoiceStatus) => canDeleteAp(status);
 
   const canRecordPayment = (status: InvoiceStatus, outstanding: number) => {
-    return isFinance && (status === 'APPROVED' || status === 'PARTIAL') && outstanding > 0;
+    return (isFinance || isPurchasing) && (status === 'APPROVED' || status === 'PARTIAL') && outstanding > 0;
   };
 
   const canMarkAsPaid = (status: InvoiceStatus, outstanding: number, invoiceAmount: number) => {
-    return isFinance && (status === 'APPROVED' || status === 'PARTIAL') && outstanding === 0 && invoiceAmount === 0;
+    return (isFinance || isPurchasing) && (status === 'APPROVED' || status === 'PARTIAL') && outstanding === 0 && invoiceAmount === 0;
   };
 
   const handleMarkAsPaid = async (invoice: ApInvoice) => {
