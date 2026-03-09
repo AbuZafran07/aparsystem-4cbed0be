@@ -532,6 +532,33 @@ export default function ApListPage() {
 
       if (updateError) throw updateError;
 
+      // Notify FINANCE users about the payment
+      if (user?.role === 'PURCHASING') {
+        try {
+          const { data: financeUsers } = await supabase
+            .from('user_roles')
+            .select('user_id')
+            .in('role', ['FINANCE', 'SUPER_ADMIN']);
+
+          if (financeUsers && financeUsers.length > 0) {
+            const vendorName = vendors.find(v => v.id === selectedInvoice.vendor_id)?.vendor_name || '-';
+            const notifications = financeUsers.map(fu => ({
+              user_id: fu.user_id,
+              title: language === 'en' ? 'AP Payment Recorded' : 'Pembayaran AP Dicatat',
+              message: language === 'en'
+                ? `Purchasing recorded payment of Rp ${amount.toLocaleString('id-ID')} for invoice ${selectedInvoice.vendor_invoice_number} (${vendorName})`
+                : `Purchasing mencatat pembayaran Rp ${amount.toLocaleString('id-ID')} untuk invoice ${selectedInvoice.vendor_invoice_number} (${vendorName})`,
+              type: 'info',
+              entity_type: 'ap_invoice',
+              entity_id: selectedInvoice.id,
+            }));
+            await supabase.from('notifications').insert(notifications);
+          }
+        } catch (notifError) {
+          console.error('Failed to send notifications:', notifError);
+        }
+      }
+
       toast.success(language === 'en' ? 'Payment recorded successfully' : 'Pembayaran berhasil dicatat');
       setIsPaymentDialogOpen(false);
       setSelectedInvoice(null);
