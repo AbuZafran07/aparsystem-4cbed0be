@@ -670,7 +670,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       <div className="flex gap-2 mt-2">
-                        <Link to={`/ar`}>
+                        <Link to="/billing-letters">
                           <Button size="sm" variant="outline" className="text-xs h-7">
                             {t('btn.generateBillingLetter')}
                           </Button>
