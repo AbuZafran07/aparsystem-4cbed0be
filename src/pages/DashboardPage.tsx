@@ -611,15 +611,24 @@ export default function DashboardPage() {
                   {data.apDueSoon.map((item) => (
                     <div
                       key={item.id}
-                      className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                      className="p-3 bg-muted/50 rounded-lg"
                     >
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-foreground truncate">{item.vendor}</p>
-                        <p className="text-xs text-muted-foreground">{item.invoice}</p>
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">{item.vendor}</p>
+                          <p className="text-xs text-muted-foreground">{item.invoice}</p>
+                        </div>
+                        <div className="text-right ml-4">
+                          <p className="text-sm font-semibold text-foreground">{formatFullCurrency(item.amount)}</p>
+                          <p className="text-xs text-warning">{item.dueDate}</p>
+                        </div>
                       </div>
-                      <div className="text-right ml-4">
-                        <p className="text-sm font-semibold text-foreground">{formatFullCurrency(item.amount)}</p>
-                        <p className="text-xs text-warning">{item.dueDate}</p>
+                      <div className="flex gap-2 mt-2">
+                        <Link to="/payment-requests">
+                          <Button size="sm" variant="outline" className="text-xs h-7">
+                            {language === 'en' ? 'Create Payment Request' : 'Buat Pengajuan Pembayaran'}
+                          </Button>
+                        </Link>
                       </div>
                     </div>
                   ))}
