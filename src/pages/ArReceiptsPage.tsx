@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { exportToCSV, exportToExcel, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
+import { exportToCSV, exportToExcel, exportToPDF, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
 
 interface ReceiptAllocation {
   id: string;
