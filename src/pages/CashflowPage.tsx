@@ -158,7 +158,7 @@ export default function CashflowPage() {
     return acc;
   }, { inflow: 0, outflow: 0 });
 
-  const handleExport = () => {
+  const handleExport = (format: 'excel' | 'pdf') => {
     const columns: ExportColumn[] = [
       { key: 'date', header: language === 'en' ? 'Date' : 'Tanggal', format: formatDateForExport },
       { key: 'type', header: language === 'en' ? 'Type' : 'Tipe', format: (v) => v === 'inflow' ? 'Inflow' : 'Outflow' },
@@ -169,7 +169,11 @@ export default function CashflowPage() {
     ];
 
     const filename = `Cashflow_Report_${new Date().toISOString().split('T')[0]}`;
-    exportToExcel(entries, columns, filename);
+    if (format === 'pdf') {
+      exportToPDF(entries, columns, filename, language === 'en' ? 'Cashflow Report' : 'Laporan Arus Kas');
+    } else {
+      exportToExcel(entries, columns, filename);
+    }
     toast.success(language === 'en' ? 'Report exported' : 'Laporan diekspor');
   };
 
