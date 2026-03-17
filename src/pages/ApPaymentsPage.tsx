@@ -12,7 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { exportToCSV, exportToExcel, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
+import { exportToCSV, exportToExcel, exportToPDF, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
 
 interface PaymentAllocation {
   id: string;
@@ -126,7 +126,7 @@ export default function ApPaymentsPage() {
     );
   });
 
-  const handleExport = (type: 'csv' | 'excel') => {
+  const handleExport = (type: 'csv' | 'excel' | 'pdf') => {
     const exportData = filteredPayments.map(p => ({
       payment_date: p.payment_date,
       reference_no: p.reference_no || '-',
@@ -148,6 +148,8 @@ export default function ApPaymentsPage() {
     const filename = `ap_payments_${format(new Date(), 'yyyyMMdd')}`;
     if (type === 'csv') {
       exportToCSV(exportData, columns, filename);
+    } else if (type === 'pdf') {
+      exportToPDF(exportData, columns, filename, language === 'en' ? 'AP Payments Report' : 'Laporan Pembayaran AP');
     } else {
       exportToExcel(exportData, columns, filename);
     }
@@ -185,6 +187,9 @@ export default function ApPaymentsPage() {
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => handleExport('excel')}>
               Export Excel
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport('pdf')}>
+              Export PDF
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
