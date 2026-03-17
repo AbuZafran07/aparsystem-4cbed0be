@@ -188,6 +188,9 @@ export default function ApPaymentsPage() {
             <DropdownMenuItem onClick={() => handleExport('excel')}>
               Export Excel
             </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => handleExport('pdf')}>
+              Export PDF
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>

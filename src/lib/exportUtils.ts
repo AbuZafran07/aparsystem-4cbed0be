@@ -113,7 +113,7 @@ export const exportToExcel = (
   downloadFile(excelContent, `${filename}.xls`, 'application/vnd.ms-excel');
 };
 
-export const exportToPDF = (
+export const exportToPDF = async (
   data: Record<string, any>[],
   columns: ExportColumn[],
   filename: string,
@@ -127,29 +127,112 @@ export const exportToPDF = (
   const margin = 10;
   const usableWidth = pageWidth - margin * 2;
 
+  // Try to load company logo
+  let logoLoaded = false;
+  let logoDataUrl: string | null = null;
+  let companyName = '';
+  try {
+    const { data: profile } = await supabase
+      .from('company_profile')
+      .select('logo_url, company_name, brand_name')
+      .limit(1)
+      .maybeSingle();
+
+    companyName = profile?.brand_name || profile?.company_name || '';
+
+    const logoUrl = profile?.logo_url;
+    if (logoUrl) {
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+      await new Promise<void>((resolve) => {
+        img.onload = () => { logoLoaded = true; resolve(); };
+        img.onerror = () => resolve();
+        img.src = logoUrl;
+      });
+      if (logoLoaded) {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0);
+        logoDataUrl = canvas.toDataURL('image/png');
+      }
+    }
+  } catch {
+    // fallback: no logo
+  }
+
+  // If no logo from profile, try local fallback
+  if (!logoDataUrl) {
+    try {
+      const img = new Image();
+      await new Promise<void>((resolve) => {
+        img.onload = () => { logoLoaded = true; resolve(); };
+        img.onerror = () => resolve();
+        img.src = '/logo-kemika-new.png';
+      });
+      if (logoLoaded) {
+        const canvas = document.createElement('canvas');
+        canvas.width = img.naturalWidth;
+        canvas.height = img.naturalHeight;
+        const ctx = canvas.getContext('2d');
+        ctx?.drawImage(img, 0, 0);
+        logoDataUrl = canvas.toDataURL('image/png');
+      }
+    } catch {
+      // no logo at all
+    }
+  }
+
+  let headerY = margin;
+
+  // Draw logo + company name header
+  if (logoDataUrl) {
+    const logoH = 12;
+    const logoW = logoH * 2.5; // approximate aspect ratio
+    doc.addImage(logoDataUrl, 'PNG', margin, headerY, logoW, logoH);
+    if (companyName) {
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'bold');
+      doc.text(companyName, margin + logoW + 3, headerY + 7);
+    }
+    headerY += logoH + 2;
+  } else if (companyName) {
+    doc.setFontSize(10);
+    doc.setFont('helvetica', 'bold');
+    doc.text(companyName, margin, headerY + 5);
+    headerY += 8;
+  }
+
+  // Separator line
+  doc.setDrawColor(200, 200, 200);
+  doc.line(margin, headerY, pageWidth - margin, headerY);
+  headerY += 3;
+
   // Title
   if (title) {
     doc.setFontSize(14);
     doc.setFont('helvetica', 'bold');
-    doc.text(title, pageWidth / 2, margin + 5, { align: 'center' });
+    doc.text(title, pageWidth / 2, headerY + 5, { align: 'center' });
+    headerY += 8;
   }
 
   // Date
   doc.setFontSize(8);
   doc.setFont('helvetica', 'normal');
-  doc.text(`Generated: ${new Date().toLocaleDateString('id-ID')}`, pageWidth - margin, margin + 5, { align: 'right' });
+  doc.text(`Generated: ${new Date().toLocaleDateString('id-ID')}`, pageWidth - margin, headerY, { align: 'right' });
+  headerY += 4;
 
   // Calculate column widths proportionally
   const headers = columns.map(col => col.header);
   const colWidths = columns.map(col => {
-    // Estimate width based on header length and typical data
     const headerLen = col.header.length;
     return Math.max(headerLen * 2, 15);
   });
   const totalColWidth = colWidths.reduce((a, b) => a + b, 0);
   const scaledWidths = colWidths.map(w => (w / totalColWidth) * usableWidth);
 
-  let y = title ? margin + 12 : margin + 5;
+  let y = headerY;
   const rowHeight = 6;
   const headerHeight = 8;
   const fontSize = 7;
