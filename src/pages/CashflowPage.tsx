@@ -16,7 +16,8 @@ import { Download, TrendingUp, TrendingDown, DollarSign, RefreshCw, Loader2, Arr
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { exportToExcel, ExportColumn, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
+import { exportToExcel, exportToPDF, ExportColumn, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from 'recharts';
 
 interface CashflowEntry {
