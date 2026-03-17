@@ -126,7 +126,7 @@ export default function ArReceiptsPage() {
     );
   });
 
-  const handleExport = (type: 'csv' | 'excel') => {
+  const handleExport = (type: 'csv' | 'excel' | 'pdf') => {
     const exportData = filteredReceipts.map(r => ({
       receipt_date: r.receipt_date,
       reference_no: r.reference_no || '-',
@@ -148,6 +148,8 @@ export default function ArReceiptsPage() {
     const filename = `ar_receipts_${format(new Date(), 'yyyyMMdd')}`;
     if (type === 'csv') {
       exportToCSV(exportData, columns, filename);
+    } else if (type === 'pdf') {
+      exportToPDF(exportData, columns, filename, language === 'en' ? 'AR Receipts Report' : 'Laporan Penerimaan AR');
     } else {
       exportToExcel(exportData, columns, filename);
     }
