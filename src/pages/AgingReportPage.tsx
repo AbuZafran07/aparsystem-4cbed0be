@@ -153,7 +153,7 @@ export default function AgingReportPage() {
     });
   };
 
-  const handleExport = (type: 'ap' | 'ar') => {
+  const handleExport = (type: 'ap' | 'ar', format: 'excel' | 'pdf') => {
     const buckets = type === 'ap' ? apBuckets : arBuckets;
     const allInvoices = buckets.flatMap(b => 
       b.invoices.map(inv => ({
@@ -172,7 +172,16 @@ export default function AgingReportPage() {
       { key: 'aging_bucket', header: language === 'en' ? 'Aging Bucket' : 'Bucket Aging' },
     ];
 
-    exportToExcel(allInvoices, columns, `${type.toUpperCase()}_Aging_Report`);
+    const filename = `${type.toUpperCase()}_Aging_Report`;
+    const title = type === 'ap'
+      ? (language === 'en' ? 'AP Aging Report' : 'Laporan Aging AP')
+      : (language === 'en' ? 'AR Aging Report' : 'Laporan Aging AR');
+
+    if (format === 'pdf') {
+      exportToPDF(allInvoices, columns, filename, title);
+    } else {
+      exportToExcel(allInvoices, columns, filename);
+    }
     toast.success(language === 'en' ? 'Report exported' : 'Laporan diekspor');
   };
 
