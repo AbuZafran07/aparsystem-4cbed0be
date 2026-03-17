@@ -3,13 +3,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Download, FileText, Receipt, RefreshCw, Loader2 } from 'lucide-react';
+import { Download, FileText, Receipt, RefreshCw, Loader2, FileSpreadsheet } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
-import { exportToExcel, ExportColumn } from '@/lib/exportUtils';
+import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 interface AgingBucket {
   label: string;
@@ -152,7 +153,7 @@ export default function AgingReportPage() {
     });
   };
 
-  const handleExport = (type: 'ap' | 'ar') => {
+  const handleExport = (type: 'ap' | 'ar', format: 'excel' | 'pdf') => {
     const buckets = type === 'ap' ? apBuckets : arBuckets;
     const allInvoices = buckets.flatMap(b => 
       b.invoices.map(inv => ({
@@ -171,7 +172,16 @@ export default function AgingReportPage() {
       { key: 'aging_bucket', header: language === 'en' ? 'Aging Bucket' : 'Bucket Aging' },
     ];
 
-    exportToExcel(allInvoices, columns, `${type.toUpperCase()}_Aging_Report`);
+    const filename = `${type.toUpperCase()}_Aging_Report`;
+    const title = type === 'ap'
+      ? (language === 'en' ? 'AP Aging Report' : 'Laporan Aging AP')
+      : (language === 'en' ? 'AR Aging Report' : 'Laporan Aging AR');
+
+    if (format === 'pdf') {
+      exportToPDF(allInvoices, columns, filename, title);
+    } else {
+      exportToExcel(allInvoices, columns, filename);
+    }
     toast.success(language === 'en' ? 'Report exported' : 'Laporan diekspor');
   };
 
@@ -208,10 +218,24 @@ export default function AgingReportPage() {
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             {language === 'en' ? 'Refresh' : 'Refresh'}
           </Button>
-          <Button onClick={() => handleExport(activeTab)}>
-            <Download className="w-4 h-4 mr-2" />
-            {language === 'en' ? 'Export Excel' : 'Ekspor Excel'}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Download className="w-4 h-4 mr-2" />
+                {language === 'en' ? 'Export' : 'Ekspor'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExport(activeTab, 'excel')}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Export Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport(activeTab, 'pdf')}>
+                <FileText className="w-4 h-4 mr-2" />
+                Export PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

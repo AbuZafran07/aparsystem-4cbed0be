@@ -12,11 +12,12 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Download, TrendingUp, TrendingDown, DollarSign, RefreshCw, Loader2, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Download, TrendingUp, TrendingDown, DollarSign, RefreshCw, Loader2, ArrowUpRight, ArrowDownRight, FileText, FileSpreadsheet } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { exportToExcel, ExportColumn, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
+import { exportToExcel, exportToPDF, ExportColumn, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend, LineChart, Line } from 'recharts';
 
 interface CashflowEntry {
@@ -157,7 +158,7 @@ export default function CashflowPage() {
     return acc;
   }, { inflow: 0, outflow: 0 });
 
-  const handleExport = () => {
+  const handleExport = (format: 'excel' | 'pdf') => {
     const columns: ExportColumn[] = [
       { key: 'date', header: language === 'en' ? 'Date' : 'Tanggal', format: formatDateForExport },
       { key: 'type', header: language === 'en' ? 'Type' : 'Tipe', format: (v) => v === 'inflow' ? 'Inflow' : 'Outflow' },
@@ -168,7 +169,11 @@ export default function CashflowPage() {
     ];
 
     const filename = `Cashflow_Report_${new Date().toISOString().split('T')[0]}`;
-    exportToExcel(entries, columns, filename);
+    if (format === 'pdf') {
+      exportToPDF(entries, columns, filename, language === 'en' ? 'Cashflow Report' : 'Laporan Arus Kas');
+    } else {
+      exportToExcel(entries, columns, filename);
+    }
     toast.success(language === 'en' ? 'Report exported' : 'Laporan diekspor');
   };
 
@@ -197,10 +202,24 @@ export default function CashflowPage() {
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button onClick={handleExport}>
-            <Download className="w-4 h-4 mr-2" />
-            {language === 'en' ? 'Export Excel' : 'Ekspor Excel'}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Download className="w-4 h-4 mr-2" />
+                {language === 'en' ? 'Export' : 'Ekspor'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExport('excel')}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Export Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                <FileText className="w-4 h-4 mr-2" />
+                Export PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

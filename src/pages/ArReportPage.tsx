@@ -18,11 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Download, Receipt, RefreshCw, Loader2, Search } from 'lucide-react';
+import { Download, Receipt, RefreshCw, Loader2, Search, FileText, FileSpreadsheet } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { exportToExcel, ExportColumn, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
+import { exportToExcel, exportToPDF, ExportColumn, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -149,22 +150,27 @@ export default function ArReportPage() {
     outstanding_amount: acc.outstanding_amount + inv.outstanding_amount,
   }), { invoice_amount: 0, paid_amount: 0, outstanding_amount: 0 });
 
-  const handleExport = () => {
-    const columns: ExportColumn[] = [
-      { key: 'customer_name', header: language === 'en' ? 'Customer Name' : 'Nama Customer' },
-      { key: 'sales_name', header: language === 'en' ? 'Sales' : 'Sales' },
-      { key: 'invoice_number', header: language === 'en' ? 'Invoice Number' : 'No. Invoice' },
-      { key: 'order_number', header: language === 'en' ? 'Order Number' : 'No. Order' },
-      { key: 'invoice_date', header: language === 'en' ? 'Invoice Date' : 'Tanggal Invoice', format: formatDateForExport },
-      { key: 'due_date', header: language === 'en' ? 'Due Date' : 'Jatuh Tempo', format: formatDateForExport },
-      { key: 'invoice_amount', header: language === 'en' ? 'Invoice Amount' : 'Jumlah Invoice', format: formatCurrencyForExport },
-      { key: 'paid_amount', header: language === 'en' ? 'Paid Amount' : 'Jumlah Dibayar', format: formatCurrencyForExport },
-      { key: 'outstanding_amount', header: language === 'en' ? 'Outstanding' : 'Sisa', format: formatCurrencyForExport },
-      { key: 'status', header: 'Status' },
-    ];
+  const getExportColumns = (): ExportColumn[] => [
+    { key: 'customer_name', header: language === 'en' ? 'Customer Name' : 'Nama Customer' },
+    { key: 'sales_name', header: language === 'en' ? 'Sales' : 'Sales' },
+    { key: 'invoice_number', header: language === 'en' ? 'Invoice Number' : 'No. Invoice' },
+    { key: 'order_number', header: language === 'en' ? 'Order Number' : 'No. Order' },
+    { key: 'invoice_date', header: language === 'en' ? 'Invoice Date' : 'Tanggal Invoice', format: formatDateForExport },
+    { key: 'due_date', header: language === 'en' ? 'Due Date' : 'Jatuh Tempo', format: formatDateForExport },
+    { key: 'invoice_amount', header: language === 'en' ? 'Invoice Amount' : 'Jumlah Invoice', format: formatCurrencyForExport },
+    { key: 'paid_amount', header: language === 'en' ? 'Paid Amount' : 'Jumlah Dibayar', format: formatCurrencyForExport },
+    { key: 'outstanding_amount', header: language === 'en' ? 'Outstanding' : 'Sisa', format: formatCurrencyForExport },
+    { key: 'status', header: 'Status' },
+  ];
 
+  const handleExport = (format: 'excel' | 'pdf') => {
+    const columns = getExportColumns();
     const filename = `AR_Report_${new Date().toISOString().split('T')[0]}`;
-    exportToExcel(filteredInvoices, columns, filename);
+    if (format === 'pdf') {
+      exportToPDF(filteredInvoices, columns, filename, language === 'en' ? 'AR Report' : 'Laporan Piutang (AR)');
+    } else {
+      exportToExcel(filteredInvoices, columns, filename);
+    }
     toast.success(language === 'en' ? 'Report exported' : 'Laporan diekspor');
   };
 
@@ -193,10 +199,24 @@ export default function ArReportPage() {
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button onClick={handleExport}>
-            <Download className="w-4 h-4 mr-2" />
-            {language === 'en' ? 'Export Excel' : 'Ekspor Excel'}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Download className="w-4 h-4 mr-2" />
+                {language === 'en' ? 'Export' : 'Ekspor'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExport('excel')}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Export Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                <FileText className="w-4 h-4 mr-2" />
+                Export PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
