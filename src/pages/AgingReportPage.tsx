@@ -218,10 +218,24 @@ export default function AgingReportPage() {
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             {language === 'en' ? 'Refresh' : 'Refresh'}
           </Button>
-          <Button onClick={() => handleExport(activeTab)}>
-            <Download className="w-4 h-4 mr-2" />
-            {language === 'en' ? 'Export Excel' : 'Ekspor Excel'}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button>
+                <Download className="w-4 h-4 mr-2" />
+                {language === 'en' ? 'Export' : 'Ekspor'}
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExport(activeTab, 'excel')}>
+                <FileSpreadsheet className="w-4 h-4 mr-2" />
+                Export Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport(activeTab, 'pdf')}>
+                <FileText className="w-4 h-4 mr-2" />
+                Export PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 
