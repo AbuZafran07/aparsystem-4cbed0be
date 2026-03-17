@@ -23,7 +23,8 @@ import { Download, FileText, RefreshCw, Loader2, Search, Filter, FileSpreadsheet
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
-import { exportToExcel, ExportColumn, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
+import { exportToExcel, exportToPDF, ExportColumn, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import type { Database } from '@/integrations/supabase/types';
 
