@@ -150,22 +150,27 @@ export default function ArReportPage() {
     outstanding_amount: acc.outstanding_amount + inv.outstanding_amount,
   }), { invoice_amount: 0, paid_amount: 0, outstanding_amount: 0 });
 
-  const handleExport = () => {
-    const columns: ExportColumn[] = [
-      { key: 'customer_name', header: language === 'en' ? 'Customer Name' : 'Nama Customer' },
-      { key: 'sales_name', header: language === 'en' ? 'Sales' : 'Sales' },
-      { key: 'invoice_number', header: language === 'en' ? 'Invoice Number' : 'No. Invoice' },
-      { key: 'order_number', header: language === 'en' ? 'Order Number' : 'No. Order' },
-      { key: 'invoice_date', header: language === 'en' ? 'Invoice Date' : 'Tanggal Invoice', format: formatDateForExport },
-      { key: 'due_date', header: language === 'en' ? 'Due Date' : 'Jatuh Tempo', format: formatDateForExport },
-      { key: 'invoice_amount', header: language === 'en' ? 'Invoice Amount' : 'Jumlah Invoice', format: formatCurrencyForExport },
-      { key: 'paid_amount', header: language === 'en' ? 'Paid Amount' : 'Jumlah Dibayar', format: formatCurrencyForExport },
-      { key: 'outstanding_amount', header: language === 'en' ? 'Outstanding' : 'Sisa', format: formatCurrencyForExport },
-      { key: 'status', header: 'Status' },
-    ];
+  const getExportColumns = (): ExportColumn[] => [
+    { key: 'customer_name', header: language === 'en' ? 'Customer Name' : 'Nama Customer' },
+    { key: 'sales_name', header: language === 'en' ? 'Sales' : 'Sales' },
+    { key: 'invoice_number', header: language === 'en' ? 'Invoice Number' : 'No. Invoice' },
+    { key: 'order_number', header: language === 'en' ? 'Order Number' : 'No. Order' },
+    { key: 'invoice_date', header: language === 'en' ? 'Invoice Date' : 'Tanggal Invoice', format: formatDateForExport },
+    { key: 'due_date', header: language === 'en' ? 'Due Date' : 'Jatuh Tempo', format: formatDateForExport },
+    { key: 'invoice_amount', header: language === 'en' ? 'Invoice Amount' : 'Jumlah Invoice', format: formatCurrencyForExport },
+    { key: 'paid_amount', header: language === 'en' ? 'Paid Amount' : 'Jumlah Dibayar', format: formatCurrencyForExport },
+    { key: 'outstanding_amount', header: language === 'en' ? 'Outstanding' : 'Sisa', format: formatCurrencyForExport },
+    { key: 'status', header: 'Status' },
+  ];
 
+  const handleExport = (format: 'excel' | 'pdf') => {
+    const columns = getExportColumns();
     const filename = `AR_Report_${new Date().toISOString().split('T')[0]}`;
-    exportToExcel(filteredInvoices, columns, filename);
+    if (format === 'pdf') {
+      exportToPDF(filteredInvoices, columns, filename, language === 'en' ? 'AR Report' : 'Laporan Piutang (AR)');
+    } else {
+      exportToExcel(filteredInvoices, columns, filename);
+    }
     toast.success(language === 'en' ? 'Report exported' : 'Laporan diekspor');
   };
 
