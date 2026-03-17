@@ -12,7 +12,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Download, TrendingUp, TrendingDown, DollarSign, RefreshCw, Loader2, ArrowUpRight, ArrowDownRight } from 'lucide-react';
+import { Download, TrendingUp, TrendingDown, DollarSign, RefreshCw, Loader2, ArrowUpRight, ArrowDownRight, FileText, FileSpreadsheet } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
