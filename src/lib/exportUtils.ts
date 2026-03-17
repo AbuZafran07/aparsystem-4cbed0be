@@ -1,5 +1,6 @@
 // Export utilities for AP/AR data
 import { jsPDF } from 'jspdf';
+import { supabase } from '@/integrations/supabase/client';
 
 export interface ExportColumn {
   key: string;
