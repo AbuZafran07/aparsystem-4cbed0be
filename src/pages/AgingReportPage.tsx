@@ -418,7 +418,7 @@ function AgingContent({ buckets, chartData, pieData, totalAmount, totalCount, la
                 </div>
                 {bucket.invoices.length > 0 && (
                   <div className="divide-y">
-                    {bucket.invoices.slice(0, 5).map(inv => (
+                    {(expandedBuckets[bucket.label] ? bucket.invoices : bucket.invoices.slice(0, 5)).map(inv => (
                       <div key={inv.id} className="px-4 py-2 flex items-center justify-between text-sm hover:bg-muted/50">
                         <div>
                           <span className="font-medium">{inv.name}</span>
@@ -435,9 +435,15 @@ function AgingContent({ buckets, chartData, pieData, totalAmount, totalCount, la
                       </div>
                     ))}
                     {bucket.invoices.length > 5 && (
-                      <div className="px-4 py-2 text-sm text-muted-foreground text-center">
-                        +{bucket.invoices.length - 5} {language === 'en' ? 'more invoices' : 'invoice lainnya'}
-                      </div>
+                      <button
+                        onClick={() => toggleBucket(bucket.label)}
+                        className="w-full px-4 py-2 text-sm text-primary hover:bg-muted/50 text-center cursor-pointer font-medium transition-colors"
+                      >
+                        {expandedBuckets[bucket.label]
+                          ? (language === 'en' ? 'Show less' : 'Tampilkan lebih sedikit')
+                          : `+${bucket.invoices.length - 5} ${language === 'en' ? 'more invoices' : 'invoice lainnya'}`
+                        }
+                      </button>
                     )}
                   </div>
                 )}
