@@ -144,8 +144,8 @@ export default function CustomerStatusPage() {
     setExpandedCustomers(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Filter invoices within each customer by date range
-  const applyDateFilter = (invoices: CustomerInvoice[]) => {
+  // Filter invoices within each customer by date range and invoice search
+  const applyFilters = (invoices: CustomerInvoice[]) => {
     return invoices.filter(inv => {
       const invDate = new Date(inv.invoice_date);
       if (dateFrom && invDate < dateFrom) return false;
@@ -154,19 +154,41 @@ export default function CustomerStatusPage() {
         toEnd.setHours(23, 59, 59, 999);
         if (invDate > toEnd) return false;
       }
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matchCustomer = true; // customer name checked at parent level
+        const matchInvoice = inv.invoice_number.toLowerCase().includes(q);
+        const matchOrder = inv.order_number.toLowerCase().includes(q);
+        // If query doesn't match customer name, check invoice/order
+        return matchInvoice || matchOrder;
+      }
       return true;
     });
   };
 
   const filteredCustomers = useMemo(() => {
+    const q = searchQuery.toLowerCase();
     return customers
-      .filter(c => c.customer_name.toLowerCase().includes(searchQuery.toLowerCase()))
-      .map(c => ({
-        ...c,
-        overdueInvoices: applyDateFilter(c.overdueInvoices),
-        outstandingInvoices: applyDateFilter(c.outstandingInvoices),
-        paidInvoices: applyDateFilter(c.paidInvoices),
-      }));
+      .map(c => {
+        const nameMatch = !q || c.customer_name.toLowerCase().includes(q);
+        const filterInvs = (invs: CustomerInvoice[]) => invs.filter(inv => {
+          const invDate = new Date(inv.invoice_date);
+          if (dateFrom && invDate < dateFrom) return false;
+          if (dateTo) { const e = new Date(dateTo); e.setHours(23,59,59,999); if (invDate > e) return false; }
+          if (q && !nameMatch) {
+            return inv.invoice_number.toLowerCase().includes(q) || inv.order_number.toLowerCase().includes(q);
+          }
+          return true;
+        });
+        return {
+          ...c,
+          overdueInvoices: filterInvs(c.overdueInvoices),
+          outstandingInvoices: filterInvs(c.outstandingInvoices),
+          paidInvoices: filterInvs(c.paidInvoices),
+          _nameMatch: nameMatch,
+        };
+      })
+      .filter(c => !q || c._nameMatch || c.overdueInvoices.length > 0 || c.outstandingInvoices.length > 0 || c.paidInvoices.length > 0);
   }, [customers, searchQuery, dateFrom, dateTo]);
 
   const overdueCustomers = filteredCustomers.filter(c => c.overdueInvoices.length > 0).sort((a, b) => b.maxOverdueDays - a.maxOverdueDays);
@@ -442,7 +464,7 @@ export default function CustomerStatusPage() {
         <div className="relative max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            placeholder={t('Search customer...', 'Cari customer...')}
+            placeholder={t('Search customer, invoice, order...', 'Cari customer, invoice, order...')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-9 w-64"
