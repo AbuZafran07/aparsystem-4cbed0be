@@ -61,6 +61,8 @@ export default function CustomerStatusPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('overdue');
   const [expandedCustomers, setExpandedCustomers] = useState<Record<string, boolean>>({});
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
 
   const fetchData = async () => {
     setLoading(true);
@@ -142,9 +144,30 @@ export default function CustomerStatusPage() {
     setExpandedCustomers(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const filteredCustomers = customers.filter(c =>
-    c.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter invoices within each customer by date range
+  const applyDateFilter = (invoices: CustomerInvoice[]) => {
+    return invoices.filter(inv => {
+      const invDate = new Date(inv.invoice_date);
+      if (dateFrom && invDate < dateFrom) return false;
+      if (dateTo) {
+        const toEnd = new Date(dateTo);
+        toEnd.setHours(23, 59, 59, 999);
+        if (invDate > toEnd) return false;
+      }
+      return true;
+    });
+  };
+
+  const filteredCustomers = useMemo(() => {
+    return customers
+      .filter(c => c.customer_name.toLowerCase().includes(searchQuery.toLowerCase()))
+      .map(c => ({
+        ...c,
+        overdueInvoices: applyDateFilter(c.overdueInvoices),
+        outstandingInvoices: applyDateFilter(c.outstandingInvoices),
+        paidInvoices: applyDateFilter(c.paidInvoices),
+      }));
+  }, [customers, searchQuery, dateFrom, dateTo]);
 
   const overdueCustomers = filteredCustomers.filter(c => c.overdueInvoices.length > 0).sort((a, b) => b.maxOverdueDays - a.maxOverdueDays);
   const outstandingCustomers = filteredCustomers.filter(c => c.outstandingInvoices.length > 0).sort((a, b) => {
