@@ -8,10 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, AlertTriangle, Clock, CheckCircle2, Users, RefreshCw, FileText, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { Search, AlertTriangle, Clock, CheckCircle2, Users, RefreshCw, FileText, ChevronDown, ChevronUp, ExternalLink, Download } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { TablePagination, usePagination } from '@/components/TablePagination';
+import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 interface CustomerInvoice {
   id: string;
