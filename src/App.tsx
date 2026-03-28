@@ -35,6 +35,7 @@ import ImportExportPage from "@/pages/ImportExportPage";
 import PaymentRequestsPage from "@/pages/PaymentRequestsPage";
 import MyProfilePage from "@/pages/MyProfilePage";
 import BackupRestorePage from "@/pages/BackupRestorePage";
+import CustomerStatusPage from "@/pages/CustomerStatusPage";
 import NotFound from "@/pages/NotFound";
 const queryClient = new QueryClient();
 
@@ -90,6 +91,7 @@ const App = () => (
                 <Route path="/ap-aging" element={<AgingReportPage />} />
                 <Route path="/ar-aging" element={<AgingReportPage />} />
                 <Route path="/ap-report" element={<ApReportPage />} />
+                <Route path="/customer-status" element={<CustomerStatusPage />} />
                 <Route path="/ar-report" element={<ArReportPage />} />
                 <Route path="/cashflow" element={<CashflowPage />} />
                 <Route path="/payment-requests" element={<PaymentRequestsPage />} />
