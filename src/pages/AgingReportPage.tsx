@@ -298,6 +298,12 @@ interface AgingContentProps {
 }
 
 function AgingContent({ buckets, chartData, pieData, totalAmount, totalCount, language, type }: AgingContentProps) {
+  const [expandedBuckets, setExpandedBuckets] = React.useState<Record<string, boolean>>({});
+
+  const toggleBucket = (label: string) => {
+    setExpandedBuckets(prev => ({ ...prev, [label]: !prev[label] }));
+  };
+
   return (
     <>
       {/* Summary Cards */}
