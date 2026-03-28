@@ -426,7 +426,7 @@ function AgingContent({ buckets, chartData, pieData, totalAmount, totalCount, la
                 {bucket.invoices.length > 0 && (
                   <div className="divide-y">
                     {(expandedBuckets[bucket.label] ? bucket.invoices : bucket.invoices.slice(0, 5)).map(inv => (
-                      <div key={inv.id} className="px-4 py-2 flex items-center justify-between text-sm hover:bg-muted/50">
+                      <div key={inv.id} onClick={() => handleInvoiceClick(inv.id)} className="px-4 py-2 flex items-center justify-between text-sm hover:bg-muted/50 cursor-pointer">
                         <div>
                           <span className="font-medium">{inv.name}</span>
                           <span className="text-muted-foreground ml-2">({inv.invoice_number})</span>
