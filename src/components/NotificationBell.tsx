@@ -136,7 +136,7 @@ export default function NotificationBell() {
             </Button>
           )}
         </div>
-        <ScrollArea className="max-h-80">
+        <ScrollArea className="h-[320px]">
           {notifications.length === 0 ? (
             <div className="p-4 text-center text-sm text-muted-foreground">
               {language === 'en' ? 'No notifications' : 'Tidak ada notifikasi'}

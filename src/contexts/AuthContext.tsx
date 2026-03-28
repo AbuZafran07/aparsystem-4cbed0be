@@ -210,6 +210,7 @@ export function useRoleAccess() {
       'arReport',
       'cashflow',
       'paymentRequests',
+      'customerStatus',
       'exportCenter',
       'importExportCenter',
     ];

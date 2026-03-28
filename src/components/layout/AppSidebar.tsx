@@ -85,6 +85,7 @@ const menuStructure: MenuSection[] = [
       { key: 'arAging', translationKey: 'menu.arAging', icon: TrendingUp, path: '/ar-aging' },
       { key: 'apReport', translationKey: 'menu.apReport', icon: FileBarChart, path: '/ap-report' },
       { key: 'arReport', translationKey: 'menu.arReport', icon: FileBarChart2, path: '/ar-report' },
+      { key: 'customerStatus', translationKey: 'menu.customerStatus', icon: Users, path: '/customer-status' },
       { key: 'cashflow', translationKey: 'menu.cashflow', icon: DollarSign, path: '/cashflow' },
       { key: 'exportCenter', translationKey: 'menu.exportCenter', icon: Download, path: '/export-center' },
       { key: 'importExportCenter', translationKey: 'menu.importExportCenter', icon: ArrowUpDown, path: '/import-export' },
