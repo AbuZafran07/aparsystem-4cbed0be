@@ -144,8 +144,8 @@ export default function CustomerStatusPage() {
     setExpandedCustomers(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // Filter invoices within each customer by date range
-  const applyDateFilter = (invoices: CustomerInvoice[]) => {
+  // Filter invoices within each customer by date range and invoice search
+  const applyFilters = (invoices: CustomerInvoice[]) => {
     return invoices.filter(inv => {
       const invDate = new Date(inv.invoice_date);
       if (dateFrom && invDate < dateFrom) return false;
@@ -154,19 +154,36 @@ export default function CustomerStatusPage() {
         toEnd.setHours(23, 59, 59, 999);
         if (invDate > toEnd) return false;
       }
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        const matchCustomer = true; // customer name checked at parent level
+        const matchInvoice = inv.invoice_number.toLowerCase().includes(q);
+        const matchOrder = inv.order_number.toLowerCase().includes(q);
+        // If query doesn't match customer name, check invoice/order
+        return matchInvoice || matchOrder;
+      }
       return true;
     });
   };
 
   const filteredCustomers = useMemo(() => {
+    const q = searchQuery.toLowerCase();
     return customers
-      .filter(c => c.customer_name.toLowerCase().includes(searchQuery.toLowerCase()))
-      .map(c => ({
-        ...c,
-        overdueInvoices: applyDateFilter(c.overdueInvoices),
-        outstandingInvoices: applyDateFilter(c.outstandingInvoices),
-        paidInvoices: applyDateFilter(c.paidInvoices),
-      }));
+      .map(c => {
+        const nameMatch = c.customer_name.toLowerCase().includes(q);
+        return {
+          ...c,
+          overdueInvoices: nameMatch ? applyFilters(c.overdueInvoices).length > 0 ? applyFilters(c.overdueInvoices) : applyFilters(c.overdueInvoices) : applyFilters(c.overdueInvoices),
+          outstandingInvoices: nameMatch ? applyFilters(c.outstandingInvoices).length > 0 ? applyFilters(c.outstandingInvoices) : applyFilters(c.outstandingInvoices) : applyFilters(c.outstandingInvoices),
+          paidInvoices: nameMatch ? applyFilters(c.paidInvoices).length > 0 ? applyFilters(c.paidInvoices) : applyFilters(c.paidInvoices) : applyFilters(c.paidInvoices),
+          _nameMatch: nameMatch,
+        };
+      })
+      .filter(c => {
+        if (!q) return true;
+        // Show customer if name matches OR any invoice/order matches
+        return c._nameMatch || c.overdueInvoices.length > 0 || c.outstandingInvoices.length > 0 || c.paidInvoices.length > 0;
+      });
   }, [customers, searchQuery, dateFrom, dateTo]);
 
   const overdueCustomers = filteredCustomers.filter(c => c.overdueInvoices.length > 0).sort((a, b) => b.maxOverdueDays - a.maxOverdueDays);
