@@ -300,9 +300,15 @@ interface AgingContentProps {
 
 function AgingContent({ buckets, chartData, pieData, totalAmount, totalCount, language, type }: AgingContentProps) {
   const [expandedBuckets, setExpandedBuckets] = React.useState<Record<string, boolean>>({});
+  const navigate = useNavigate();
 
   const toggleBucket = (label: string) => {
     setExpandedBuckets(prev => ({ ...prev, [label]: !prev[label] }));
+  };
+
+  const handleInvoiceClick = (invoiceId: string) => {
+    const path = type === 'ar' ? `/ar/${invoiceId}` : `/ap/${invoiceId}`;
+    navigate(path);
   };
 
   return (
