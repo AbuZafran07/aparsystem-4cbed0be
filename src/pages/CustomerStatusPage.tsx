@@ -170,20 +170,25 @@ export default function CustomerStatusPage() {
     const q = searchQuery.toLowerCase();
     return customers
       .map(c => {
-        const nameMatch = c.customer_name.toLowerCase().includes(q);
+        const nameMatch = !q || c.customer_name.toLowerCase().includes(q);
+        const filterInvs = (invs: CustomerInvoice[]) => invs.filter(inv => {
+          const invDate = new Date(inv.invoice_date);
+          if (dateFrom && invDate < dateFrom) return false;
+          if (dateTo) { const e = new Date(dateTo); e.setHours(23,59,59,999); if (invDate > e) return false; }
+          if (q && !nameMatch) {
+            return inv.invoice_number.toLowerCase().includes(q) || inv.order_number.toLowerCase().includes(q);
+          }
+          return true;
+        });
         return {
           ...c,
-          overdueInvoices: nameMatch ? applyFilters(c.overdueInvoices).length > 0 ? applyFilters(c.overdueInvoices) : applyFilters(c.overdueInvoices) : applyFilters(c.overdueInvoices),
-          outstandingInvoices: nameMatch ? applyFilters(c.outstandingInvoices).length > 0 ? applyFilters(c.outstandingInvoices) : applyFilters(c.outstandingInvoices) : applyFilters(c.outstandingInvoices),
-          paidInvoices: nameMatch ? applyFilters(c.paidInvoices).length > 0 ? applyFilters(c.paidInvoices) : applyFilters(c.paidInvoices) : applyFilters(c.paidInvoices),
+          overdueInvoices: filterInvs(c.overdueInvoices),
+          outstandingInvoices: filterInvs(c.outstandingInvoices),
+          paidInvoices: filterInvs(c.paidInvoices),
           _nameMatch: nameMatch,
         };
       })
-      .filter(c => {
-        if (!q) return true;
-        // Show customer if name matches OR any invoice/order matches
-        return c._nameMatch || c.overdueInvoices.length > 0 || c.outstandingInvoices.length > 0 || c.paidInvoices.length > 0;
-      });
+      .filter(c => !q || c._nameMatch || c.overdueInvoices.length > 0 || c.outstandingInvoices.length > 0 || c.paidInvoices.length > 0);
   }, [customers, searchQuery, dateFrom, dateTo]);
 
   const overdueCustomers = filteredCustomers.filter(c => c.overdueInvoices.length > 0).sort((a, b) => b.maxOverdueDays - a.maxOverdueDays);
