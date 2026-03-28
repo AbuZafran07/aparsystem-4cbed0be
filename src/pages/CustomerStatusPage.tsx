@@ -438,32 +438,41 @@ export default function CustomerStatusPage() {
         </TabsList>
 
         <TabsContent value="overdue" className="mt-4 space-y-3">
-          {overdueCustomers.length === 0 ? (
+          {paginatedOverdue.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">
               {t('No overdue customers', 'Tidak ada customer jatuh tempo lewat')}
             </CardContent></Card>
           ) : (
-            overdueCustomers.map(c => renderCustomerCard(c, c.overdueInvoices, 'overdue'))
+            <>
+              {paginatedOverdue.map(c => renderCustomerCard(c, c.overdueInvoices, 'overdue'))}
+              <TablePagination currentPage={overduePage} totalItems={overdueCustomers.length} pageSize={overduePageSize} onPageChange={setOverduePage} onPageSizeChange={setOverduePageSize} />
+            </>
           )}
         </TabsContent>
 
         <TabsContent value="outstanding" className="mt-4 space-y-3">
-          {outstandingCustomers.length === 0 ? (
+          {paginatedOutstanding.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">
               {t('No outstanding customers', 'Tidak ada customer dengan tagihan belum lunas')}
             </CardContent></Card>
           ) : (
-            outstandingCustomers.map(c => renderCustomerCard(c, c.outstandingInvoices, 'outstanding'))
+            <>
+              {paginatedOutstanding.map(c => renderCustomerCard(c, c.outstandingInvoices, 'outstanding'))}
+              <TablePagination currentPage={outstandingPage} totalItems={outstandingCustomers.length} pageSize={outstandingPageSize} onPageChange={setOutstandingPage} onPageSizeChange={setOutstandingPageSize} />
+            </>
           )}
         </TabsContent>
 
         <TabsContent value="paid" className="mt-4 space-y-3">
-          {paidCustomers.length === 0 ? (
+          {paginatedPaid.length === 0 ? (
             <Card><CardContent className="py-8 text-center text-muted-foreground text-sm">
               {t('No fully paid customers', 'Tidak ada customer yang lunas')}
             </CardContent></Card>
           ) : (
-            paidCustomers.map(c => renderCustomerCard(c, c.paidInvoices, 'paid'))
+            <>
+              {paginatedPaid.map(c => renderCustomerCard(c, c.paidInvoices, 'paid'))}
+              <TablePagination currentPage={paidPage} totalItems={paidCustomers.length} pageSize={paidPageSize} onPageChange={setPaidPage} onPageSizeChange={setPaidPageSize} />
+            </>
           )}
         </TabsContent>
       </Tabs>
