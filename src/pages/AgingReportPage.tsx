@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -299,9 +300,15 @@ interface AgingContentProps {
 
 function AgingContent({ buckets, chartData, pieData, totalAmount, totalCount, language, type }: AgingContentProps) {
   const [expandedBuckets, setExpandedBuckets] = React.useState<Record<string, boolean>>({});
+  const navigate = useNavigate();
 
   const toggleBucket = (label: string) => {
     setExpandedBuckets(prev => ({ ...prev, [label]: !prev[label] }));
+  };
+
+  const handleInvoiceClick = (invoiceId: string) => {
+    const path = type === 'ar' ? `/ar/${invoiceId}` : `/ap/${invoiceId}`;
+    navigate(path);
   };
 
   return (
@@ -419,7 +426,7 @@ function AgingContent({ buckets, chartData, pieData, totalAmount, totalCount, la
                 {bucket.invoices.length > 0 && (
                   <div className="divide-y">
                     {(expandedBuckets[bucket.label] ? bucket.invoices : bucket.invoices.slice(0, 5)).map(inv => (
-                      <div key={inv.id} className="px-4 py-2 flex items-center justify-between text-sm hover:bg-muted/50">
+                      <div key={inv.id} onClick={() => handleInvoiceClick(inv.id)} className="px-4 py-2 flex items-center justify-between text-sm hover:bg-muted/50 cursor-pointer">
                         <div>
                           <span className="font-medium">{inv.name}</span>
                           <span className="text-muted-foreground ml-2">({inv.invoice_number})</span>
