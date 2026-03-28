@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { format } from 'date-fns';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -8,8 +9,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, AlertTriangle, Clock, CheckCircle2, Users, RefreshCw, FileText, ChevronDown, ChevronUp, ExternalLink, Download } from 'lucide-react';
+import { Search, AlertTriangle, Clock, CheckCircle2, Users, RefreshCw, FileText, ChevronDown, ChevronUp, ExternalLink, Download, CalendarIcon, X } from 'lucide-react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Calendar } from '@/components/ui/calendar';
+import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { TablePagination, usePagination } from '@/components/TablePagination';
@@ -57,6 +61,8 @@ export default function CustomerStatusPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState('overdue');
   const [expandedCustomers, setExpandedCustomers] = useState<Record<string, boolean>>({});
+  const [dateFrom, setDateFrom] = useState<Date | undefined>();
+  const [dateTo, setDateTo] = useState<Date | undefined>();
 
   const fetchData = async () => {
     setLoading(true);
@@ -138,9 +144,30 @@ export default function CustomerStatusPage() {
     setExpandedCustomers(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const filteredCustomers = customers.filter(c =>
-    c.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  // Filter invoices within each customer by date range
+  const applyDateFilter = (invoices: CustomerInvoice[]) => {
+    return invoices.filter(inv => {
+      const invDate = new Date(inv.invoice_date);
+      if (dateFrom && invDate < dateFrom) return false;
+      if (dateTo) {
+        const toEnd = new Date(dateTo);
+        toEnd.setHours(23, 59, 59, 999);
+        if (invDate > toEnd) return false;
+      }
+      return true;
+    });
+  };
+
+  const filteredCustomers = useMemo(() => {
+    return customers
+      .filter(c => c.customer_name.toLowerCase().includes(searchQuery.toLowerCase()))
+      .map(c => ({
+        ...c,
+        overdueInvoices: applyDateFilter(c.overdueInvoices),
+        outstandingInvoices: applyDateFilter(c.outstandingInvoices),
+        paidInvoices: applyDateFilter(c.paidInvoices),
+      }));
+  }, [customers, searchQuery, dateFrom, dateTo]);
 
   const overdueCustomers = filteredCustomers.filter(c => c.overdueInvoices.length > 0).sort((a, b) => b.maxOverdueDays - a.maxOverdueDays);
   const outstandingCustomers = filteredCustomers.filter(c => c.outstandingInvoices.length > 0).sort((a, b) => {
@@ -410,15 +437,48 @@ export default function CustomerStatusPage() {
         </Card>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder={t('Search customer...', 'Cari customer...')}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-        />
+      {/* Search & Date Filter */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t('Search customer...', 'Cari customer...')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 w-64"
+          />
+        </div>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className={cn("gap-2 text-sm", !dateFrom && "text-muted-foreground")}>
+              <CalendarIcon className="h-4 w-4" />
+              {dateFrom ? format(dateFrom, 'dd/MM/yyyy') : t('From Date', 'Dari Tanggal')}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className={cn("p-3 pointer-events-auto")} />
+          </PopoverContent>
+        </Popover>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className={cn("gap-2 text-sm", !dateTo && "text-muted-foreground")}>
+              <CalendarIcon className="h-4 w-4" />
+              {dateTo ? format(dateTo, 'dd/MM/yyyy') : t('To Date', 'Sampai Tanggal')}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className={cn("p-3 pointer-events-auto")} />
+          </PopoverContent>
+        </Popover>
+
+        {(dateFrom || dateTo) && (
+          <Button variant="ghost" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>
+            <X className="h-4 w-4 mr-1" />
+            {t('Clear', 'Hapus')}
+          </Button>
+        )}
       </div>
 
       {/* Tabs */}
