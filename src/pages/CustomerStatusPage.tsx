@@ -156,6 +156,55 @@ export default function CustomerStatusPage() {
 
   const t = (en: string, id: string) => language === 'en' ? en : id;
 
+  const getExportData = () => {
+    const tabMap: Record<string, { customers: CustomerSummary[]; getInvoices: (c: CustomerSummary) => CustomerInvoice[]; label: string }> = {
+      overdue: { customers: overdueCustomers, getInvoices: c => c.overdueInvoices, label: t('Overdue', 'Jatuh Tempo Lewat') },
+      outstanding: { customers: outstandingCustomers, getInvoices: c => c.outstandingInvoices, label: t('Outstanding', 'Belum Lunas') },
+      paid: { customers: paidCustomers, getInvoices: c => c.paidInvoices, label: t('Paid', 'Lunas') },
+    };
+    const { customers: custs, getInvoices, label } = tabMap[activeTab];
+    const rows: Record<string, any>[] = [];
+    custs.forEach(c => {
+      getInvoices(c).forEach(inv => {
+        rows.push({
+          customer_name: c.customer_name,
+          invoice_number: inv.invoice_number,
+          invoice_date: inv.invoice_date,
+          due_date: inv.due_date,
+          invoice_amount: inv.invoice_amount,
+          paid_amount: inv.paid_amount,
+          outstanding_amount: inv.outstanding_amount,
+          overdue_days: inv.overdue_days,
+          status: inv.status,
+        });
+      });
+    });
+    return { rows, label };
+  };
+
+  const handleExport = async (format: 'excel' | 'pdf') => {
+    const { rows, label } = getExportData();
+    if (rows.length === 0) return;
+    const columns: ExportColumn[] = [
+      { key: 'customer_name', header: t('Customer', 'Customer') },
+      { key: 'invoice_number', header: t('Invoice #', 'No. Invoice') },
+      { key: 'invoice_date', header: t('Invoice Date', 'Tgl Invoice'), format: (v: string) => v ? formatDate(v) : '' },
+      { key: 'due_date', header: t('Due Date', 'Jatuh Tempo'), format: (v: string) => v ? formatDate(v) : '' },
+      { key: 'invoice_amount', header: t('Amount', 'Jumlah'), format: (v: number) => formatCurrency(v) },
+      { key: 'paid_amount', header: t('Paid', 'Dibayar'), format: (v: number) => formatCurrency(v) },
+      { key: 'outstanding_amount', header: t('Outstanding', 'Sisa'), format: (v: number) => formatCurrency(v) },
+      { key: 'overdue_days', header: t('Overdue Days', 'Hari Terlambat'), format: (v: number) => String(v ?? 0) },
+      { key: 'status', header: 'Status' },
+    ];
+    const filename = `customer-status-${activeTab}-${new Date().toISOString().slice(0, 10)}`;
+    const title = `${t('Customer Status', 'Status Customer')} - ${label}`;
+    if (format === 'excel') {
+      exportToExcel(rows, columns, filename);
+    } else {
+      await exportToPDF(rows, columns, filename, title);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
