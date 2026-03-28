@@ -332,10 +332,30 @@ export default function CustomerStatusPage() {
           <h1 className="text-2xl font-bold">{t('Customer Status', 'Status Customer')}</h1>
           <p className="text-sm text-muted-foreground">{t('Overview of customer payment status', 'Ringkasan status pembayaran customer')}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchData}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          {t('Refresh', 'Perbarui')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExport('excel')}>
+                <FileText className="h-4 w-4 mr-2" />
+                Export Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                <FileText className="h-4 w-4 mr-2" />
+                Export PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button variant="outline" size="sm" onClick={fetchData}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            {t('Refresh', 'Perbarui')}
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
