@@ -8,10 +8,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Search, AlertTriangle, Clock, CheckCircle2, Users, RefreshCw, FileText, ChevronDown, ChevronUp, ExternalLink } from 'lucide-react';
+import { Search, AlertTriangle, Clock, CheckCircle2, Users, RefreshCw, FileText, ChevronDown, ChevronUp, ExternalLink, Download } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { supabase } from '@/integrations/supabase/client';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { TablePagination, usePagination } from '@/components/TablePagination';
+import { exportToExcel, exportToPDF, ExportColumn } from '@/lib/exportUtils';
 
 interface CustomerInvoice {
   id: string;
@@ -154,6 +156,55 @@ export default function CustomerStatusPage() {
 
   const t = (en: string, id: string) => language === 'en' ? en : id;
 
+  const getExportData = () => {
+    const tabMap: Record<string, { customers: CustomerSummary[]; getInvoices: (c: CustomerSummary) => CustomerInvoice[]; label: string }> = {
+      overdue: { customers: overdueCustomers, getInvoices: c => c.overdueInvoices, label: t('Overdue', 'Jatuh Tempo Lewat') },
+      outstanding: { customers: outstandingCustomers, getInvoices: c => c.outstandingInvoices, label: t('Outstanding', 'Belum Lunas') },
+      paid: { customers: paidCustomers, getInvoices: c => c.paidInvoices, label: t('Paid', 'Lunas') },
+    };
+    const { customers: custs, getInvoices, label } = tabMap[activeTab];
+    const rows: Record<string, any>[] = [];
+    custs.forEach(c => {
+      getInvoices(c).forEach(inv => {
+        rows.push({
+          customer_name: c.customer_name,
+          invoice_number: inv.invoice_number,
+          invoice_date: inv.invoice_date,
+          due_date: inv.due_date,
+          invoice_amount: inv.invoice_amount,
+          paid_amount: inv.paid_amount,
+          outstanding_amount: inv.outstanding_amount,
+          overdue_days: inv.overdue_days,
+          status: inv.status,
+        });
+      });
+    });
+    return { rows, label };
+  };
+
+  const handleExport = async (format: 'excel' | 'pdf') => {
+    const { rows, label } = getExportData();
+    if (rows.length === 0) return;
+    const columns: ExportColumn[] = [
+      { key: 'customer_name', header: t('Customer', 'Customer') },
+      { key: 'invoice_number', header: t('Invoice #', 'No. Invoice') },
+      { key: 'invoice_date', header: t('Invoice Date', 'Tgl Invoice'), format: (v: string) => v ? formatDate(v) : '' },
+      { key: 'due_date', header: t('Due Date', 'Jatuh Tempo'), format: (v: string) => v ? formatDate(v) : '' },
+      { key: 'invoice_amount', header: t('Amount', 'Jumlah'), format: (v: number) => formatCurrency(v) },
+      { key: 'paid_amount', header: t('Paid', 'Dibayar'), format: (v: number) => formatCurrency(v) },
+      { key: 'outstanding_amount', header: t('Outstanding', 'Sisa'), format: (v: number) => formatCurrency(v) },
+      { key: 'overdue_days', header: t('Overdue Days', 'Hari Terlambat'), format: (v: number) => String(v ?? 0) },
+      { key: 'status', header: 'Status' },
+    ];
+    const filename = `customer-status-${activeTab}-${new Date().toISOString().slice(0, 10)}`;
+    const title = `${t('Customer Status', 'Status Customer')} - ${label}`;
+    if (format === 'excel') {
+      exportToExcel(rows, columns, filename);
+    } else {
+      await exportToPDF(rows, columns, filename, title);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -281,10 +332,30 @@ export default function CustomerStatusPage() {
           <h1 className="text-2xl font-bold">{t('Customer Status', 'Status Customer')}</h1>
           <p className="text-sm text-muted-foreground">{t('Overview of customer payment status', 'Ringkasan status pembayaran customer')}</p>
         </div>
-        <Button variant="outline" size="sm" onClick={fetchData}>
-          <RefreshCw className="h-4 w-4 mr-2" />
-          {t('Refresh', 'Perbarui')}
-        </Button>
+        <div className="flex items-center gap-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              <DropdownMenuItem onClick={() => handleExport('excel')}>
+                <FileText className="h-4 w-4 mr-2" />
+                Export Excel
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => handleExport('pdf')}>
+                <FileText className="h-4 w-4 mr-2" />
+                Export PDF
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <Button variant="outline" size="sm" onClick={fetchData}>
+            <RefreshCw className="h-4 w-4 mr-2" />
+            {t('Refresh', 'Perbarui')}
+          </Button>
+        </div>
       </div>
 
       {/* Summary Cards */}
