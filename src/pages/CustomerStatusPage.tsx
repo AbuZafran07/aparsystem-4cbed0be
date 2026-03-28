@@ -437,15 +437,48 @@ export default function CustomerStatusPage() {
         </Card>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder={t('Search customer...', 'Cari customer...')}
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9"
-        />
+      {/* Search & Date Filter */}
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative max-w-sm">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder={t('Search customer...', 'Cari customer...')}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9 w-64"
+          />
+        </div>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className={cn("gap-2 text-sm", !dateFrom && "text-muted-foreground")}>
+              <CalendarIcon className="h-4 w-4" />
+              {dateFrom ? format(dateFrom, 'dd/MM/yyyy') : t('From Date', 'Dari Tanggal')}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateFrom} onSelect={setDateFrom} initialFocus className={cn("p-3 pointer-events-auto")} />
+          </PopoverContent>
+        </Popover>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button variant="outline" size="sm" className={cn("gap-2 text-sm", !dateTo && "text-muted-foreground")}>
+              <CalendarIcon className="h-4 w-4" />
+              {dateTo ? format(dateTo, 'dd/MM/yyyy') : t('To Date', 'Sampai Tanggal')}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={dateTo} onSelect={setDateTo} initialFocus className={cn("p-3 pointer-events-auto")} />
+          </PopoverContent>
+        </Popover>
+
+        {(dateFrom || dateTo) && (
+          <Button variant="ghost" size="sm" onClick={() => { setDateFrom(undefined); setDateTo(undefined); }}>
+            <X className="h-4 w-4 mr-1" />
+            {t('Clear', 'Hapus')}
+          </Button>
+        )}
       </div>
 
       {/* Tabs */}
