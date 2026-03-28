@@ -154,6 +154,10 @@ export default function CustomerStatusPage() {
   const totalOutstandingAmount = outstandingCustomers.reduce((s, c) => s + c.outstandingInvoices.reduce((ss, i) => ss + i.outstanding_amount, 0), 0);
   const totalPaidAmount = paidCustomers.reduce((s, c) => s + c.paidInvoices.reduce((ss, i) => ss + i.invoice_amount, 0), 0);
 
+  const { paginatedItems: paginatedOverdue, currentPage: overduePage, pageSize: overduePageSize, handlePageChange: setOverduePage, handlePageSizeChange: setOverduePageSize } = usePagination(overdueCustomers, 10);
+  const { paginatedItems: paginatedOutstanding, currentPage: outstandingPage, pageSize: outstandingPageSize, handlePageChange: setOutstandingPage, handlePageSizeChange: setOutstandingPageSize } = usePagination(outstandingCustomers, 10);
+  const { paginatedItems: paginatedPaid, currentPage: paidPage, pageSize: paidPageSize, handlePageChange: setPaidPage, handlePageSizeChange: setPaidPageSize } = usePagination(paidCustomers, 10);
+
   const t = (en: string, id: string) => language === 'en' ? en : id;
 
   const getExportData = () => {
