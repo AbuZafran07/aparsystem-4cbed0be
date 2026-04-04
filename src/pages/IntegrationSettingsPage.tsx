@@ -517,10 +517,10 @@ export default function IntegrationSettingsPage() {
                     <div className="mt-4">
                       <TablePagination
                         currentPage={currentPage}
-                        totalPages={totalPages}
-                        onPageChange={setCurrentPage}
                         totalItems={filteredLogs.length}
-                        itemsPerPage={ITEMS_PER_PAGE}
+                        pageSize={ITEMS_PER_PAGE}
+                        onPageChange={setCurrentPage}
+                        onPageSizeChange={() => {}}
                       />
                     </div>
                   )}
