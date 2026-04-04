@@ -1,6 +1,10 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.2";
-import { corsHeaders } from "https://esm.sh/@supabase/supabase-js@2.49.2/cors";
 import { z } from "https://esm.sh/zod@3.23.8";
+
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type, x-api-key',
+};
 
 // --- Validation Schemas ---
 const CustomerSchema = z.object({
