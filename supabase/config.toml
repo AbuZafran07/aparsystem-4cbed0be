@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.backup-restore]
 verify_jwt = false
+
+[functions.wms-sync]
+verify_jwt = false
