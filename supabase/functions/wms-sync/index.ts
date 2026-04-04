@@ -13,7 +13,7 @@ const CustomerSchema = z.object({
   phone: z.string().trim().max(50).nullable().optional(),
   billing_email: z.string().trim().email().max(255).nullable().optional(),
   is_active: z.boolean().optional().default(true),
-  wms_id: z.string().trim().max(100).optional(), // optional WMS reference ID
+  wms_id: z.string().trim().max(100).optional(),
 });
 
 const VendorSchema = z.object({
@@ -27,16 +27,38 @@ const VendorSchema = z.object({
   wms_id: z.string().trim().max(100).optional(),
 });
 
+const SalesOrderSchema = z.object({
+  customer_name: z.string().trim().min(1).max(255),
+  order_number: z.string().trim().min(1).max(100),
+  invoice_number: z.string().trim().min(1).max(100),
+  invoice_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format: YYYY-MM-DD"),
+  sp_po_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format: YYYY-MM-DD"),
+  invoice_amount: z.number().positive("Invoice amount must be positive"),
+  sales_name: z.string().trim().max(255).nullable().optional(),
+  payment_terms_name: z.string().trim().max(100).nullable().optional(),
+  notes: z.string().trim().max(1000).nullable().optional(),
+  wms_id: z.string().trim().max(100).optional(),
+});
+
 const SyncRequestSchema = z.object({
-  entity: z.enum(["customer", "vendor"]),
+  entity: z.enum(["customer", "vendor", "sales_order"]),
   action: z.enum(["upsert", "sync_batch"]),
   data: z.union([
     CustomerSchema,
     VendorSchema,
+    SalesOrderSchema,
     z.array(CustomerSchema),
     z.array(VendorSchema),
+    z.array(SalesOrderSchema),
   ]),
 });
+
+// Helper: calculate due date based on payment terms days
+function calculateDueDate(invoiceDate: string, days: number): string {
+  const date = new Date(invoiceDate);
+  date.setDate(date.getDate() + days);
+  return date.toISOString().split("T")[0];
+}
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -82,7 +104,7 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const items = Array.isArray(data) ? data : [data];
-    const results: { success: number; failed: number; errors: string[]; synced_ids: string[] } = {
+    const results: { success: number; failed: number; errors: string[]; synced_ids: string[]; created_invoices?: string[] } = {
       success: 0,
       failed: 0,
       errors: [],
@@ -95,7 +117,6 @@ Deno.serve(async (req) => {
           const customerData = CustomerSchema.parse(item);
           const { wms_id, ...dbData } = customerData;
 
-          // Upsert by customer_name (check if exists)
           const { data: existing } = await supabase
             .from("customers")
             .select("id")
@@ -103,22 +124,18 @@ Deno.serve(async (req) => {
             .maybeSingle();
 
           if (existing) {
-            // Update existing
             const { error } = await supabase
               .from("customers")
               .update({ ...dbData, updated_at: new Date().toISOString() })
               .eq("id", existing.id);
-
             if (error) throw new Error(error.message);
             results.synced_ids.push(existing.id);
           } else {
-            // Insert new
             const { data: newRow, error } = await supabase
               .from("customers")
               .insert(dbData)
               .select("id")
               .single();
-
             if (error) throw new Error(error.message);
             results.synced_ids.push(newRow.id);
           }
@@ -145,7 +162,6 @@ Deno.serve(async (req) => {
               .from("vendors")
               .update({ ...dbData, updated_at: new Date().toISOString() })
               .eq("id", existing.id);
-
             if (error) throw new Error(error.message);
             results.synced_ids.push(existing.id);
           } else {
@@ -154,7 +170,6 @@ Deno.serve(async (req) => {
               .insert(dbData)
               .select("id")
               .single();
-
             if (error) throw new Error(error.message);
             results.synced_ids.push(newRow.id);
           }
@@ -164,15 +179,132 @@ Deno.serve(async (req) => {
           results.errors.push(`Vendor "${(item as any).vendor_name}": ${e.message}`);
         }
       }
+    } else if (entity === "sales_order") {
+      results.created_invoices = [];
+
+      for (const item of items) {
+        try {
+          const soData = SalesOrderSchema.parse(item);
+
+          // 1. Validate customer exists
+          const { data: customer } = await supabase
+            .from("customers")
+            .select("id, customer_name")
+            .eq("customer_name", soData.customer_name)
+            .eq("is_active", true)
+            .maybeSingle();
+
+          if (!customer) {
+            throw new Error(`Customer "${soData.customer_name}" not found or inactive. Sync customer first.`);
+          }
+
+          // 2. Check duplicate invoice_number
+          const { data: existingInvoice } = await supabase
+            .from("ar_invoices")
+            .select("id, invoice_number")
+            .eq("invoice_number", soData.invoice_number)
+            .maybeSingle();
+
+          if (existingInvoice) {
+            throw new Error(`Invoice "${soData.invoice_number}" already exists (ID: ${existingInvoice.id})`);
+          }
+
+          // 3. Resolve sales person (optional)
+          let salesId: string | null = null;
+          if (soData.sales_name) {
+            const { data: sales } = await supabase
+              .from("sales")
+              .select("id")
+              .eq("sales_name", soData.sales_name)
+              .eq("is_active", true)
+              .maybeSingle();
+            salesId = sales?.id || null;
+          }
+
+          // 4. Resolve payment terms & calculate due date
+          let termsId: string | null = null;
+          let termsDays = 0;
+
+          if (soData.payment_terms_name) {
+            const { data: terms } = await supabase
+              .from("payment_terms")
+              .select("id, days")
+              .eq("terms_name", soData.payment_terms_name)
+              .eq("is_active", true)
+              .maybeSingle();
+
+            if (terms) {
+              termsId = terms.id;
+              termsDays = terms.days;
+            }
+          }
+
+          // If no terms specified, try to get a default (first active)
+          if (!termsId) {
+            const { data: defaultTerms } = await supabase
+              .from("payment_terms")
+              .select("id, days")
+              .eq("is_active", true)
+              .order("days", { ascending: true })
+              .limit(1)
+              .maybeSingle();
+
+            if (defaultTerms) {
+              termsId = defaultTerms.id;
+              termsDays = defaultTerms.days;
+            }
+          }
+
+          const dueDate = calculateDueDate(soData.invoice_date, termsDays);
+
+          // 5. Create AR Invoice as DRAFT
+          // Use a system UUID as created_by (WMS system actor)
+          const systemActorId = "00000000-0000-0000-0000-000000000000";
+
+          const { data: newInvoice, error: insertError } = await supabase
+            .from("ar_invoices")
+            .insert({
+              customer_id: customer.id,
+              order_number: soData.order_number,
+              invoice_number: soData.invoice_number,
+              invoice_date: soData.invoice_date,
+              sp_po_date: soData.sp_po_date,
+              invoice_amount: soData.invoice_amount,
+              outstanding_amount: soData.invoice_amount,
+              due_date: dueDate,
+              status: "DRAFT",
+              created_by: systemActorId,
+              sales_id: salesId,
+              terms_id: termsId,
+              notes: soData.notes || `Auto-created from WMS Sales Order`,
+            })
+            .select("id, invoice_number")
+            .single();
+
+          if (insertError) throw new Error(insertError.message);
+
+          results.synced_ids.push(newInvoice.id);
+          results.created_invoices!.push(newInvoice.invoice_number);
+          results.success++;
+        } catch (e) {
+          results.failed++;
+          results.errors.push(`Sales Order "${(item as any).order_number || (item as any).invoice_number}": ${e.message}`);
+        }
+      }
     }
 
     // --- Audit Log ---
     await supabase.from("audit_logs").insert({
       action: `WMS_SYNC_${entity.toUpperCase()}`,
-      actor_id: "00000000-0000-0000-0000-000000000000", // system actor
+      actor_id: "00000000-0000-0000-0000-000000000000",
       actor_role: "SUPER_ADMIN",
-      entity_type: entity,
-      after_data: { synced: results.success, failed: results.failed, total: items.length },
+      entity_type: entity === "sales_order" ? "ar_invoice" : entity,
+      after_data: {
+        synced: results.success,
+        failed: results.failed,
+        total: items.length,
+        ...(results.created_invoices ? { invoices_created: results.created_invoices } : {}),
+      },
       is_super_admin_action: true,
     });
 
