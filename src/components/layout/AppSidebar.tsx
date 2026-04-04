@@ -99,6 +99,7 @@ const menuStructure: MenuSection[] = [
       { key: 'userManagement', translationKey: 'menu.userManagement', icon: UserCog, path: '/users' },
       { key: 'systemSettings', translationKey: 'menu.systemSettings', icon: Settings, path: '/settings' },
       { key: 'backupRestore', translationKey: 'menu.backupRestore', icon: Database, path: '/backup-restore' },
+      { key: 'integrationSettings', translationKey: 'menu.integrationSettings', icon: Plug, path: '/integration-settings' },
     ],
   },
 ];

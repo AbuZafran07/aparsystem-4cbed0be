@@ -47,6 +47,7 @@ const translations: TranslationMap = {
   'menu.userManagement': { en: 'User Management', id: 'Manajemen User' },
   'menu.systemSettings': { en: 'System Settings', id: 'Pengaturan Sistem' },
   'menu.backupRestore': { en: 'Backup & Restore', id: 'Backup & Restore' },
+  'menu.integrationSettings': { en: 'Integration Settings', id: 'Integrasi WMS' },
 
   // Common Buttons
   'btn.save': { en: 'Save', id: 'Simpan' },

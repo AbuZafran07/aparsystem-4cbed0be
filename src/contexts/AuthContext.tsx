@@ -217,7 +217,7 @@ export function useRoleAccess() {
 
     // System menu items
     const systemMenuItems = ['auditLogs', 'userManagement', 'systemSettings'];
-    const superAdminOnly = ['backupRestore'];
+    const superAdminOnly = ['backupRestore', 'integrationSettings'];
 
     const roleMenuAccess: Record<UserRole, string[]> = {
       PURCHASING: [...allMenuItems, 'auditLogs'],
