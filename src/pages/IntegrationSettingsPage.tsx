@@ -30,7 +30,7 @@ import {
   Building2,
   FileText,
 } from 'lucide-react';
-import TablePagination from '@/components/TablePagination';
+import { TablePagination } from '@/components/TablePagination';
 
 interface SyncLog {
   id: string;
