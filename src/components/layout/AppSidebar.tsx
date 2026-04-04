@@ -26,6 +26,7 @@ import {
   UserCog,
   ClipboardList,
   Database,
+  Plug,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useRoleAccess } from '@/contexts/AuthContext';
