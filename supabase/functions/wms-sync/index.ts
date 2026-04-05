@@ -29,6 +29,9 @@ const VendorSchema = z.object({
 
 const SalesOrderSchema = z.object({
   customer_name: z.string().trim().min(1).max(255),
+  customer_address: z.string().trim().max(500).nullable().optional(),
+  customer_phone: z.string().trim().max(50).nullable().optional(),
+  customer_billing_email: z.string().trim().email().max(255).nullable().optional(),
   order_number: z.string().trim().min(1).max(100),
   invoice_number: z.string().trim().min(1).max(100),
   invoice_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format: YYYY-MM-DD"),
@@ -213,7 +216,13 @@ Deno.serve(async (req) => {
             // Auto-create customer
             const { data: newCustomer, error: custErr } = await supabase
               .from("customers")
-              .insert({ customer_name: soData.customer_name, is_active: true })
+              .insert({
+                customer_name: soData.customer_name,
+                address: soData.customer_address || null,
+                phone: soData.customer_phone || null,
+                billing_email: soData.customer_billing_email || null,
+                is_active: true,
+              })
               .select("id, customer_name")
               .single();
             if (custErr) throw new Error(`Failed to auto-create customer "${soData.customer_name}": ${custErr.message}`);
