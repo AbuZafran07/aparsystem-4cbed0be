@@ -412,7 +412,7 @@ Deno.serve(async (req) => {
       action: `WMS_SYNC_${entity.toUpperCase()}`,
       actor_id: "00000000-0000-0000-0000-000000000000",
       actor_role: "SUPER_ADMIN",
-      entity_type: entity === "sales_order" ? "ar_invoice" : entity,
+      entity_type: entity === "sales_order" ? "ar_invoice" : entity === "plan_order" ? "ap_invoice" : entity,
       after_data: {
         synced: results.success,
         failed: results.failed,
