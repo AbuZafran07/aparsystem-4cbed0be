@@ -406,8 +406,6 @@ Deno.serve(async (req) => {
         }
       }
     }
-      }
-    }
 
     // --- Audit Log ---
     await supabase.from("audit_logs").insert({
