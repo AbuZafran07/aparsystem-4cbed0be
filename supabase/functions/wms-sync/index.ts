@@ -321,8 +321,8 @@ Deno.serve(async (req) => {
         try {
           const poData = PlanOrderSchema.parse(item);
 
-          // 1. Validate vendor exists and is active
-          const { data: vendor } = await supabase
+          // 1. Find or auto-create vendor
+          let { data: vendor } = await supabase
             .from("vendors")
             .select("id, vendor_name")
             .eq("vendor_name", poData.vendor_name)
@@ -330,7 +330,14 @@ Deno.serve(async (req) => {
             .maybeSingle();
 
           if (!vendor) {
-            throw new Error(`Vendor "${poData.vendor_name}" not found or inactive. Sync vendor first.`);
+            const { data: newVendor, error: vendErr } = await supabase
+              .from("vendors")
+              .insert({ vendor_name: poData.vendor_name, is_active: true })
+              .select("id, vendor_name")
+              .single();
+            if (vendErr) throw new Error(`Failed to auto-create vendor "${poData.vendor_name}": ${vendErr.message}`);
+            vendor = newVendor;
+            console.log(`Auto-created vendor: ${poData.vendor_name}`);
           }
 
           // 2. Check duplicate vendor_invoice_number for this vendor
