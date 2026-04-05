@@ -319,7 +319,7 @@ function AgingContent({ buckets, chartData, pieData, totalAmount, totalCount, la
           <Card key={bucket.label} className="border-l-4" style={{ borderLeftColor: CHART_COLORS[index] }}>
             <CardContent className="p-4">
               <p className="text-sm text-muted-foreground">{bucket.range}</p>
-              <p className="text-xl font-bold text-foreground mt-1">{formatCurrency(bucket.amount)}</p>
+              <p className="text-lg font-bold text-foreground mt-1 break-all">{formatFullCurrency(bucket.amount)}</p>
               <p className="text-xs text-muted-foreground mt-1">
                 {bucket.count} {language === 'en' ? 'invoices' : 'invoice'}
               </p>

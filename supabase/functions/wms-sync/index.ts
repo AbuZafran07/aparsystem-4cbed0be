@@ -346,7 +346,15 @@ Deno.serve(async (req) => {
           if (!vendor) {
             const { data: newVendor, error: vendErr } = await supabase
               .from("vendors")
-              .insert({ vendor_name: poData.vendor_name, is_active: true })
+              .insert({
+                vendor_name: poData.vendor_name,
+                address: poData.vendor_address || null,
+                phone: poData.vendor_phone || null,
+                email: poData.vendor_email || null,
+                bank_name: poData.vendor_bank_name || null,
+                bank_account_no: poData.vendor_bank_account_no || null,
+                is_active: true,
+              })
               .select("id, vendor_name")
               .single();
             if (vendErr) throw new Error(`Failed to auto-create vendor "${poData.vendor_name}": ${vendErr.message}`);
