@@ -40,16 +40,31 @@ const SalesOrderSchema = z.object({
   wms_id: z.string().trim().max(100).optional(),
 });
 
+const PlanOrderSchema = z.object({
+  vendor_name: z.string().trim().min(1).max(255),
+  po_number: z.string().trim().min(1).max(100),
+  vendor_invoice_number: z.string().trim().min(1).max(100),
+  invoice_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format: YYYY-MM-DD"),
+  sp_po_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format: YYYY-MM-DD"),
+  invoice_amount: z.number().positive("Invoice amount must be positive"),
+  product_name: z.string().trim().max(255).nullable().optional(),
+  payment_terms_name: z.string().trim().max(100).nullable().optional(),
+  notes: z.string().trim().max(1000).nullable().optional(),
+  wms_id: z.string().trim().max(100).optional(),
+});
+
 const SyncRequestSchema = z.object({
-  entity: z.enum(["customer", "vendor", "sales_order"]),
+  entity: z.enum(["customer", "vendor", "sales_order", "plan_order"]),
   action: z.enum(["upsert", "sync_batch"]),
   data: z.union([
     CustomerSchema,
     VendorSchema,
     SalesOrderSchema,
+    PlanOrderSchema,
     z.array(CustomerSchema),
     z.array(VendorSchema),
     z.array(SalesOrderSchema),
+    z.array(PlanOrderSchema),
   ]),
 });
 
