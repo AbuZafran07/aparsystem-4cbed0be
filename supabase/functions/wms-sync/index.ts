@@ -45,6 +45,11 @@ const SalesOrderSchema = z.object({
 
 const PlanOrderSchema = z.object({
   vendor_name: z.string().trim().min(1).max(255),
+  vendor_address: z.string().trim().max(500).nullable().optional(),
+  vendor_phone: z.string().trim().max(50).nullable().optional(),
+  vendor_email: z.string().trim().email().max(255).nullable().optional(),
+  vendor_bank_name: z.string().trim().max(100).nullable().optional(),
+  vendor_bank_account_no: z.string().trim().max(50).nullable().optional(),
   po_number: z.string().trim().min(1).max(100),
   vendor_invoice_number: z.string().trim().min(1).max(100),
   invoice_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format: YYYY-MM-DD"),
