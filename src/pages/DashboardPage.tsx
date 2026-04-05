@@ -131,6 +131,26 @@ export default function DashboardPage() {
 
   useEffect(() => {
     fetchDashboardData();
+
+    // Realtime subscription for dashboard auto-refresh
+    const arChannel = supabase
+      .channel('dashboard-ar-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ar_invoices' }, () => {
+        fetchDashboardData();
+      })
+      .subscribe();
+
+    const apChannel = supabase
+      .channel('dashboard-ap-realtime')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'ap_invoices' }, () => {
+        fetchDashboardData();
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(arChannel);
+      supabase.removeChannel(apChannel);
+    };
   }, []);
 
   const fetchDashboardData = async () => {
