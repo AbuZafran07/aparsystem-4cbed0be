@@ -398,6 +398,41 @@ export default function IntegrationSettingsPage() {
               </CardContent>
             </Card>
 
+            {/* Plan Order → AP Invoice */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/10">
+                    <FileText className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <CardTitle className="text-base">Plan Order → AP Invoice</CardTitle>
+                    <CardDescription>Auto-create invoice AP dari Plan Order WMS</CardDescription>
+                  </div>
+                  <Badge className="ml-auto bg-emerald-600">Aktif</Badge>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="bg-muted rounded-lg p-4 font-mono text-sm overflow-x-auto">
+                  <pre className="text-foreground/80">{JSON.stringify({
+                    entity: "plan_order",
+                    action: "upsert",
+                    data: {
+                      vendor_name: "Nama Vendor (wajib)",
+                      po_number: "PO-001 (wajib)",
+                      vendor_invoice_number: "VINV-001 (wajib)",
+                      invoice_amount: 5000000,
+                      invoice_date: "2026-01-15",
+                      sp_po_date: "2026-01-10",
+                      product_name: "Nama Produk (opsional)",
+                      payment_terms_name: "NET 30 (opsional)",
+                      notes: "Catatan (opsional)"
+                    }
+                  }, null, 2)}</pre>
+                </div>
+              </CardContent>
+            </Card>
+
             {/* Batch Sync */}
             <Card className="border-dashed">
               <CardHeader className="pb-3">
