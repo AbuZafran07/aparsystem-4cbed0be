@@ -29,6 +29,9 @@ const VendorSchema = z.object({
 
 const SalesOrderSchema = z.object({
   customer_name: z.string().trim().min(1).max(255),
+  customer_address: z.string().trim().max(500).nullable().optional(),
+  customer_phone: z.string().trim().max(50).nullable().optional(),
+  customer_billing_email: z.string().trim().email().max(255).nullable().optional(),
   order_number: z.string().trim().min(1).max(100),
   invoice_number: z.string().trim().min(1).max(100),
   invoice_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format: YYYY-MM-DD"),
