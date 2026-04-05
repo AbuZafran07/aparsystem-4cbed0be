@@ -304,7 +304,106 @@ Deno.serve(async (req) => {
         } catch (e) {
           results.failed++;
           results.errors.push(`Sales Order "${(item as any).order_number || (item as any).invoice_number}": ${e.message}`);
+    } else if (entity === "plan_order") {
+      results.created_invoices = [];
+
+      for (const item of items) {
+        try {
+          const poData = PlanOrderSchema.parse(item);
+
+          // 1. Validate vendor exists and is active
+          const { data: vendor } = await supabase
+            .from("vendors")
+            .select("id, vendor_name")
+            .eq("vendor_name", poData.vendor_name)
+            .eq("is_active", true)
+            .maybeSingle();
+
+          if (!vendor) {
+            throw new Error(`Vendor "${poData.vendor_name}" not found or inactive. Sync vendor first.`);
+          }
+
+          // 2. Check duplicate vendor_invoice_number for this vendor
+          const { data: existingInvoice } = await supabase
+            .from("ap_invoices")
+            .select("id, vendor_invoice_number")
+            .eq("vendor_invoice_number", poData.vendor_invoice_number)
+            .eq("vendor_id", vendor.id)
+            .maybeSingle();
+
+          if (existingInvoice) {
+            throw new Error(`AP Invoice "${poData.vendor_invoice_number}" already exists for vendor "${poData.vendor_name}" (ID: ${existingInvoice.id})`);
+          }
+
+          // 3. Resolve payment terms & calculate due date
+          let termsId: string | null = null;
+          let termsDays = 0;
+
+          if (poData.payment_terms_name) {
+            const { data: terms } = await supabase
+              .from("payment_terms")
+              .select("id, days")
+              .eq("terms_name", poData.payment_terms_name)
+              .eq("is_active", true)
+              .maybeSingle();
+
+            if (terms) {
+              termsId = terms.id;
+              termsDays = terms.days;
+            }
+          }
+
+          // Fallback to default payment terms
+          if (!termsId) {
+            const { data: defaultTerms } = await supabase
+              .from("payment_terms")
+              .select("id, days")
+              .eq("is_active", true)
+              .order("days", { ascending: true })
+              .limit(1)
+              .maybeSingle();
+
+            if (defaultTerms) {
+              termsId = defaultTerms.id;
+              termsDays = defaultTerms.days;
+            }
+          }
+
+          const dueDate = calculateDueDate(poData.invoice_date, termsDays);
+          const systemActorId = "00000000-0000-0000-0000-000000000000";
+
+          // 4. Create AP Invoice as DRAFT
+          const { data: newInvoice, error: insertError } = await supabase
+            .from("ap_invoices")
+            .insert({
+              vendor_id: vendor.id,
+              po_number: poData.po_number,
+              vendor_invoice_number: poData.vendor_invoice_number,
+              invoice_date: poData.invoice_date,
+              sp_po_date: poData.sp_po_date,
+              invoice_amount: poData.invoice_amount,
+              outstanding_amount: poData.invoice_amount,
+              due_date: dueDate,
+              status: "DRAFT",
+              created_by: systemActorId,
+              terms_id: termsId,
+              product_name: poData.product_name || null,
+              notes: poData.notes || `Auto-created from WMS Plan Order`,
+            })
+            .select("id, vendor_invoice_number")
+            .single();
+
+          if (insertError) throw new Error(insertError.message);
+
+          results.synced_ids.push(newInvoice.id);
+          results.created_invoices!.push(newInvoice.vendor_invoice_number);
+          results.success++;
+        } catch (e) {
+          results.failed++;
+          results.errors.push(`Plan Order "${(item as any).po_number || (item as any).vendor_invoice_number}": ${e.message}`);
         }
+      }
+    }
       }
     }
 
