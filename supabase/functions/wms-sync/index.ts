@@ -45,6 +45,11 @@ const SalesOrderSchema = z.object({
 
 const PlanOrderSchema = z.object({
   vendor_name: z.string().trim().min(1).max(255),
+  vendor_address: z.string().trim().max(500).nullable().optional(),
+  vendor_phone: z.string().trim().max(50).nullable().optional(),
+  vendor_email: z.string().trim().email().max(255).nullable().optional(),
+  vendor_bank_name: z.string().trim().max(100).nullable().optional(),
+  vendor_bank_account_no: z.string().trim().max(50).nullable().optional(),
   po_number: z.string().trim().min(1).max(100),
   vendor_invoice_number: z.string().trim().min(1).max(100),
   invoice_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format: YYYY-MM-DD"),
@@ -341,7 +346,15 @@ Deno.serve(async (req) => {
           if (!vendor) {
             const { data: newVendor, error: vendErr } = await supabase
               .from("vendors")
-              .insert({ vendor_name: poData.vendor_name, is_active: true })
+              .insert({
+                vendor_name: poData.vendor_name,
+                address: poData.vendor_address || null,
+                phone: poData.vendor_phone || null,
+                email: poData.vendor_email || null,
+                bank_name: poData.vendor_bank_name || null,
+                bank_account_no: poData.vendor_bank_account_no || null,
+                is_active: true,
+              })
               .select("id, vendor_name")
               .single();
             if (vendErr) throw new Error(`Failed to auto-create vendor "${poData.vendor_name}": ${vendErr.message}`);
