@@ -236,7 +236,27 @@ export default function ArListPage() {
       .channel('ar-invoices-realtime')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'ar_invoices' },
+        { event: 'INSERT', schema: 'public', table: 'ar_invoices' },
+        (payload) => {
+          const newRow = payload.new as any;
+          if (newRow?.notes?.includes('WMS')) {
+            toast.info('Invoice AR baru dari WMS', {
+              description: `Invoice ${newRow.invoice_number || ''} telah masuk otomatis dari WMS`,
+            });
+          }
+          fetchData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'ar_invoices' },
+        () => {
+          fetchData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'ar_invoices' },
         () => {
           fetchData();
         }

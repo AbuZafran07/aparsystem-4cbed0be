@@ -228,7 +228,27 @@ export default function ApListPage() {
       .channel('ap-invoices-realtime')
       .on(
         'postgres_changes',
-        { event: '*', schema: 'public', table: 'ap_invoices' },
+        { event: 'INSERT', schema: 'public', table: 'ap_invoices' },
+        (payload) => {
+          const newRow = payload.new as any;
+          if (newRow?.notes?.includes('WMS')) {
+            toast.info('Invoice AP baru dari WMS', {
+              description: `Invoice ${newRow.vendor_invoice_number || ''} telah masuk otomatis dari WMS`,
+            });
+          }
+          fetchData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'UPDATE', schema: 'public', table: 'ap_invoices' },
+        () => {
+          fetchData();
+        }
+      )
+      .on(
+        'postgres_changes',
+        { event: 'DELETE', schema: 'public', table: 'ap_invoices' },
         () => {
           fetchData();
         }
