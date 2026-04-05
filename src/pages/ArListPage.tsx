@@ -230,6 +230,22 @@ export default function ArListPage() {
 
   useEffect(() => {
     fetchData();
+
+    // Realtime subscription for AR invoices
+    const channel = supabase
+      .channel('ar-invoices-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ar_invoices' },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchData = async () => {

@@ -222,6 +222,22 @@ export default function ApListPage() {
 
   useEffect(() => {
     fetchData();
+
+    // Realtime subscription for AP invoices
+    const channel = supabase
+      .channel('ap-invoices-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'ap_invoices' },
+        () => {
+          fetchData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, []);
 
   const fetchData = async () => {
