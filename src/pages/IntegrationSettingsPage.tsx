@@ -86,19 +86,20 @@ export default function IntegrationSettingsPage() {
       const response = await fetch(endpointUrl, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entity: 'customer', action: 'upsert', data: {} }),
+        body: JSON.stringify({ entity: 'ping', action: 'test', data: {} }),
       });
 
+      const body = await response.json().catch(() => ({}));
+
       if (response.status === 401) {
-        toast.success('Endpoint aktif! (401 = API key diperlukan - ini normal)');
+        toast.success('✅ Endpoint aktif dan terlindungi! (401 = API key required — ini normal untuk test tanpa key)');
       } else if (response.ok) {
-        toast.success('Koneksi endpoint berhasil!');
+        toast.success('✅ Koneksi endpoint berhasil!');
       } else {
-        const body = await response.json().catch(() => ({}));
-        toast.info(`Endpoint merespons dengan status ${response.status}`);
+        toast.info(`Endpoint merespons dengan status ${response.status}: ${body?.error || 'Unknown'}`);
       }
     } catch (err) {
-      toast.error('Gagal terhubung ke endpoint WMS');
+      toast.error('❌ Gagal terhubung ke endpoint WMS. Pastikan function sudah di-deploy.');
     } finally {
       setIsTesting(false);
     }
