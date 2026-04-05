@@ -201,8 +201,8 @@ Deno.serve(async (req) => {
         try {
           const soData = SalesOrderSchema.parse(item);
 
-          // 1. Validate customer exists
-          const { data: customer } = await supabase
+          // 1. Find or auto-create customer
+          let { data: customer } = await supabase
             .from("customers")
             .select("id, customer_name")
             .eq("customer_name", soData.customer_name)
@@ -210,7 +210,15 @@ Deno.serve(async (req) => {
             .maybeSingle();
 
           if (!customer) {
-            throw new Error(`Customer "${soData.customer_name}" not found or inactive. Sync customer first.`);
+            // Auto-create customer
+            const { data: newCustomer, error: custErr } = await supabase
+              .from("customers")
+              .insert({ customer_name: soData.customer_name, is_active: true })
+              .select("id, customer_name")
+              .single();
+            if (custErr) throw new Error(`Failed to auto-create customer "${soData.customer_name}": ${custErr.message}`);
+            customer = newCustomer;
+            console.log(`Auto-created customer: ${soData.customer_name}`);
           }
 
           // 2. Check duplicate invoice_number
