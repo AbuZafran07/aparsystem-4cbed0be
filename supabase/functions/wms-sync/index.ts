@@ -320,6 +320,24 @@ Deno.serve(async (req) => {
 
           if (insertError) throw new Error(insertError.message);
 
+          // Notify FINANCE, ADMIN, SUPER_ADMIN users about new AR invoice
+          const { data: targetUsers } = await supabase
+            .from("user_roles")
+            .select("user_id")
+            .in("role", ["FINANCE", "ADMIN", "SUPER_ADMIN"]);
+
+          if (targetUsers && targetUsers.length > 0) {
+            const notifications = targetUsers.map((u: any) => ({
+              user_id: u.user_id,
+              title: "Invoice AR Baru dari WMS",
+              message: `Invoice AR ${newInvoice.invoice_number} untuk ${customer!.customer_name} senilai ${soData.invoice_amount.toLocaleString('id-ID')} telah dibuat otomatis dari WMS.`,
+              type: "wms_sync",
+              entity_type: "ar_invoice",
+              entity_id: newInvoice.id,
+            }));
+            await supabase.from("notifications").insert(notifications);
+          }
+
           results.synced_ids.push(newInvoice.id);
           results.created_invoices!.push(newInvoice.invoice_number);
           results.success++;
