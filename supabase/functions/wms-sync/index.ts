@@ -304,6 +304,8 @@ Deno.serve(async (req) => {
         } catch (e) {
           results.failed++;
           results.errors.push(`Sales Order "${(item as any).order_number || (item as any).invoice_number}": ${e.message}`);
+        }
+      }
     } else if (entity === "plan_order") {
       results.created_invoices = [];
 
