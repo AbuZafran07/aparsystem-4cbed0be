@@ -1,36 +1,16 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
-  LayoutDashboard,
-  FileText,
-  Receipt,
-  CreditCard,
-  Wallet,
-  Mail,
-  MailCheck,
-  Building2,
-  Users,
-  UserCircle,
-  Clock,
-  Landmark,
-  Building,
-  TrendingDown,
-  TrendingUp,
-  FileBarChart,
-  FileBarChart2,
-  DollarSign,
-  Download,
-  ArrowUpDown,
-  ScrollText,
-  Settings,
-  UserCog,
-  ClipboardList,
-  Database,
-  Plug,
+  LayoutDashboard, FileText, Receipt, CreditCard, Wallet, Mail, MailCheck,
+  Building2, Users, UserCircle, Clock, Landmark, Building, TrendingDown,
+  TrendingUp, FileBarChart, FileBarChart2, DollarSign, Download, ArrowUpDown,
+  ScrollText, Settings, UserCog, ClipboardList, Database, Plug,
+  PanelLeftClose, PanelLeftOpen,
 } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useRoleAccess } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface MenuItem {
   key: string;
@@ -106,9 +86,11 @@ const menuStructure: MenuSection[] = [
 
 interface AppSidebarProps {
   onNavigate?: () => void;
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
 }
 
-export default function AppSidebar({ onNavigate }: AppSidebarProps) {
+export default function AppSidebar({ onNavigate, collapsed = false, onToggleCollapse }: AppSidebarProps) {
   const { t } = useLanguage();
   const { canAccessMenu } = useRoleAccess();
   const location = useLocation();
@@ -121,62 +103,126 @@ export default function AppSidebar({ onNavigate }: AppSidebarProps) {
     .filter(section => section.items.length > 0);
 
   return (
-    <aside className="h-full bg-sidebar flex flex-col">
-      {/* Logo Section */}
-      <div className="h-16 flex items-center gap-3 px-5 border-b border-sidebar-border/30">
-        <img src="/logo-kemika-new.png" alt="Kemika" className="w-9 h-9 rounded-lg object-contain" />
-        <div className="flex flex-col">
-          <span className="text-base font-bold text-sidebar-foreground">AP/AR HUB</span>
-          <span className="text-xs text-sidebar-foreground/60">Finance System</span>
+    <TooltipProvider delayDuration={0}>
+      <aside className="h-full bg-sidebar flex flex-col overflow-hidden">
+        {/* Logo Section */}
+        <div className={cn(
+          'h-16 flex items-center border-b border-sidebar-border/30 transition-all duration-300',
+          collapsed ? 'px-0 justify-center' : 'px-5 gap-3'
+        )}>
+          <img
+            src="/logo-kemika-new.png"
+            alt="Kemika"
+            className={cn(
+              'rounded-lg object-contain transition-all duration-300',
+              collapsed ? 'w-8 h-8' : 'w-9 h-9'
+            )}
+          />
+          {!collapsed && (
+            <div className="flex flex-col min-w-0">
+              <span className="text-base font-bold text-sidebar-foreground truncate">AP/AR HUB</span>
+              <span className="text-xs text-sidebar-foreground/60 truncate">Finance System</span>
+            </div>
+          )}
         </div>
-      </div>
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto py-4 px-3 scrollbar-thin">
-        {filteredSections.map((section, sectionIdx) => (
-          <div key={section.sectionKey} className={cn(sectionIdx > 0 && 'mt-6')}>
-            <div className="px-3 mb-2">
-              <span className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-                {t(section.sectionKey)}
-              </span>
+        {/* Navigation */}
+        <nav className={cn(
+          'flex-1 overflow-y-auto py-4 scrollbar-thin transition-all duration-300',
+          collapsed ? 'px-1.5' : 'px-3'
+        )}>
+          {filteredSections.map((section, sectionIdx) => (
+            <div key={section.sectionKey} className={cn(sectionIdx > 0 && 'mt-5')}>
+              {!collapsed && (
+                <div className="px-3 mb-2">
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+                    {t(section.sectionKey)}
+                  </span>
+                </div>
+              )}
+              {collapsed && sectionIdx > 0 && (
+                <div className="mx-2 mb-2 border-t border-sidebar-border/20" />
+              )}
+              <div className="space-y-0.5">
+                {section.items.map(item => {
+                  const isActive = location.pathname === item.path ||
+                    (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
+                  const Icon = item.icon;
+                  const label = t(item.translationKey);
+
+                  const linkContent = (
+                    <NavLink
+                      key={item.key}
+                      to={item.path}
+                      onClick={onNavigate}
+                      className={cn(
+                        'relative flex items-center rounded-lg text-sm font-medium transition-all duration-200',
+                        collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5',
+                        isActive
+                          ? 'bg-sidebar-accent text-sidebar-foreground'
+                          : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                      )}
+                    >
+                      {isActive && (
+                        <div className="sidebar-active-indicator" />
+                      )}
+                      <Icon className={cn(
+                        'flex-shrink-0 transition-all duration-200',
+                        collapsed ? 'w-5 h-5' : 'w-[18px] h-[18px]'
+                      )} />
+                      {!collapsed && <span className="truncate">{label}</span>}
+                    </NavLink>
+                  );
+
+                  if (collapsed) {
+                    return (
+                      <Tooltip key={item.key}>
+                        <TooltipTrigger asChild>
+                          {linkContent}
+                        </TooltipTrigger>
+                        <TooltipContent side="right" sideOffset={8} className="font-medium">
+                          {label}
+                        </TooltipContent>
+                      </Tooltip>
+                    );
+                  }
+
+                  return linkContent;
+                })}
+              </div>
             </div>
-            <div className="space-y-1">
-              {section.items.map(item => {
-                const isActive = location.pathname === item.path || 
-                  (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
-                const Icon = item.icon;
+          ))}
+        </nav>
 
-                return (
-                  <NavLink
-                    key={item.key}
-                    to={item.path}
-                    onClick={onNavigate}
-                    className={cn(
-                      'relative flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200',
-                      isActive
-                        ? 'bg-sidebar-accent text-sidebar-foreground'
-                        : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-                    )}
-                  >
-                    {isActive && (
-                      <div className="sidebar-active-indicator" />
-                    )}
-                    <Icon className="w-[18px] h-[18px] flex-shrink-0" />
-                    <span className="truncate">{t(item.translationKey)}</span>
-                  </NavLink>
-                );
-              })}
+        {/* Collapse Toggle + Footer */}
+        <div className="border-t border-sidebar-border/30">
+          {onToggleCollapse && (
+            <button
+              onClick={onToggleCollapse}
+              className={cn(
+                'w-full flex items-center gap-2 px-4 py-3 text-sidebar-foreground/50 hover:text-sidebar-foreground hover:bg-sidebar-accent/30 transition-all duration-200',
+                collapsed ? 'justify-center' : ''
+              )}
+            >
+              {collapsed ? (
+                <PanelLeftOpen className="w-4 h-4" />
+              ) : (
+                <>
+                  <PanelLeftClose className="w-4 h-4" />
+                  <span className="text-xs font-medium">Minimize</span>
+                </>
+              )}
+            </button>
+          )}
+          {!collapsed && (
+            <div className="px-4 pb-3 pt-1">
+              <p className="text-[10px] text-sidebar-foreground/40 text-center">
+                © 2026 PT. Kemika Karya Pratama
+              </p>
             </div>
-          </div>
-        ))}
-      </nav>
-
-      {/* Footer */}
-      <div className="p-4 border-t border-sidebar-border/30">
-        <p className="text-[10px] text-sidebar-foreground/40 text-center">
-          © 2026 PT. Kemika Karya Pratama
-        </p>
-      </div>
-    </aside>
+          )}
+        </div>
+      </aside>
+    </TooltipProvider>
   );
 }
