@@ -41,6 +41,8 @@ const SalesOrderSchema = z.object({
   payment_terms_name: z.string().trim().max(100).nullable().optional(),
   notes: z.string().trim().max(1000).nullable().optional(),
   wms_id: z.string().trim().max(100).optional(),
+  created_by_email: z.string().trim().email().max(255).optional(),
+  created_by_name: z.string().trim().max(255).optional(),
 });
 
 const PlanOrderSchema = z.object({
@@ -59,6 +61,8 @@ const PlanOrderSchema = z.object({
   payment_terms_name: z.string().trim().max(100).nullable().optional(),
   notes: z.string().trim().max(1000).nullable().optional(),
   wms_id: z.string().trim().max(100).optional(),
+  created_by_email: z.string().trim().email().max(255).optional(),
+  created_by_name: z.string().trim().max(255).optional(),
 });
 
 const SyncRequestSchema = z.object({
@@ -85,6 +89,45 @@ function calculateDueDate(invoiceDate: string, days: number): string {
   const date = new Date(invoiceDate);
   date.setDate(date.getDate() + days);
   return date.toISOString().split("T")[0];
+}
+
+// Helper: resolve WMS user to system user by email or name
+async function resolveCreator(
+  supabase: any,
+  email?: string,
+  name?: string,
+  fallbackId?: string
+): Promise<string> {
+  // Try by email first (most reliable)
+  if (email) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("user_id")
+      .eq("email", email)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (profile) {
+      console.log(`Resolved creator by email "${email}" -> ${profile.user_id}`);
+      return profile.user_id;
+    }
+  }
+
+  // Try by full_name (case-insensitive)
+  if (name) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("user_id")
+      .ilike("full_name", name)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (profile) {
+      console.log(`Resolved creator by name "${name}" -> ${profile.user_id}`);
+      return profile.user_id;
+    }
+  }
+
+  console.log(`Creator not resolved (email: ${email}, name: ${name}), using fallback`);
+  return fallbackId || "00000000-0000-0000-0000-000000000000";
 }
 
 Deno.serve(async (req) => {
@@ -307,8 +350,8 @@ Deno.serve(async (req) => {
 
           const dueDate = calculateDueDate(soData.invoice_date, termsDays);
 
-          // 5. Create AR Invoice as DRAFT
-          // Use system actor from Super Admin lookup
+          // 5. Resolve creator from WMS payload or fallback to system actor
+          const creatorId = await resolveCreator(supabase, soData.created_by_email, soData.created_by_name, systemActorId);
 
           const { data: newInvoice, error: insertError } = await supabase
             .from("ar_invoices")
@@ -322,7 +365,7 @@ Deno.serve(async (req) => {
               outstanding_amount: soData.invoice_amount,
               due_date: dueDate,
               status: "DRAFT",
-              created_by: systemActorId,
+              created_by: creatorId,
               sales_id: salesId,
               terms_id: termsId,
               notes: soData.notes || `Auto-created from WMS Sales Order`,
@@ -439,9 +482,11 @@ Deno.serve(async (req) => {
           }
 
           const dueDate = calculateDueDate(poData.invoice_date, termsDays);
-          // Use system actor from Super Admin lookup
 
-          // 4. Create AP Invoice as DRAFT
+          // 4. Resolve creator from WMS payload or fallback to system actor
+          const creatorId = await resolveCreator(supabase, poData.created_by_email, poData.created_by_name, systemActorId);
+
+          // Create AP Invoice as DRAFT
           const { data: newInvoice, error: insertError } = await supabase
             .from("ap_invoices")
             .insert({
@@ -454,7 +499,7 @@ Deno.serve(async (req) => {
               outstanding_amount: poData.invoice_amount,
               due_date: dueDate,
               status: "DRAFT",
-              created_by: systemActorId,
+              created_by: creatorId,
               terms_id: termsId,
               product_name: poData.product_name || null,
               notes: poData.notes || `Auto-created from WMS Plan Order`,
