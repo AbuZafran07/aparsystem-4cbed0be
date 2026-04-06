@@ -61,6 +61,8 @@ const PlanOrderSchema = z.object({
   payment_terms_name: z.string().trim().max(100).nullable().optional(),
   notes: z.string().trim().max(1000).nullable().optional(),
   wms_id: z.string().trim().max(100).optional(),
+  created_by_email: z.string().trim().email().max(255).optional(),
+  created_by_name: z.string().trim().max(255).optional(),
 });
 
 const SyncRequestSchema = z.object({
