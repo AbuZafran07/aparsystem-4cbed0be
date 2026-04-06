@@ -17,7 +17,7 @@ Deno.serve(async (req) => {
     // Test plan_order payload
     const testPayload = {
       entity: "plan_order",
-      action: "sync",
+      action: "upsert",
       data: {
         vendor_name: "PT Test Vendor WMS Auto",
         vendor_invoice_number: "TEST-WMS-" + Date.now(),
