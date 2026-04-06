@@ -466,6 +466,30 @@ export default function ApListPage() {
         .eq('id', selectedInvoice.id);
 
       if (error) throw error;
+
+      // If rejecting a REVISION_REQUESTED invoice, notify PURCHASING users
+      if (selectedInvoice.status === 'REVISION_REQUESTED') {
+        const vendor = vendors.find(v => v.id === selectedInvoice.vendor_id);
+        const { data: purchasingUsers } = await supabase
+          .from('user_roles')
+          .select('user_id')
+          .in('role', ['PURCHASING', 'SUPER_ADMIN']);
+        if (purchasingUsers && purchasingUsers.length > 0) {
+          await supabase.from('notifications').insert(
+            purchasingUsers.map(r => ({
+              user_id: r.user_id,
+              title: language === 'en' ? 'AP Revision Rejected' : 'Revisi AP Ditolak',
+              message: language === 'en'
+                ? `Revision for AP invoice ${selectedInvoice.vendor_invoice_number} (${vendor?.vendor_name || 'Unknown'}) was rejected. Reason: ${rejectReason}`
+                : `Revisi invoice AP ${selectedInvoice.vendor_invoice_number} (${vendor?.vendor_name || 'Unknown'}) ditolak. Alasan: ${rejectReason}`,
+              type: 'revision_rejected',
+              entity_type: 'ap_invoice',
+              entity_id: selectedInvoice.id,
+            }))
+          );
+        }
+      }
+
       toast.success(language === 'en' ? 'Invoice rejected' : 'Invoice ditolak');
       setIsRejectDialogOpen(false);
       setRejectReason('');
