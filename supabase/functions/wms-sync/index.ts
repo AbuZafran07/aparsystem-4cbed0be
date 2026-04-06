@@ -482,9 +482,11 @@ Deno.serve(async (req) => {
           }
 
           const dueDate = calculateDueDate(poData.invoice_date, termsDays);
-          // Use system actor from Super Admin lookup
 
-          // 4. Create AP Invoice as DRAFT
+          // 4. Resolve creator from WMS payload or fallback to system actor
+          const creatorId = await resolveCreator(supabase, poData.created_by_email, poData.created_by_name, systemActorId);
+
+          // Create AP Invoice as DRAFT
           const { data: newInvoice, error: insertError } = await supabase
             .from("ap_invoices")
             .insert({
@@ -497,7 +499,7 @@ Deno.serve(async (req) => {
               outstanding_amount: poData.invoice_amount,
               due_date: dueDate,
               status: "DRAFT",
-              created_by: systemActorId,
+              created_by: creatorId,
               terms_id: termsId,
               product_name: poData.product_name || null,
               notes: poData.notes || `Auto-created from WMS Plan Order`,
