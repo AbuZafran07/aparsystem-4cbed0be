@@ -814,6 +814,27 @@ export default function ApListPage() {
         reason: 'Revision approved, reverted to DRAFT',
       });
 
+      // Notify PURCHASING users that revision was approved
+      const vendor = vendors.find(v => v.id === invoice.vendor_id);
+      const { data: purchasingUsers } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .in('role', ['PURCHASING', 'SUPER_ADMIN']);
+      if (purchasingUsers && purchasingUsers.length > 0) {
+        await supabase.from('notifications').insert(
+          purchasingUsers.map(r => ({
+            user_id: r.user_id,
+            title: language === 'en' ? 'AP Revision Approved' : 'Revisi AP Disetujui',
+            message: language === 'en'
+              ? `Revision for AP invoice ${invoice.vendor_invoice_number} (${vendor?.vendor_name || 'Unknown'}) has been approved. Invoice reverted to Draft for editing.`
+              : `Revisi invoice AP ${invoice.vendor_invoice_number} (${vendor?.vendor_name || 'Unknown'}) telah disetujui. Invoice kembali ke Draft untuk diedit.`,
+            type: 'revision_approved',
+            entity_type: 'ap_invoice',
+            entity_id: invoice.id,
+          }))
+        );
+      }
+
       toast.success(language === 'en' ? 'Revision approved, invoice reverted to Draft' : 'Revisi disetujui, invoice kembali ke Draft');
       fetchData();
     } catch (error: any) {
