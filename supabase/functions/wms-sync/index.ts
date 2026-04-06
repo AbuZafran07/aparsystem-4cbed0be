@@ -64,16 +64,20 @@ const PlanOrderSchema = z.object({
 const SyncRequestSchema = z.object({
   entity: z.enum(["customer", "vendor", "sales_order", "plan_order"]),
   action: z.enum(["upsert", "sync_batch"]),
-  data: z.union([
-    CustomerSchema,
-    VendorSchema,
-    SalesOrderSchema,
-    PlanOrderSchema,
-    z.array(CustomerSchema),
-    z.array(VendorSchema),
-    z.array(SalesOrderSchema),
-    z.array(PlanOrderSchema),
-  ]),
+  data: z.any(),
+}).refine((val) => {
+  // Validate data matches entity schema
+  const schemaMap: Record<string, z.ZodSchema> = {
+    customer: z.union([CustomerSchema, z.array(CustomerSchema)]),
+    vendor: z.union([VendorSchema, z.array(VendorSchema)]),
+    sales_order: z.union([SalesOrderSchema, z.array(SalesOrderSchema)]),
+    plan_order: z.union([PlanOrderSchema, z.array(PlanOrderSchema)]),
+  };
+  const schema = schemaMap[val.entity];
+  return schema ? schema.safeParse(val.data).success : false;
+}, {
+  message: "Data does not match expected schema for the given entity",
+  path: ["data"],
 });
 
 // Helper: calculate due date based on payment terms days
@@ -125,6 +129,15 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    // Get a valid system actor (Super Admin) for created_by FK constraint
+    const { data: systemAdmin } = await supabase
+      .from("user_roles")
+      .select("user_id")
+      .eq("role", "SUPER_ADMIN")
+      .limit(1)
+      .maybeSingle();
+    const systemActorId = systemAdmin?.user_id || "00000000-0000-0000-0000-000000000000";
 
     const items = Array.isArray(data) ? data : [data];
     const results: { success: number; failed: number; errors: string[]; synced_ids: string[]; created_invoices?: string[] } = {
@@ -295,8 +308,7 @@ Deno.serve(async (req) => {
           const dueDate = calculateDueDate(soData.invoice_date, termsDays);
 
           // 5. Create AR Invoice as DRAFT
-          // Use a system UUID as created_by (WMS system actor)
-          const systemActorId = "00000000-0000-0000-0000-000000000000";
+          // Use system actor from Super Admin lookup
 
           const { data: newInvoice, error: insertError } = await supabase
             .from("ar_invoices")
@@ -427,7 +439,7 @@ Deno.serve(async (req) => {
           }
 
           const dueDate = calculateDueDate(poData.invoice_date, termsDays);
-          const systemActorId = "00000000-0000-0000-0000-000000000000";
+          // Use system actor from Super Admin lookup
 
           // 4. Create AP Invoice as DRAFT
           const { data: newInvoice, error: insertError } = await supabase
