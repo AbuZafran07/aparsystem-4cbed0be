@@ -439,7 +439,7 @@ Deno.serve(async (req) => {
           }
 
           const dueDate = calculateDueDate(poData.invoice_date, termsDays);
-          const systemActorId = "00000000-0000-0000-0000-000000000000";
+          // Use system actor from Super Admin lookup
 
           // 4. Create AP Invoice as DRAFT
           const { data: newInvoice, error: insertError } = await supabase
