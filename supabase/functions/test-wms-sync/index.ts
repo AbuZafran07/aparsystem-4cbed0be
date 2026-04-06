@@ -14,25 +14,27 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const wmsApiKey = Deno.env.get('WMS_API_KEY')!;
 
-    // Test plan_order payload
+    const uniqueId = Date.now();
+
+    // Test plan_order payload with correct field names matching PlanOrderSchema
     const testPayload = {
       entity: "plan_order",
       action: "upsert",
-      data: [{
+      data: {
         vendor_name: "PT Test Vendor WMS Auto",
-        vendor_invoice_number: "TEST-WMS-" + Date.now(),
+        vendor_invoice_number: `TEST-WMS-${uniqueId}`,
         po_number: "PO/TEST/001",
         sp_po_date: "2026-04-06",
         invoice_date: "2026-04-06",
         invoice_amount: 5000000,
-        payment_terms: "NET 30",
+        payment_terms_name: "NET 30",
         product_name: "Test Product dari WMS",
-        address: "Jl. Test Alamat No. 1, Jakarta",
-        phone: "08123456789",
-        email: "vendor-test@wms.com",
-        bank_name: "BCA",
-        bank_account_no: "1234567890"
-      }]
+        vendor_address: "Jl. Test Alamat No. 1, Jakarta",
+        vendor_phone: "08123456789",
+        vendor_email: "vendor-test@wms.com",
+        vendor_bank_name: "BCA",
+        vendor_bank_account_no: "1234567890"
+      }
     };
 
     const response = await fetch(`${supabaseUrl}/functions/v1/wms-sync`, {
