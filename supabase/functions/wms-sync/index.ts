@@ -91,6 +91,45 @@ function calculateDueDate(invoiceDate: string, days: number): string {
   return date.toISOString().split("T")[0];
 }
 
+// Helper: resolve WMS user to system user by email or name
+async function resolveCreator(
+  supabase: any,
+  email?: string,
+  name?: string,
+  fallbackId?: string
+): Promise<string> {
+  // Try by email first (most reliable)
+  if (email) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("user_id")
+      .eq("email", email)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (profile) {
+      console.log(`Resolved creator by email "${email}" -> ${profile.user_id}`);
+      return profile.user_id;
+    }
+  }
+
+  // Try by full_name (case-insensitive)
+  if (name) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("user_id")
+      .ilike("full_name", name)
+      .eq("is_active", true)
+      .maybeSingle();
+    if (profile) {
+      console.log(`Resolved creator by name "${name}" -> ${profile.user_id}`);
+      return profile.user_id;
+    }
+  }
+
+  console.log(`Creator not resolved (email: ${email}, name: ${name}), using fallback`);
+  return fallbackId || "00000000-0000-0000-0000-000000000000";
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
