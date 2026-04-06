@@ -64,16 +64,20 @@ const PlanOrderSchema = z.object({
 const SyncRequestSchema = z.object({
   entity: z.enum(["customer", "vendor", "sales_order", "plan_order"]),
   action: z.enum(["upsert", "sync_batch"]),
-  data: z.union([
-    CustomerSchema,
-    VendorSchema,
-    SalesOrderSchema,
-    PlanOrderSchema,
-    z.array(CustomerSchema),
-    z.array(VendorSchema),
-    z.array(SalesOrderSchema),
-    z.array(PlanOrderSchema),
-  ]),
+  data: z.any(),
+}).refine((val) => {
+  // Validate data matches entity schema
+  const schemaMap: Record<string, z.ZodSchema> = {
+    customer: z.union([CustomerSchema, z.array(CustomerSchema)]),
+    vendor: z.union([VendorSchema, z.array(VendorSchema)]),
+    sales_order: z.union([SalesOrderSchema, z.array(SalesOrderSchema)]),
+    plan_order: z.union([PlanOrderSchema, z.array(PlanOrderSchema)]),
+  };
+  const schema = schemaMap[val.entity];
+  return schema ? schema.safeParse(val.data).success : false;
+}, {
+  message: "Data does not match expected schema for the given entity",
+  path: ["data"],
 });
 
 // Helper: calculate due date based on payment terms days
