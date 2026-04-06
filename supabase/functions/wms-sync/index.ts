@@ -350,8 +350,8 @@ Deno.serve(async (req) => {
 
           const dueDate = calculateDueDate(soData.invoice_date, termsDays);
 
-          // 5. Create AR Invoice as DRAFT
-          // Use system actor from Super Admin lookup
+          // 5. Resolve creator from WMS payload or fallback to system actor
+          const creatorId = await resolveCreator(supabase, soData.created_by_email, soData.created_by_name, systemActorId);
 
           const { data: newInvoice, error: insertError } = await supabase
             .from("ar_invoices")
@@ -365,7 +365,7 @@ Deno.serve(async (req) => {
               outstanding_amount: soData.invoice_amount,
               due_date: dueDate,
               status: "DRAFT",
-              created_by: systemActorId,
+              created_by: creatorId,
               sales_id: salesId,
               terms_id: termsId,
               notes: soData.notes || `Auto-created from WMS Sales Order`,
