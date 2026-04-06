@@ -308,8 +308,7 @@ Deno.serve(async (req) => {
           const dueDate = calculateDueDate(soData.invoice_date, termsDays);
 
           // 5. Create AR Invoice as DRAFT
-          // Use a system UUID as created_by (WMS system actor)
-          const systemActorId = "00000000-0000-0000-0000-000000000000";
+          // Use system actor from Super Admin lookup
 
           const { data: newInvoice, error: insertError } = await supabase
             .from("ar_invoices")
