@@ -18,7 +18,7 @@ Deno.serve(async (req) => {
     const testPayload = {
       entity: "plan_order",
       action: "upsert",
-      data: {
+      data: [{
         vendor_name: "PT Test Vendor WMS Auto",
         vendor_invoice_number: "TEST-WMS-" + Date.now(),
         po_number: "PO/TEST/001",
@@ -32,7 +32,7 @@ Deno.serve(async (req) => {
         email: "vendor-test@wms.com",
         bank_name: "BCA",
         bank_account_no: "1234567890"
-      }
+      }]
     };
 
     const response = await fetch(`${supabaseUrl}/functions/v1/wms-sync`, {
