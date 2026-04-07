@@ -83,7 +83,7 @@ export default function ArInvoiceDetailPage() {
   useEffect(() => {
     fetchDropdowns();
     if (!isCreateMode && id) fetchInvoice();
-  }, [id, isCreateMode]);
+  }, [id, isCreateMode, isEditMode]);
 
   const fetchDropdowns = async () => {
     const [customersRes, salesRes, termsRes] = await Promise.all([
