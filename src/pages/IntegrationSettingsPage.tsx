@@ -698,7 +698,9 @@ export default function IntegrationSettingsPage() {
                   <pre className="text-foreground/80">{JSON.stringify({
                     entity: "sales_order", action: "upsert",
                     data: {
-                      customer_name: "Nama Customer (wajib)", order_number: "SO-001 (wajib)", invoice_number: "INV-001 (wajib)",
+                      customer_name: "Nama Customer (wajib)", order_number: "SO-001 (wajib)",
+                      customer_po_number: "PO-CUST-001 (opsional, jika diisi akan digunakan sebagai No. Order)",
+                      invoice_number: "INV-001 (wajib)",
                       invoice_amount: 1000000, invoice_date: "2026-01-15", sp_po_date: "2026-01-10",
                       sales_name: "Nama Sales (opsional)", payment_terms_name: "NET 30 (opsional)",
                       created_by_email: "user@company.com (opsional)", created_by_name: "Nama User (opsional)",
