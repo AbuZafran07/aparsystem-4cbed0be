@@ -544,7 +544,7 @@ Deno.serve(async (req) => {
     // --- Audit Log ---
     await supabase.from("audit_logs").insert({
       action: `WMS_SYNC_${entity.toUpperCase()}`,
-      actor_id: "00000000-0000-0000-0000-000000000000",
+      actor_id: systemActorId,
       actor_role: "SUPER_ADMIN",
       entity_type: entity === "sales_order" ? "ar_invoice" : entity === "plan_order" ? "ap_invoice" : entity,
       after_data: {
