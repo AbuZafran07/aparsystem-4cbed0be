@@ -351,7 +351,9 @@ Deno.serve(async (req) => {
           const dueDate = calculateDueDate(soData.invoice_date, termsDays);
 
           // 5. Resolve creator from WMS payload or fallback to system actor
+          console.log(`[WMS] sales_order creator fields - email: "${soData.created_by_email || 'NOT SET'}", name: "${soData.created_by_name || 'NOT SET'}"`);
           const creatorId = await resolveCreator(supabase, soData.created_by_email, soData.created_by_name, systemActorId);
+          console.log(`[WMS] Resolved creatorId: ${creatorId} (systemActorId fallback: ${systemActorId})`);
 
           const { data: newInvoice, error: insertError } = await supabase
             .from("ar_invoices")
