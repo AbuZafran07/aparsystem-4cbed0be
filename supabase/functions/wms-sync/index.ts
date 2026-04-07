@@ -173,14 +173,10 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
-    // Get a valid system actor (Super Admin) for created_by FK constraint
-    const { data: systemAdmin } = await supabase
-      .from("user_roles")
-      .select("user_id")
-      .eq("role", "SUPER_ADMIN")
-      .limit(1)
-      .maybeSingle();
-    const systemActorId = systemAdmin?.user_id || "00000000-0000-0000-0000-000000000000";
+    // Use dedicated WMS System service account as default creator
+    // This ensures invoices created via WMS are clearly marked as system-generated
+    const WMS_SYSTEM_USER_ID = "5c2d93f2-d564-46ba-9a2c-66e028788147";
+    const systemActorId = WMS_SYSTEM_USER_ID;
 
     const items = Array.isArray(data) ? data : [data];
     const results: { success: number; failed: number; errors: string[]; synced_ids: string[]; created_invoices?: string[] } = {
