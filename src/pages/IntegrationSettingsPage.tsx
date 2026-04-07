@@ -80,18 +80,15 @@ export default function IntegrationSettingsPage() {
   const checkEndpointHealth = useCallback(async () => {
     setConnectionStatus('checking');
     try {
+      // Use OPTIONS (CORS preflight) to check if endpoint is alive
+      // This avoids triggering the API key auth check and 401 errors
       const response = await fetch(endpointUrl, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ entity: 'ping', action: 'test', data: {} }),
+        method: 'OPTIONS',
       });
-      // 401 means endpoint is alive and protected (expected)
-      if (response.status === 401 || response.ok) {
-        setConnectionStatus('online');
-      } else {
-        setConnectionStatus('error');
-      }
+      // Any response (including CORS preflight 200/204) means endpoint is alive
+      setConnectionStatus('online');
     } catch {
+      // Network error means endpoint is unreachable
       setConnectionStatus('offline');
     }
     setLastCheckTime(new Date());
