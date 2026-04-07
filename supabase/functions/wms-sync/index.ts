@@ -351,7 +351,9 @@ Deno.serve(async (req) => {
           const dueDate = calculateDueDate(soData.invoice_date, termsDays);
 
           // 5. Resolve creator from WMS payload or fallback to system actor
+          console.log(`[WMS] sales_order creator fields - email: "${soData.created_by_email || 'NOT SET'}", name: "${soData.created_by_name || 'NOT SET'}"`);
           const creatorId = await resolveCreator(supabase, soData.created_by_email, soData.created_by_name, systemActorId);
+          console.log(`[WMS] Resolved creatorId: ${creatorId} (systemActorId fallback: ${systemActorId})`);
 
           const { data: newInvoice, error: insertError } = await supabase
             .from("ar_invoices")
@@ -484,7 +486,9 @@ Deno.serve(async (req) => {
           const dueDate = calculateDueDate(poData.invoice_date, termsDays);
 
           // 4. Resolve creator from WMS payload or fallback to system actor
+          console.log(`[WMS] plan_order creator fields - email: "${poData.created_by_email || 'NOT SET'}", name: "${poData.created_by_name || 'NOT SET'}"`);
           const creatorId = await resolveCreator(supabase, poData.created_by_email, poData.created_by_name, systemActorId);
+          console.log(`[WMS] Resolved creatorId: ${creatorId} (systemActorId fallback: ${systemActorId})`);
 
           // Create AP Invoice as DRAFT
           const { data: newInvoice, error: insertError } = await supabase
@@ -540,7 +544,7 @@ Deno.serve(async (req) => {
     // --- Audit Log ---
     await supabase.from("audit_logs").insert({
       action: `WMS_SYNC_${entity.toUpperCase()}`,
-      actor_id: "00000000-0000-0000-0000-000000000000",
+      actor_id: systemActorId,
       actor_role: "SUPER_ADMIN",
       entity_type: entity === "sales_order" ? "ar_invoice" : entity === "plan_order" ? "ap_invoice" : entity,
       after_data: {
