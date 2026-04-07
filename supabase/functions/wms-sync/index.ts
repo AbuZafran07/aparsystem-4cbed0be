@@ -486,7 +486,9 @@ Deno.serve(async (req) => {
           const dueDate = calculateDueDate(poData.invoice_date, termsDays);
 
           // 4. Resolve creator from WMS payload or fallback to system actor
+          console.log(`[WMS] plan_order creator fields - email: "${poData.created_by_email || 'NOT SET'}", name: "${poData.created_by_name || 'NOT SET'}"`);
           const creatorId = await resolveCreator(supabase, poData.created_by_email, poData.created_by_name, systemActorId);
+          console.log(`[WMS] Resolved creatorId: ${creatorId} (systemActorId fallback: ${systemActorId})`);
 
           // Create AP Invoice as DRAFT
           const { data: newInvoice, error: insertError } = await supabase
