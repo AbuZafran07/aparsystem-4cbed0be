@@ -352,11 +352,14 @@ Deno.serve(async (req) => {
           const creatorId = await resolveCreator(supabase, soData.created_by_email, soData.created_by_name, systemActorId);
           console.log(`[WMS] Resolved creatorId: ${creatorId} (systemActorId fallback: ${systemActorId})`);
 
+          // Use customer_po_number as order_number if provided, otherwise fall back to order_number
+          const effectiveOrderNumber = soData.customer_po_number || soData.order_number;
+
           const { data: newInvoice, error: insertError } = await supabase
             .from("ar_invoices")
             .insert({
               customer_id: customer.id,
-              order_number: soData.order_number,
+              order_number: effectiveOrderNumber,
               invoice_number: soData.invoice_number,
               invoice_date: soData.invoice_date,
               sp_po_date: soData.sp_po_date,
