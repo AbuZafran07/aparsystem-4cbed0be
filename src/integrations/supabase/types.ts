@@ -213,6 +213,7 @@ export type Database = {
           status: Database["public"]["Enums"]["record_status"]
           terms_id: string | null
           updated_at: string
+          wms_so_number: string | null
         }
         Insert: {
           approved_at?: string | null
@@ -239,6 +240,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["record_status"]
           terms_id?: string | null
           updated_at?: string
+          wms_so_number?: string | null
         }
         Update: {
           approved_at?: string | null
@@ -265,6 +267,7 @@ export type Database = {
           status?: Database["public"]["Enums"]["record_status"]
           terms_id?: string | null
           updated_at?: string
+          wms_so_number?: string | null
         }
         Relationships: [
           {
@@ -1003,6 +1006,69 @@ export type Database = {
           phone?: string | null
           sales_name?: string
           updated_at?: string
+        }
+        Relationships: []
+      }
+      salespulse_overdue_notified: {
+        Row: {
+          ar_invoice_id: string
+          notified_at: string
+        }
+        Insert: {
+          ar_invoice_id: string
+          notified_at?: string
+        }
+        Update: {
+          ar_invoice_id?: string
+          notified_at?: string
+        }
+        Relationships: []
+      }
+      salespulse_webhook_log: {
+        Row: {
+          ar_invoice_id: string | null
+          attempt: number
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          event_type: string
+          id: string
+          invoice_number: string | null
+          ok: boolean
+          request_payload: Json
+          response_body: Json | null
+          response_status: number | null
+          so_number: string | null
+        }
+        Insert: {
+          ar_invoice_id?: string | null
+          attempt?: number
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          event_type: string
+          id?: string
+          invoice_number?: string | null
+          ok?: boolean
+          request_payload: Json
+          response_body?: Json | null
+          response_status?: number | null
+          so_number?: string | null
+        }
+        Update: {
+          ar_invoice_id?: string | null
+          attempt?: number
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          event_type?: string
+          id?: string
+          invoice_number?: string | null
+          ok?: boolean
+          request_payload?: Json
+          response_body?: Json | null
+          response_status?: number | null
+          so_number?: string | null
         }
         Relationships: []
       }
