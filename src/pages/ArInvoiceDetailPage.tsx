@@ -191,6 +191,13 @@ export default function ArInvoiceDetailPage() {
           .eq('id', invoice.id);
         if (error) throw error;
         toast.success('Invoice berhasil diperbarui');
+
+        // If invoice was already approved (has counterpart in SalesPulse), send revised event
+        const wasApproved = ['APPROVED', 'PARTIAL', 'PAID'].includes(invoice.status);
+        if (wasApproved) {
+          dispatchSalesPulseEvent({ event_type: 'revised', ar_invoice_id: invoice.id });
+        }
+
         navigate(`/ar/${invoice.id}`);
       } else {
         const { data: newInvoice, error } = await supabase

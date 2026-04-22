@@ -506,6 +506,17 @@ export default function ArListPage() {
     if (!selectedInvoice) return;
 
     try {
+      // Send cancelled event BEFORE deleting (we need invoice data for so_number)
+      // Only send if invoice was previously approved (has SalesPulse counterpart)
+      const wasApproved = ['APPROVED', 'PARTIAL', 'PAID'].includes(selectedInvoice.status);
+      if (wasApproved) {
+        await dispatchSalesPulseEvent({
+          event_type: 'cancelled',
+          ar_invoice_id: selectedInvoice.id,
+          reason: 'Invoice deleted in AP/AR Nexus',
+        });
+      }
+
       const { error } = await supabase
         .from('ar_invoices')
         .delete()
