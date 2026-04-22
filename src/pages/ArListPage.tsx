@@ -68,6 +68,7 @@ import {
   BillingLetterData 
 } from '@/lib/billingUtils';
 import type { Database } from '@/integrations/supabase/types';
+import { dispatchSalesPulseEvent } from '@/lib/salespulseDispatch';
 
 interface BankAccount {
   id: string;
