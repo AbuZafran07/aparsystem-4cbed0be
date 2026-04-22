@@ -464,6 +464,10 @@ export default function ArListPage() {
 
       if (error) throw error;
       toast.success(language === 'en' ? 'Invoice approved' : 'Invoice disetujui');
+
+      // Sync to SalesPulse (fire-and-forget, non-blocking UX)
+      dispatchSalesPulseEvent({ event_type: 'approved', ar_invoice_id: invoice.id });
+
       fetchData();
     } catch (error: any) {
       console.error('Error approving invoice:', error);
@@ -674,6 +678,10 @@ export default function ArListPage() {
         .eq('id', invoice.id);
       if (error) throw error;
       toast.success(language === 'en' ? 'Invoice marked as paid' : 'Invoice ditandai lunas');
+
+      // Sync paid event to SalesPulse
+      dispatchSalesPulseEvent({ event_type: 'paid', ar_invoice_id: invoice.id });
+
       fetchData();
     } catch (error: any) {
       console.error('Error marking as paid:', error);
@@ -848,6 +856,13 @@ export default function ArListPage() {
       if (updateError) throw updateError;
 
       toast.success(language === 'en' ? 'Receipt recorded successfully' : 'Penerimaan berhasil dicatat');
+
+      // Sync to SalesPulse: paid if fully settled, else partial_paid
+      dispatchSalesPulseEvent({
+        event_type: newStatus === 'PAID' ? 'paid' : 'partial_paid',
+        ar_invoice_id: selectedInvoice.id,
+      });
+
       setIsReceiptDialogOpen(false);
       setSelectedInvoice(null);
       fetchData();
