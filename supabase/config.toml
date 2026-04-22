@@ -17,3 +17,6 @@ verify_jwt = false
 
 [functions.wms-sync]
 verify_jwt = false
+
+[functions.salespulse-overdue-cron]
+verify_jwt = false
