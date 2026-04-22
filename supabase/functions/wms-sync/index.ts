@@ -353,6 +353,7 @@ Deno.serve(async (req) => {
           console.log(`[WMS] Resolved creatorId: ${creatorId} (systemActorId fallback: ${systemActorId})`);
 
           // Use customer_po_number as order_number if provided, otherwise fall back to order_number
+          // Always store the WMS SO number separately as wms_so_number for SalesPulse matching
           const effectiveOrderNumber = soData.customer_po_number || soData.order_number;
 
           const { data: newInvoice, error: insertError } = await supabase
@@ -360,6 +361,7 @@ Deno.serve(async (req) => {
             .insert({
               customer_id: customer.id,
               order_number: effectiveOrderNumber,
+              wms_so_number: soData.order_number,
               invoice_number: soData.invoice_number,
               invoice_date: soData.invoice_date,
               sp_po_date: soData.sp_po_date,
