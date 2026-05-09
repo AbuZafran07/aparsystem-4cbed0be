@@ -37,6 +37,7 @@ import MyProfilePage from "@/pages/MyProfilePage";
 import BackupRestorePage from "@/pages/BackupRestorePage";
 import CustomerStatusPage from "@/pages/CustomerStatusPage";
 import IntegrationSettingsPage from "@/pages/IntegrationSettingsPage";
+import AuditCashoutPage from "@/pages/AuditCashoutPage";
 import NotFound from "@/pages/NotFound";
 const queryClient = new QueryClient();
 
@@ -106,6 +107,9 @@ const App = () => (
                 <Route path="/backup-restore" element={<BackupRestorePage />} />
                 <Route path="/integration-settings" element={<IntegrationSettingsPage />} />
                 
+                {/* Audit Cash Out */}
+                <Route path="/audit-cashout" element={<AuditCashoutPage />} />
+
                 {/* User Profile */}
                 <Route path="/my-profile" element={<MyProfilePage />} />
               </Route>

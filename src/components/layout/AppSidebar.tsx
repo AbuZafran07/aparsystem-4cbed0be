@@ -11,6 +11,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useRoleAccess } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import WorkspaceSwitcher from './WorkspaceSwitcher';
 
 interface MenuItem {
   key: string;
@@ -125,6 +126,9 @@ export default function AppSidebar({ onNavigate, collapsed = false, onToggleColl
             </div>
           )}
         </div>
+
+        {/* Workspace Switcher */}
+        <WorkspaceSwitcher collapsed={collapsed} />
 
         {/* Navigation */}
         <nav className={cn(
