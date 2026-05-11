@@ -199,20 +199,24 @@ export default function AuditSettingsPage() {
   });
 
   // ── Year save ─────────────────────────────────────────────────────────
+  const applyYear = (n: number) => {
+    setYear(n);
+    setYearInput(String(n));
+    setYearSaved(true);
+    setTimeout(() => setYearSaved(false), 2000);
+    qc.invalidateQueries({ queryKey: ['audit-transactions'] });
+    qc.invalidateQueries({ queryKey: ['audit-budgets'] });
+    qc.invalidateQueries({ queryKey: ['audit-sidebar-alert-count'] });
+    toast({ title: 'Tahun aktif diperbarui', description: `Semua halaman audit sekarang menggunakan tahun ${n}` });
+  };
+
   const handleSaveYear = () => {
     const n = parseInt(yearInput, 10);
     if (isNaN(n) || n < 2020 || n > 2099) {
       toast({ title: 'Tahun tidak valid', description: 'Masukkan tahun antara 2020–2099', variant: 'destructive' });
       return;
     }
-    setYear(n);
-    setYearSaved(true);
-    setTimeout(() => setYearSaved(false), 2000);
-    // Invalidate all audit queries so they refetch with new year
-    qc.invalidateQueries({ queryKey: ['audit-transactions'] });
-    qc.invalidateQueries({ queryKey: ['audit-budgets'] });
-    qc.invalidateQueries({ queryKey: ['audit-sidebar-alert-count'] });
-    toast({ title: 'Tahun aktif diperbarui', description: `Semua halaman audit sekarang menggunakan tahun ${n}` });
+    applyYear(n);
   };
 
   // ── Dept mutations ────────────────────────────────────────────────────
@@ -330,7 +334,7 @@ export default function AuditSettingsPage() {
                   {yearRange.map(y => (
                     <button
                       key={y}
-                      onClick={() => { setYearInput(String(y)); }}
+                      onClick={() => applyYear(y)}
                       className={cn(
                         'px-4 py-1.5 rounded-lg text-sm font-semibold border transition-all',
                         String(y) === yearInput
