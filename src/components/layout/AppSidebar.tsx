@@ -5,13 +5,18 @@ import {
   Building2, Users, UserCircle, Clock, Landmark, Building, TrendingDown,
   TrendingUp, FileBarChart, FileBarChart2, DollarSign, Download, ArrowUpDown,
   ScrollText, Settings, UserCog, ClipboardList, Database, Plug,
-  PanelLeftClose, PanelLeftOpen,
+  PanelLeftClose, PanelLeftOpen, Bell, List, PieChart,
 } from 'lucide-react';
+import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useRoleAccess } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
+import { supabase } from '@/integrations/supabase/client';
+
+const db = supabase as any;
+const AUDIT_YEAR = 2026;
 
 interface MenuItem {
   key: string;
@@ -85,6 +90,116 @@ const menuStructure: MenuSection[] = [
   },
 ];
 
+// ── Audit sidebar items ────────────────────────────────────────────────────
+interface AuditItem {
+  key: string;
+  label: string;
+  icon: React.ElementType;
+  path: string;
+  exact?: boolean;
+  badge?: number;
+}
+
+function AuditNavMenu({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+  const location = useLocation();
+
+  const { data: alertCount = 0 } = useQuery<number>({
+    queryKey: ['audit-sidebar-alert-count', AUDIT_YEAR],
+    queryFn: async () => {
+      const [{ data: budgets }, { data: transactions }] = await Promise.all([
+        db.from('budgets').select('department_id, amount').eq('year', AUDIT_YEAR),
+        db.from('cash_out_transactions').select('department_id, nominal').eq('tahun', AUDIT_YEAR),
+      ]);
+      if (!budgets?.length || !transactions?.length) return 0;
+      const budgetMap: Record<string, number> = Object.fromEntries(budgets.map((b: any) => [b.department_id, b.amount]));
+      const spentMap: Record<string, number> = {};
+      transactions.forEach((t: any) => { spentMap[t.department_id] = (spentMap[t.department_id] ?? 0) + t.nominal; });
+      return Object.entries(spentMap).filter(([deptId, spent]) => {
+        const budget = budgetMap[deptId] ?? 0;
+        return budget > 0 && (spent as number) / budget >= 0.8;
+      }).length;
+    },
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });
+
+  const items: AuditItem[] = [
+    { key: 'audit-dashboard', label: 'Dashboard', icon: LayoutDashboard, path: '/audit-cashout', exact: true },
+    { key: 'audit-transaksi', label: 'Transaksi', icon: List, path: '/audit-cashout/transaksi' },
+    { key: 'audit-budget', label: 'Budget Plan', icon: PieChart, path: '/audit-cashout/budget' },
+    { key: 'audit-export', label: 'Export Laporan', icon: Download, path: '/audit-cashout/export' },
+    { key: 'audit-alert', label: 'Alert', icon: Bell, path: '/audit-cashout/alert', badge: alertCount },
+  ];
+
+  return (
+    <div>
+      {!collapsed && (
+        <div className="px-3 mb-2">
+          <span className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+            Audit Cash Out
+          </span>
+        </div>
+      )}
+      <div className="space-y-0.5">
+        {items.map(item => {
+          const isActive = item.exact
+            ? location.pathname === item.path
+            : location.pathname.startsWith(item.path);
+          const Icon = item.icon;
+
+          const linkContent = (
+            <NavLink
+              key={item.key}
+              to={item.path}
+              onClick={onNavigate}
+              className={cn(
+                'relative flex items-center rounded-lg text-sm font-medium transition-all duration-200',
+                collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5',
+                isActive
+                  ? 'bg-sidebar-accent text-sidebar-foreground'
+                  : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+              )}
+            >
+              {isActive && <div className="sidebar-active-indicator" />}
+              <div className="relative flex-shrink-0">
+                <Icon className={cn('transition-all duration-200', collapsed ? 'w-5 h-5' : 'w-[18px] h-[18px]')} />
+                {/* Dot badge when collapsed */}
+                {collapsed && item.badge && item.badge > 0 && (
+                  <span className="absolute -top-1 -right-1 w-2 h-2 bg-red-500 rounded-full" />
+                )}
+              </div>
+              {!collapsed && (
+                <>
+                  <span className="truncate flex-1">{item.label}</span>
+                  {item.badge && item.badge > 0 ? (
+                    <span className="ml-auto flex-shrink-0 min-w-[18px] h-[18px] text-[10px] font-bold bg-red-500 text-white rounded-full flex items-center justify-center px-1">
+                      {item.badge > 9 ? '9+' : item.badge}
+                    </span>
+                  ) : null}
+                </>
+              )}
+            </NavLink>
+          );
+
+          if (collapsed) {
+            return (
+              <Tooltip key={item.key}>
+                <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                <TooltipContent side="right" sideOffset={8} className="font-medium">
+                  {item.label}
+                  {item.badge && item.badge > 0 ? ` (${item.badge} alert)` : ''}
+                </TooltipContent>
+              </Tooltip>
+            );
+          }
+          return linkContent;
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Main Sidebar ───────────────────────────────────────────────────────────
 interface AppSidebarProps {
   onNavigate?: () => void;
   collapsed?: boolean;
@@ -95,6 +210,7 @@ export default function AppSidebar({ onNavigate, collapsed = false, onToggleColl
   const { t } = useLanguage();
   const { canAccessMenu } = useRoleAccess();
   const location = useLocation();
+  const isAuditRoute = location.pathname.startsWith('/audit-cashout');
 
   const filteredSections = menuStructure
     .map(section => ({
@@ -106,7 +222,7 @@ export default function AppSidebar({ onNavigate, collapsed = false, onToggleColl
   return (
     <TooltipProvider delayDuration={0}>
       <aside className="h-full bg-sidebar flex flex-col overflow-hidden">
-        {/* Logo Section */}
+        {/* Logo */}
         <div className={cn(
           'h-16 flex items-center border-b border-sidebar-border/30 transition-all duration-300',
           collapsed ? 'px-0 justify-center' : 'px-5 gap-3'
@@ -114,15 +230,16 @@ export default function AppSidebar({ onNavigate, collapsed = false, onToggleColl
           <img
             src="/logo-kemika-new.png"
             alt="Kemika"
-            className={cn(
-              'rounded-lg object-contain transition-all duration-300',
-              collapsed ? 'w-8 h-8' : 'w-9 h-9'
-            )}
+            className={cn('rounded-lg object-contain transition-all duration-300', collapsed ? 'w-8 h-8' : 'w-9 h-9')}
           />
           {!collapsed && (
             <div className="flex flex-col min-w-0">
-              <span className="text-base font-bold text-sidebar-foreground truncate">AP/AR HUB</span>
-              <span className="text-xs text-sidebar-foreground/60 truncate">Finance System</span>
+              <span className="text-base font-bold text-sidebar-foreground truncate">
+                {isAuditRoute ? 'Audit Cash Out' : 'AP/AR HUB'}
+              </span>
+              <span className="text-xs text-sidebar-foreground/60 truncate">
+                {isAuditRoute ? 'Audit Module 2026' : 'Finance System'}
+              </span>
             </div>
           )}
         </div>
@@ -135,67 +252,66 @@ export default function AppSidebar({ onNavigate, collapsed = false, onToggleColl
           'flex-1 overflow-y-auto py-4 scrollbar-thin transition-all duration-300',
           collapsed ? 'px-1.5' : 'px-3'
         )}>
-          {filteredSections.map((section, sectionIdx) => (
-            <div key={section.sectionKey} className={cn(sectionIdx > 0 && 'mt-5')}>
-              {!collapsed && (
-                <div className="px-3 mb-2">
-                  <span className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-                    {t(section.sectionKey)}
-                  </span>
-                </div>
-              )}
-              {collapsed && sectionIdx > 0 && (
-                <div className="mx-2 mb-2 border-t border-sidebar-border/20" />
-              )}
-              <div className="space-y-0.5">
-                {section.items.map(item => {
-                  const isActive = location.pathname === item.path ||
-                    (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
-                  const Icon = item.icon;
-                  const label = t(item.translationKey);
+          {isAuditRoute ? (
+            <AuditNavMenu collapsed={collapsed} onNavigate={onNavigate} />
+          ) : (
+            filteredSections.map((section, sectionIdx) => (
+              <div key={section.sectionKey} className={cn(sectionIdx > 0 && 'mt-5')}>
+                {!collapsed && (
+                  <div className="px-3 mb-2">
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+                      {t(section.sectionKey)}
+                    </span>
+                  </div>
+                )}
+                {collapsed && sectionIdx > 0 && (
+                  <div className="mx-2 mb-2 border-t border-sidebar-border/20" />
+                )}
+                <div className="space-y-0.5">
+                  {section.items.map(item => {
+                    const isActive = location.pathname === item.path ||
+                      (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
+                    const Icon = item.icon;
+                    const label = t(item.translationKey);
 
-                  const linkContent = (
-                    <NavLink
-                      key={item.key}
-                      to={item.path}
-                      onClick={onNavigate}
-                      className={cn(
-                        'relative flex items-center rounded-lg text-sm font-medium transition-all duration-200',
-                        collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5',
-                        isActive
-                          ? 'bg-sidebar-accent text-sidebar-foreground'
-                          : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-                      )}
-                    >
-                      {isActive && (
-                        <div className="sidebar-active-indicator" />
-                      )}
-                      <Icon className={cn(
-                        'flex-shrink-0 transition-all duration-200',
-                        collapsed ? 'w-5 h-5' : 'w-[18px] h-[18px]'
-                      )} />
-                      {!collapsed && <span className="truncate">{label}</span>}
-                    </NavLink>
-                  );
-
-                  if (collapsed) {
-                    return (
-                      <Tooltip key={item.key}>
-                        <TooltipTrigger asChild>
-                          {linkContent}
-                        </TooltipTrigger>
-                        <TooltipContent side="right" sideOffset={8} className="font-medium">
-                          {label}
-                        </TooltipContent>
-                      </Tooltip>
+                    const linkContent = (
+                      <NavLink
+                        key={item.key}
+                        to={item.path}
+                        onClick={onNavigate}
+                        className={cn(
+                          'relative flex items-center rounded-lg text-sm font-medium transition-all duration-200',
+                          collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5',
+                          isActive
+                            ? 'bg-sidebar-accent text-sidebar-foreground'
+                            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+                        )}
+                      >
+                        {isActive && <div className="sidebar-active-indicator" />}
+                        <Icon className={cn(
+                          'flex-shrink-0 transition-all duration-200',
+                          collapsed ? 'w-5 h-5' : 'w-[18px] h-[18px]'
+                        )} />
+                        {!collapsed && <span className="truncate">{label}</span>}
+                      </NavLink>
                     );
-                  }
 
-                  return linkContent;
-                })}
+                    if (collapsed) {
+                      return (
+                        <Tooltip key={item.key}>
+                          <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+                          <TooltipContent side="right" sideOffset={8} className="font-medium">
+                            {label}
+                          </TooltipContent>
+                        </Tooltip>
+                      );
+                    }
+                    return linkContent;
+                  })}
+                </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </nav>
 
         {/* Collapse Toggle + Footer */}

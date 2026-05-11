@@ -38,6 +38,10 @@ import BackupRestorePage from "@/pages/BackupRestorePage";
 import CustomerStatusPage from "@/pages/CustomerStatusPage";
 import IntegrationSettingsPage from "@/pages/IntegrationSettingsPage";
 import AuditCashoutPage from "@/pages/AuditCashoutPage";
+import AuditTransaksiPage from "@/pages/audit/AuditTransaksiPage";
+import AuditBudgetPage from "@/pages/audit/AuditBudgetPage";
+import AuditExportPage from "@/pages/audit/AuditExportPage";
+import AuditAlertPage from "@/pages/audit/AuditAlertPage";
 import NotFound from "@/pages/NotFound";
 const queryClient = new QueryClient();
 
@@ -109,6 +113,10 @@ const App = () => (
                 
                 {/* Audit Cash Out */}
                 <Route path="/audit-cashout" element={<AuditCashoutPage />} />
+                <Route path="/audit-cashout/transaksi" element={<AuditTransaksiPage />} />
+                <Route path="/audit-cashout/budget" element={<AuditBudgetPage />} />
+                <Route path="/audit-cashout/export" element={<AuditExportPage />} />
+                <Route path="/audit-cashout/alert" element={<AuditAlertPage />} />
 
                 {/* User Profile */}
                 <Route path="/my-profile" element={<MyProfilePage />} />
