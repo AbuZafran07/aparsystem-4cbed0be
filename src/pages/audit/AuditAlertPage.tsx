@@ -9,10 +9,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { useAuditConfig } from '@/contexts/AuditConfigContext';
 
 // ─── Types & constants ────────────────────────────────────────────────────────
 const db = supabase as any;
-const TAHUN = 2026;
 
 interface Department { id: string; name: string; color: string; }
 interface BudgetRow   { department_id: string; amount: number; }
@@ -125,6 +125,7 @@ function AlertCard({ dept, onViewTransaksi }: { dept: DeptStat; onViewTransaksi:
 export default function AuditAlertPage() {
   const navigate = useNavigate();
   const qc = useQueryClient();
+  const { year: TAHUN } = useAuditConfig();
 
   // ── Queries ─── refetch every 30s for real-time badge update ─────────────
   const { data: departments = [], isLoading: deptLoading } = useQuery<Department[]>({

@@ -15,9 +15,9 @@ import {
 } from 'recharts';
 import { supabase } from '@/integrations/supabase/client';
 import { cn } from '@/lib/utils';
+import { useAuditConfig } from '@/contexts/AuditConfigContext';
 
 const db = supabase as any;
-const TAHUN = 2026;
 
 const BULAN_LIST = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -63,6 +63,7 @@ const DonutTooltip = ({ active, payload }: any) => {
 
 export default function AuditCashoutPage() {
   const navigate = useNavigate();
+  const { year: TAHUN } = useAuditConfig();
   const [filterBulan, setFilterBulan] = useState<string>('all');
   const [filterDept, setFilterDept] = useState<string>('all');
   const [dismissedAlerts, setDismissedAlerts] = useState<string[]>([]);

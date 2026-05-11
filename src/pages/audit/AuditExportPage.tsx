@@ -9,10 +9,10 @@ import {
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { useAuditConfig } from '@/contexts/AuditConfigContext';
 
 // ─── Types & constants ────────────────────────────────────────────────────────
 const db = supabase as any;
-const TAHUN = 2026;
 
 const BULAN_LIST = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -77,8 +77,9 @@ function buildPdfHtml(opts: {
   filterBulan: string;
   filterDept: string;
   deptName: (id: string) => string;
+  year: number;
 }): string {
-  const { transactions, departments, budgetMap, filterBulan, filterDept, deptName } = opts;
+  const { transactions, departments, budgetMap, filterBulan, filterDept, deptName, year } = opts;
 
   const printDate = new Date().toLocaleDateString('id-ID', {
     weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
@@ -133,7 +134,7 @@ function buildPdfHtml(opts: {
 <html lang="id">
 <head>
   <meta charset="UTF-8" />
-  <title>Audit Cash Out ${TAHUN}</title>
+  <title>Audit Cash Out ${year}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: 'Segoe UI', Arial, sans-serif; font-size: 12px; color: #1a1a1a; padding: 32px; background: #fff; }
@@ -167,7 +168,7 @@ function buildPdfHtml(opts: {
   <div class="header">
     <img src="${logoUrl}" alt="Kemika" onerror="this.style.display='none'" />
     <div class="header-text">
-      <h1>Laporan Audit Cash Out ${TAHUN}</h1>
+      <h1>Laporan Audit Cash Out ${year}</h1>
       <p>PT. Kemika Karya Pratama · Laporan Pengeluaran per Departemen</p>
     </div>
   </div>
@@ -182,7 +183,7 @@ function buildPdfHtml(opts: {
     <thead>
       <tr>
         <th>Departemen</th>
-        <th class="right">Budget ${TAHUN}</th>
+        <th class="right">Budget ${year}</th>
         <th class="right">Realisasi</th>
         <th class="right">Sisa</th>
         <th class="right">%</th>
@@ -225,7 +226,7 @@ function buildPdfHtml(opts: {
   </table>`}
 
   <div class="footer">
-    <span>PT. Kemika Karya Pratama · Sistem Audit Cash Out ${TAHUN}</span>
+    <span>PT. Kemika Karya Pratama · Sistem Audit Cash Out ${year}</span>
     <span>Dokumen ini digenerate otomatis oleh sistem</span>
   </div>
 </body>
@@ -291,6 +292,7 @@ function buildCsv(
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function AuditExportPage() {
   const { toast } = useToast();
+  const { year: TAHUN } = useAuditConfig();
 
   // PDF filter state
   const [pdfBulan, setPdfBulan] = useState('all');
@@ -361,7 +363,7 @@ export default function AuditExportPage() {
   const handlePdf = () => {
     setPdfLoading(true);
     try {
-      const html = buildPdfHtml({ transactions: pdfTx, departments, budgetMap, filterBulan: pdfBulan, filterDept: pdfDept, deptName });
+      const html = buildPdfHtml({ transactions: pdfTx, departments, budgetMap, filterBulan: pdfBulan, filterDept: pdfDept, deptName, year: TAHUN });
       const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
       const url  = URL.createObjectURL(blob);
       const win  = window.open(url, '_blank');

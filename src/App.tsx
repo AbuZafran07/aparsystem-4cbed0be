@@ -42,11 +42,14 @@ import AuditTransaksiPage from "@/pages/audit/AuditTransaksiPage";
 import AuditBudgetPage from "@/pages/audit/AuditBudgetPage";
 import AuditExportPage from "@/pages/audit/AuditExportPage";
 import AuditAlertPage from "@/pages/audit/AuditAlertPage";
+import AuditSettingsPage from "@/pages/audit/AuditSettingsPage";
+import { AuditConfigProvider } from "@/contexts/AuditConfigContext";
 import NotFound from "@/pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
+    <AuditConfigProvider>
     <LanguageProvider>
       <AuthProvider>
         <TooltipProvider>
@@ -117,6 +120,7 @@ const App = () => (
                 <Route path="/audit-cashout/budget" element={<AuditBudgetPage />} />
                 <Route path="/audit-cashout/export" element={<AuditExportPage />} />
                 <Route path="/audit-cashout/alert" element={<AuditAlertPage />} />
+                <Route path="/audit-cashout/settings" element={<AuditSettingsPage />} />
 
                 {/* User Profile */}
                 <Route path="/my-profile" element={<MyProfilePage />} />
@@ -132,6 +136,7 @@ const App = () => (
         </TooltipProvider>
       </AuthProvider>
     </LanguageProvider>
+    </AuditConfigProvider>
   </QueryClientProvider>
 );
 

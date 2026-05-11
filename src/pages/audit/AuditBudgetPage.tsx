@@ -7,10 +7,10 @@ import { Label } from '@/components/ui/label';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { cn } from '@/lib/utils';
+import { useAuditConfig } from '@/contexts/AuditConfigContext';
 
 // ─── Constants & types ────────────────────────────────────────────────────────
 const db = supabase as any;
-const TAHUN = 2026;
 
 interface Department  { id: string; name: string; color: string; }
 interface BudgetRow   { id?: string; department_id: string; year: number; amount: number; }
@@ -156,6 +156,7 @@ function BudgetCard({ dept, budgetRp, spentRp, onSave }: BudgetCardProps) {
 export default function AuditBudgetPage() {
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { year: TAHUN } = useAuditConfig();
 
   // ── Queries ──────────────────────────────────────────────────────────────
   const { data: departments = [], isLoading: deptLoading } = useQuery<Department[]>({

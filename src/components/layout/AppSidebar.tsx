@@ -14,9 +14,9 @@ import { cn } from '@/lib/utils';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import WorkspaceSwitcher from './WorkspaceSwitcher';
 import { supabase } from '@/integrations/supabase/client';
+import { useAuditConfig } from '@/contexts/AuditConfigContext';
 
 const db = supabase as any;
-const AUDIT_YEAR = 2026;
 
 interface MenuItem {
   key: string;
@@ -102,6 +102,7 @@ interface AuditItem {
 
 function AuditNavMenu({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const location = useLocation();
+  const { year: AUDIT_YEAR } = useAuditConfig();
 
   const { data: alertCount = 0 } = useQuery<number>({
     queryKey: ['audit-sidebar-alert-count', AUDIT_YEAR],
@@ -129,6 +130,7 @@ function AuditNavMenu({ collapsed, onNavigate }: { collapsed: boolean; onNavigat
     { key: 'audit-budget', label: 'Budget Plan', icon: PieChart, path: '/audit-cashout/budget' },
     { key: 'audit-export', label: 'Export Laporan', icon: Download, path: '/audit-cashout/export' },
     { key: 'audit-alert', label: 'Alert', icon: Bell, path: '/audit-cashout/alert', badge: alertCount },
+    { key: 'audit-settings', label: 'Pengaturan', icon: Settings, path: '/audit-cashout/settings' },
   ];
 
   return (
@@ -210,6 +212,7 @@ export default function AppSidebar({ onNavigate, collapsed = false, onToggleColl
   const { t } = useLanguage();
   const { canAccessMenu } = useRoleAccess();
   const location = useLocation();
+  const { year: auditYear } = useAuditConfig();
   const isAuditRoute = location.pathname.startsWith('/audit-cashout');
 
   const filteredSections = menuStructure
@@ -238,7 +241,7 @@ export default function AppSidebar({ onNavigate, collapsed = false, onToggleColl
                 {isAuditRoute ? 'Audit Cash Out' : 'AP/AR HUB'}
               </span>
               <span className="text-xs text-sidebar-foreground/60 truncate">
-                {isAuditRoute ? 'Audit Module 2026' : 'Finance System'}
+                {isAuditRoute ? `Audit Module ${auditYear}` : 'Finance System'}
               </span>
             </div>
           )}

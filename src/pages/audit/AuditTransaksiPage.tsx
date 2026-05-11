@@ -26,10 +26,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
+import { useAuditConfig } from '@/contexts/AuditConfigContext';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 const db = supabase as any;
-const TAHUN = 2026;
 
 const BULAN_LIST = [
   'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
@@ -153,6 +153,7 @@ export default function AuditTransaksiPage() {
   const { toast } = useToast();
   const { user } = useAuth();
   const qc = useQueryClient();
+  const { year: TAHUN } = useAuditConfig();
   const [searchParams, setSearchParams] = useSearchParams();
 
   // ── Filter state — initialise from URL params ─────────────────────────────
