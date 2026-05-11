@@ -660,6 +660,91 @@ export type Database = {
           },
         ]
       }
+      budgets: {
+        Row: {
+          amount: number
+          created_at: string
+          department_id: string
+          id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          department_id: string
+          id?: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          department_id?: string
+          id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "budgets_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cash_out_transactions: {
+        Row: {
+          bulan: string
+          created_at: string
+          created_by: string | null
+          department_id: string
+          id: string
+          keterangan: string
+          nominal: number
+          status: string
+          tahun: number
+          tanggal: string
+          updated_at: string
+        }
+        Insert: {
+          bulan: string
+          created_at?: string
+          created_by?: string | null
+          department_id: string
+          id?: string
+          keterangan: string
+          nominal?: number
+          status?: string
+          tahun: number
+          tanggal: string
+          updated_at?: string
+        }
+        Update: {
+          bulan?: string
+          created_at?: string
+          created_by?: string | null
+          department_id?: string
+          id?: string
+          keterangan?: string
+          nominal?: number
+          status?: string
+          tahun?: number
+          tanggal?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_out_transactions_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_profile: {
         Row: {
           address: string | null
@@ -725,6 +810,30 @@ export type Database = {
           id?: string
           is_active?: boolean
           phone?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      departments: {
+        Row: {
+          color: string
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          id?: string
+          name?: string
           updated_at?: string
         }
         Relationships: []
