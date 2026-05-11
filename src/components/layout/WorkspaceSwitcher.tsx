@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ArrowLeftRight, ReceiptText, ChevronDown, Check } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useAuditConfig } from '@/contexts/AuditConfigContext';
 
 interface Workspace {
   id: string;
@@ -10,23 +11,6 @@ interface Workspace {
   icon: React.ElementType;
   route: string;
 }
-
-const workspaces: Workspace[] = [
-  {
-    id: 'apar',
-    name: 'AP/AR Hub',
-    subtitle: 'Finance System',
-    icon: ArrowLeftRight,
-    route: '/dashboard',
-  },
-  {
-    id: 'audit',
-    name: 'Audit Cash Out 2026',
-    subtitle: 'Audit Module',
-    icon: ReceiptText,
-    route: '/audit-cashout',
-  },
-];
 
 interface WorkspaceSwitcherProps {
   collapsed?: boolean;
@@ -37,6 +21,12 @@ export default function WorkspaceSwitcher({ collapsed = false }: WorkspaceSwitch
   const navigate = useNavigate();
   const location = useLocation();
   const ref = useRef<HTMLDivElement>(null);
+  const { year } = useAuditConfig();
+
+  const workspaces: Workspace[] = [
+    { id: 'apar',  name: 'AP/AR Hub',              subtitle: 'Finance System', icon: ArrowLeftRight, route: '/dashboard'     },
+    { id: 'audit', name: `Audit Cash Out ${year}`, subtitle: 'Audit Module',   icon: ReceiptText,    route: '/audit-cashout' },
+  ];
 
   const active = location.pathname.startsWith('/audit-cashout')
     ? workspaces[1]
