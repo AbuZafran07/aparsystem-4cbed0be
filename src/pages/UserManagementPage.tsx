@@ -396,6 +396,7 @@ export default function UserManagementPage() {
                 <SelectContent>
                   <SelectItem value="PURCHASING">Purchasing</SelectItem>
                   <SelectItem value="FINANCE">Finance</SelectItem>
+                  <SelectItem value="SALES">{language === 'en' ? 'Sales (View Only)' : 'Sales (Lihat Saja)'}</SelectItem>
                   <SelectItem value="ADMIN">Admin</SelectItem>
                   <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
                 </SelectContent>
