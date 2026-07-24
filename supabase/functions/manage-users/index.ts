@@ -9,13 +9,13 @@ interface CreateUserPayload {
   email: string;
   password: string;
   fullName: string;
-  role: 'PURCHASING' | 'FINANCE' | 'ADMIN' | 'SUPER_ADMIN';
+  role: 'PURCHASING' | 'FINANCE' | 'ADMIN' | 'SUPER_ADMIN' | 'SALES';
 }
 
 interface UpdateUserPayload {
   userId: string;
   fullName?: string;
-  role?: 'PURCHASING' | 'FINANCE' | 'ADMIN' | 'SUPER_ADMIN';
+  role?: 'PURCHASING' | 'FINANCE' | 'ADMIN' | 'SUPER_ADMIN' | 'SALES';
   isActive?: boolean;
 }
 
@@ -24,7 +24,7 @@ interface DeleteUserPayload {
 }
 
 // Validation helpers
-const VALID_ROLES = ['PURCHASING', 'FINANCE', 'ADMIN', 'SUPER_ADMIN'] as const;
+const VALID_ROLES = ['PURCHASING', 'FINANCE', 'ADMIN', 'SUPER_ADMIN', 'SALES'] as const;
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_NAME_LENGTH = 100;
