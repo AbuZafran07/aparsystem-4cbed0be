@@ -223,6 +223,7 @@ export default function UserManagementPage() {
     FINANCE: { en: 'Finance', id: 'Finance' },
     ADMIN: { en: 'Admin', id: 'Admin' },
     SUPER_ADMIN: { en: 'Super Admin', id: 'Super Admin' },
+    SALES: { en: 'Sales (View Only)', id: 'Sales (Lihat Saja)' },
   };
 
   return (
@@ -395,6 +396,7 @@ export default function UserManagementPage() {
                 <SelectContent>
                   <SelectItem value="PURCHASING">Purchasing</SelectItem>
                   <SelectItem value="FINANCE">Finance</SelectItem>
+                  <SelectItem value="SALES">{language === 'en' ? 'Sales (View Only)' : 'Sales (Lihat Saja)'}</SelectItem>
                   <SelectItem value="ADMIN">Admin</SelectItem>
                   <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
                 </SelectContent>
@@ -440,6 +442,7 @@ export default function UserManagementPage() {
                 <SelectContent>
                   <SelectItem value="PURCHASING">Purchasing</SelectItem>
                   <SelectItem value="FINANCE">Finance</SelectItem>
+                  <SelectItem value="SALES">{language === 'en' ? 'Sales (View Only)' : 'Sales (Lihat Saja)'}</SelectItem>
                   <SelectItem value="ADMIN">Admin</SelectItem>
                   <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
                 </SelectContent>

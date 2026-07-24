@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useCallback, ReactNode, use
 import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser, Session } from '@supabase/supabase-js';
 
-export type UserRole = 'PURCHASING' | 'FINANCE' | 'ADMIN' | 'SUPER_ADMIN';
+export type UserRole = 'PURCHASING' | 'FINANCE' | 'ADMIN' | 'SUPER_ADMIN' | 'SALES';
 
 export interface User {
   id: string;
@@ -219,11 +219,24 @@ export function useRoleAccess() {
     const systemMenuItems = ['auditLogs', 'userManagement', 'systemSettings'];
     const superAdminOnly = ['backupRestore', 'integrationSettings'];
 
+    // SALES: view-only access limited to AR-related menus
+    const salesMenuItems = [
+      'dashboard',
+      'accountsReceivable',
+      'arAging',
+      'arReport',
+      'customerStatus',
+      'arReceipts',
+      'billingLetters',
+      'billingEmailLogs',
+    ];
+
     const roleMenuAccess: Record<UserRole, string[]> = {
       PURCHASING: [...allMenuItems, 'auditLogs'],
       FINANCE: [...allMenuItems, 'auditLogs'],
       ADMIN: [...allMenuItems, ...systemMenuItems],
       SUPER_ADMIN: [...allMenuItems, ...systemMenuItems, ...superAdminOnly],
+      SALES: salesMenuItems,
     };
 
     return roleMenuAccess[user.role]?.includes(menuKey) ?? false;
