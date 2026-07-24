@@ -223,6 +223,7 @@ export default function UserManagementPage() {
     FINANCE: { en: 'Finance', id: 'Finance' },
     ADMIN: { en: 'Admin', id: 'Admin' },
     SUPER_ADMIN: { en: 'Super Admin', id: 'Super Admin' },
+    SALES: { en: 'Sales (View Only)', id: 'Sales (Lihat Saja)' },
   };
 
   return (
