@@ -288,23 +288,50 @@ export default function PaymentRequestsPage() {
     }
   };
 
-  const handleMarkAsPaid = async (request: PaymentRequest) => {
+  const openPayDialog = async (request: PaymentRequest) => {
+    setSelectedRequest(request);
+    setPayReferenceNo('');
+    setPayBankAccountId('');
+    if (bankAccounts.length === 0) {
+      const { data } = await supabase
+        .from('bank_accounts')
+        .select('id, bank_name, account_no, account_name')
+        .eq('is_active', true)
+        .order('bank_name');
+      setBankAccounts(data || []);
+    }
+    setIsPayDialogOpen(true);
+  };
+
+  const handleMarkAsPaid = async () => {
+    if (!selectedRequest) return;
+    if (!payBankAccountId) {
+      toast.error(language === 'en' ? 'Please select a bank account' : 'Mohon pilih rekening bank');
+      return;
+    }
     try {
       setProcessing(true);
-      const { error } = await supabase
-        .from('payment_requests')
-        .update({
-          status: 'PAID',
-          paid_at: new Date().toISOString(),
-        })
-        .eq('id', request.id);
-
+      const { data, error } = await supabase.rpc('settle_payment_request', {
+        _request_id: selectedRequest.id,
+        _bank_account_id: payBankAccountId,
+        _reference_no: payReferenceNo,
+      });
       if (error) throw error;
-      toast.success(language === 'en' ? 'Marked as paid' : 'Ditandai sebagai dibayar');
+      const res = data as any;
+      if (res?.new_pr_no) {
+        toast.success(
+          language === 'en'
+            ? `Marked as paid. Draft ${res.new_pr_no} auto-created for remaining outstanding.`
+            : `Ditandai dibayar. Draft ${res.new_pr_no} otomatis dibuat untuk sisa outstanding.`
+        );
+      } else {
+        toast.success(language === 'en' ? 'Marked as paid. Invoice fully settled.' : 'Ditandai dibayar. Invoice lunas.');
+      }
+      setIsPayDialogOpen(false);
       fetchData();
     } catch (error: any) {
       console.error('Error marking as paid:', error);
-      toast.error(language === 'en' ? 'Failed to update' : 'Gagal memperbarui');
+      toast.error(error?.message || (language === 'en' ? 'Failed to update' : 'Gagal memperbarui'));
     } finally {
       setProcessing(false);
     }
