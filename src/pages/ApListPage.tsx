@@ -1169,8 +1169,14 @@ export default function ApListPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedInvoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
+                paginatedInvoices.map((invoice) => {
+                  const prs = prByInvoice[invoice.id] || [];
+                  const pendingCount = prs.filter(p => p.status === 'PENDING' || p.status === 'APPROVED' || p.status === 'DRAFT').length;
+                  const paidCount = prs.filter(p => p.status === 'PAID').length;
+                  const isExpanded = expandedInvoiceId === invoice.id;
+                  return (
+                  <React.Fragment key={invoice.id}>
+                  <TableRow>
                     <TableCell className="font-medium">{invoice.vendor_name}</TableCell>
                     <TableCell>
                       <div>
@@ -1193,9 +1199,24 @@ export default function ApListPage() {
                       {formatCurrency(invoice.invoice_amount)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <span className={cn(invoice.outstanding_amount > 0 && 'text-warning font-medium')}>
-                        {formatCurrency(invoice.outstanding_amount)}
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={cn(invoice.outstanding_amount > 0 && 'text-warning font-medium')}>
+                          {formatCurrency(invoice.outstanding_amount)}
+                        </span>
+                        {prs.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedInvoiceId(isExpanded ? null : invoice.id)}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-muted-foreground/10 text-muted-foreground"
+                            title={language === 'en' ? 'View payment requests' : 'Lihat pengajuan pembayaran'}
+                          >
+                            PR: {pendingCount > 0 && `${pendingCount} ${language === 'en' ? 'active' : 'aktif'}`}
+                            {pendingCount > 0 && paidCount > 0 && ' · '}
+                            {paidCount > 0 && `${paidCount} paid`}
+                            {' '}{isExpanded ? '▲' : '▼'}
+                          </button>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge className={cn('text-xs', statusConfig[invoice.status]?.className)}>
