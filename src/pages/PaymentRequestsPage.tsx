@@ -673,7 +673,7 @@ export default function PaymentRequestsPage() {
                           {isFinance && request.status === 'APPROVED' && (
                             <DropdownMenuItem
                               className="gap-2 text-success"
-                              onClick={() => handleMarkAsPaid(request)}
+                              onClick={() => openPayDialog(request)}
                               disabled={processing}
                             >
                               <Check className="w-4 h-4" />
