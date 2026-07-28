@@ -284,6 +284,23 @@ export default function ApListPage() {
 
       setInvoices(formattedInvoices);
 
+      // Fetch payment requests linked to these invoices
+      const invoiceIds = formattedInvoices.map(i => i.id);
+      if (invoiceIds.length > 0) {
+        const { data: prData } = await supabase
+          .from('payment_requests')
+          .select('id, request_no, ap_invoice_id, status, submitted_amount, approved_amount, request_date, paid_at, notes')
+          .in('ap_invoice_id', invoiceIds)
+          .order('created_at', { ascending: true });
+        const grouped: Record<string, any[]> = {};
+        (prData || []).forEach((pr: any) => {
+          (grouped[pr.ap_invoice_id] ||= []).push(pr);
+        });
+        setPrByInvoice(grouped);
+      } else {
+        setPrByInvoice({});
+      }
+
       // Fetch vendors for dropdown (include address and bank details for payment request)
       const { data: vendorsData } = await supabase
         .from('vendors')
