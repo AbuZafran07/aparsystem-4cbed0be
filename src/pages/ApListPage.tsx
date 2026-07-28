@@ -886,6 +886,48 @@ export default function ApListPage() {
     }
   };
 
+  const handlePrintExistingPR = async (invoice: ApInvoice, pr: any) => {
+    try {
+      const vendor = vendors.find(v => v.id === invoice.vendor_id);
+      const submitted = Number(pr.submitted_amount) || 0;
+      const approved = pr.approved_amount != null ? Number(pr.approved_amount) : undefined;
+      const requestData: PaymentRequestData = {
+        requestNo: pr.request_no,
+        requestDate: pr.request_date,
+        vendorName: invoice.vendor_name,
+        vendorAddress: vendor?.address || undefined,
+        vendorInvoiceNumber: invoice.vendor_invoice_number,
+        poNumber: invoice.po_number,
+        productName: invoice.product_name || undefined,
+        spPoDate: invoice.sp_po_date,
+        invoiceDate: invoice.invoice_date,
+        dueDate: invoice.due_date,
+        invoiceAmount: invoice.invoice_amount,
+        outstandingAmount: invoice.outstanding_amount,
+        overdueDays: invoice.overdue_days,
+        notes: pr.notes || undefined,
+        companyName: companyProfile?.company_name || companyProfile?.brand_name || 'Company',
+        companyAddress: companyProfile?.address || undefined,
+        companyPhone: companyProfile?.phone || undefined,
+        companyEmail: companyProfile?.email || undefined,
+        companyLogoUrl: companyProfile?.logo_url || undefined,
+        requestedBy: user?.name || 'User',
+        status: pr.status,
+        paymentMethod: 'transfer',
+        bankName: vendor?.bank_name || undefined,
+        bankAccountNo: vendor?.bank_account_no || undefined,
+        transferAmount: submitted,
+        submittedAmount: submitted,
+        approvedAmount: approved,
+      };
+      const html = generatePaymentRequestHTML(requestData);
+      await downloadPaymentRequestPDF(html, `Pengajuan_Pembayaran_${pr.request_no}.pdf`);
+    } catch (e: any) {
+      console.error('Print PR error:', e);
+      toast.error(e?.message || (language === 'en' ? 'Failed to print' : 'Gagal mencetak'));
+    }
+  };
+
   const handleOpenPaymentRequest = (invoice: ApInvoice) => {
     setSelectedInvoice(invoice);
     setPaymentRequestData({
@@ -1360,6 +1402,7 @@ export default function ApListPage() {
                                   <th className="text-right px-3 py-1.5">{language === 'en' ? 'Approved' : 'Disetujui'}</th>
                                   <th className="text-left px-3 py-1.5">Status</th>
                                   <th className="text-left px-3 py-1.5">{language === 'en' ? 'Notes' : 'Catatan'}</th>
+                                  <th className="text-center px-3 py-1.5 w-[80px]">{language === 'en' ? 'Action' : 'Aksi'}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -1376,6 +1419,17 @@ export default function ApListPage() {
                                     </td>
                                     <td className="px-3 py-1.5 text-muted-foreground truncate max-w-[240px]">
                                       {pr.notes || '-'}
+                                    </td>
+                                    <td className="px-3 py-1.5 text-center">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        title={language === 'en' ? 'Print payment request' : 'Cetak form pengajuan'}
+                                        onClick={() => handlePrintExistingPR(invoice, pr)}
+                                      >
+                                        <Printer className="w-3.5 h-3.5" />
+                                      </Button>
                                     </td>
                                   </tr>
                                 ))}
