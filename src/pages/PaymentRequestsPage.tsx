@@ -132,6 +132,10 @@ export default function PaymentRequestsPage() {
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
+  const [payBankAccountId, setPayBankAccountId] = useState<string>('');
+  const [payReferenceNo, setPayReferenceNo] = useState<string>('');
+  const [bankAccounts, setBankAccounts] = useState<{ id: string; bank_name: string; account_no: string; account_name: string }[]>([]);
   const [approveAmount, setApproveAmount] = useState('');
   const [selectedRequest, setSelectedRequest] = useState<PaymentRequest | null>(null);
   const [processing, setProcessing] = useState(false);
