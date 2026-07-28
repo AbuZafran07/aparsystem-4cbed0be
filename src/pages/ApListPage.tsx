@@ -154,6 +154,8 @@ export default function ApListPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<StatusTab>('ALL');
   const [invoices, setInvoices] = useState<ApInvoice[]>([]);
+  const [prByInvoice, setPrByInvoice] = useState<Record<string, Array<{ id: string; request_no: string; status: string; submitted_amount: number; approved_amount: number | null; request_date: string; paid_at: string | null; notes: string | null }>>>({});
+  const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
