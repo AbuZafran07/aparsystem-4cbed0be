@@ -1402,6 +1402,7 @@ export default function ApListPage() {
                                   <th className="text-right px-3 py-1.5">{language === 'en' ? 'Approved' : 'Disetujui'}</th>
                                   <th className="text-left px-3 py-1.5">Status</th>
                                   <th className="text-left px-3 py-1.5">{language === 'en' ? 'Notes' : 'Catatan'}</th>
+                                  <th className="text-center px-3 py-1.5 w-[80px]">{language === 'en' ? 'Action' : 'Aksi'}</th>
                                 </tr>
                               </thead>
                               <tbody>
@@ -1418,6 +1419,17 @@ export default function ApListPage() {
                                     </td>
                                     <td className="px-3 py-1.5 text-muted-foreground truncate max-w-[240px]">
                                       {pr.notes || '-'}
+                                    </td>
+                                    <td className="px-3 py-1.5 text-center">
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-7 w-7"
+                                        title={language === 'en' ? 'Print payment request' : 'Cetak form pengajuan'}
+                                        onClick={() => handlePrintExistingPR(invoice, pr)}
+                                      >
+                                        <Printer className="w-3.5 h-3.5" />
+                                      </Button>
                                     </td>
                                   </tr>
                                 ))}
