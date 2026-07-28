@@ -132,6 +132,10 @@ export default function PaymentRequestsPage() {
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [isPayDialogOpen, setIsPayDialogOpen] = useState(false);
+  const [payBankAccountId, setPayBankAccountId] = useState<string>('');
+  const [payReferenceNo, setPayReferenceNo] = useState<string>('');
+  const [bankAccounts, setBankAccounts] = useState<{ id: string; bank_name: string; account_no: string; account_name: string }[]>([]);
   const [approveAmount, setApproveAmount] = useState('');
   const [selectedRequest, setSelectedRequest] = useState<PaymentRequest | null>(null);
   const [processing, setProcessing] = useState(false);
@@ -284,23 +288,50 @@ export default function PaymentRequestsPage() {
     }
   };
 
-  const handleMarkAsPaid = async (request: PaymentRequest) => {
+  const openPayDialog = async (request: PaymentRequest) => {
+    setSelectedRequest(request);
+    setPayReferenceNo('');
+    setPayBankAccountId('');
+    if (bankAccounts.length === 0) {
+      const { data } = await supabase
+        .from('bank_accounts')
+        .select('id, bank_name, account_no, account_name')
+        .eq('is_active', true)
+        .order('bank_name');
+      setBankAccounts(data || []);
+    }
+    setIsPayDialogOpen(true);
+  };
+
+  const handleMarkAsPaid = async () => {
+    if (!selectedRequest) return;
+    if (!payBankAccountId) {
+      toast.error(language === 'en' ? 'Please select a bank account' : 'Mohon pilih rekening bank');
+      return;
+    }
     try {
       setProcessing(true);
-      const { error } = await supabase
-        .from('payment_requests')
-        .update({
-          status: 'PAID',
-          paid_at: new Date().toISOString(),
-        })
-        .eq('id', request.id);
-
+      const { data, error } = await supabase.rpc('settle_payment_request', {
+        _request_id: selectedRequest.id,
+        _bank_account_id: payBankAccountId,
+        _reference_no: payReferenceNo,
+      });
       if (error) throw error;
-      toast.success(language === 'en' ? 'Marked as paid' : 'Ditandai sebagai dibayar');
+      const res = data as any;
+      if (res?.new_pr_no) {
+        toast.success(
+          language === 'en'
+            ? `Marked as paid. Draft ${res.new_pr_no} auto-created for remaining outstanding.`
+            : `Ditandai dibayar. Draft ${res.new_pr_no} otomatis dibuat untuk sisa outstanding.`
+        );
+      } else {
+        toast.success(language === 'en' ? 'Marked as paid. Invoice fully settled.' : 'Ditandai dibayar. Invoice lunas.');
+      }
+      setIsPayDialogOpen(false);
       fetchData();
     } catch (error: any) {
       console.error('Error marking as paid:', error);
-      toast.error(language === 'en' ? 'Failed to update' : 'Gagal memperbarui');
+      toast.error(error?.message || (language === 'en' ? 'Failed to update' : 'Gagal memperbarui'));
     } finally {
       setProcessing(false);
     }
@@ -642,7 +673,7 @@ export default function PaymentRequestsPage() {
                           {isFinance && request.status === 'APPROVED' && (
                             <DropdownMenuItem
                               className="gap-2 text-success"
-                              onClick={() => handleMarkAsPaid(request)}
+                              onClick={() => openPayDialog(request)}
                               disabled={processing}
                             >
                               <Check className="w-4 h-4" />
@@ -924,6 +955,73 @@ export default function PaymentRequestsPage() {
               {processing && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
               <Check className="w-4 h-4 mr-2" />
               {language === 'en' ? 'Approve' : 'Setujui'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Mark as Paid Dialog */}
+      <Dialog open={isPayDialogOpen} onOpenChange={setIsPayDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{language === 'en' ? 'Mark as Paid' : 'Tandai Dibayar'}</DialogTitle>
+            <DialogDescription>
+              {selectedRequest?.request_no} - {selectedRequest?.vendor_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-md border p-3 bg-muted/40 text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{language === 'en' ? 'Approved amount' : 'Nilai Approved'}</span>
+                <span className="font-medium">
+                  {selectedRequest ? formatCurrency(selectedRequest.approved_amount ?? selectedRequest.submitted_amount) : '-'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{language === 'en' ? 'Invoice outstanding' : 'Sisa Invoice'}</span>
+                <span className="font-medium">{selectedRequest ? formatCurrency(selectedRequest.outstanding_amount) : '-'}</span>
+              </div>
+              {selectedRequest && (selectedRequest.approved_amount ?? selectedRequest.submitted_amount) < selectedRequest.outstanding_amount && (
+                <p className="text-xs text-orange-600 pt-1">
+                  {language === 'en'
+                    ? 'A new DRAFT payment request for the remaining amount will be auto-created.'
+                    : 'PR baru untuk sisa outstanding akan otomatis dibuat sebagai DRAFT.'}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="text-sm font-medium">{language === 'en' ? 'Bank Account' : 'Rekening Bank'} *</label>
+              <Select value={payBankAccountId} onValueChange={setPayBankAccountId}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder={language === 'en' ? 'Select bank account' : 'Pilih rekening bank'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {bankAccounts.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.bank_name} - {b.account_no} ({b.account_name})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">{language === 'en' ? 'Reference No' : 'No. Referensi'}</label>
+              <Input
+                value={payReferenceNo}
+                onChange={(e) => setPayReferenceNo(e.target.value)}
+                placeholder={language === 'en' ? 'Optional' : 'Opsional'}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPayDialogOpen(false)} disabled={processing}>
+              {language === 'en' ? 'Cancel' : 'Batal'}
+            </Button>
+            <Button onClick={handleMarkAsPaid} disabled={processing}>
+              {processing && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              <Check className="w-4 h-4 mr-2" />
+              {language === 'en' ? 'Confirm Paid' : 'Konfirmasi Dibayar'}
             </Button>
           </DialogFooter>
         </DialogContent>

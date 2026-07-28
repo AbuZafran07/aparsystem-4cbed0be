@@ -1258,6 +1258,14 @@ export type Database = {
         }
         Returns: boolean
       }
+      settle_payment_request: {
+        Args: {
+          _bank_account_id: string
+          _reference_no: string
+          _request_id: string
+        }
+        Returns: Json
+      }
     }
     Enums: {
       email_status: "SENT" | "FAILED"

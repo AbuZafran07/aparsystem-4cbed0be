@@ -154,6 +154,8 @@ export default function ApListPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeTab, setActiveTab] = useState<StatusTab>('ALL');
   const [invoices, setInvoices] = useState<ApInvoice[]>([]);
+  const [prByInvoice, setPrByInvoice] = useState<Record<string, Array<{ id: string; request_no: string; status: string; submitted_amount: number; approved_amount: number | null; request_date: string; paid_at: string | null; notes: string | null }>>>({});
+  const [expandedInvoiceId, setExpandedInvoiceId] = useState<string | null>(null);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
@@ -281,6 +283,23 @@ export default function ApListPage() {
       }));
 
       setInvoices(formattedInvoices);
+
+      // Fetch payment requests linked to these invoices
+      const invoiceIds = formattedInvoices.map(i => i.id);
+      if (invoiceIds.length > 0) {
+        const { data: prData } = await supabase
+          .from('payment_requests')
+          .select('id, request_no, ap_invoice_id, status, submitted_amount, approved_amount, request_date, paid_at, notes')
+          .in('ap_invoice_id', invoiceIds)
+          .order('created_at', { ascending: true });
+        const grouped: Record<string, any[]> = {};
+        (prData || []).forEach((pr: any) => {
+          (grouped[pr.ap_invoice_id] ||= []).push(pr);
+        });
+        setPrByInvoice(grouped);
+      } else {
+        setPrByInvoice({});
+      }
 
       // Fetch vendors for dropdown (include address and bank details for payment request)
       const { data: vendorsData } = await supabase
@@ -1150,8 +1169,14 @@ export default function ApListPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                paginatedInvoices.map((invoice) => (
-                  <TableRow key={invoice.id}>
+                paginatedInvoices.map((invoice) => {
+                  const prs = prByInvoice[invoice.id] || [];
+                  const pendingCount = prs.filter(p => p.status === 'PENDING' || p.status === 'APPROVED' || p.status === 'DRAFT').length;
+                  const paidCount = prs.filter(p => p.status === 'PAID').length;
+                  const isExpanded = expandedInvoiceId === invoice.id;
+                  return (
+                  <React.Fragment key={invoice.id}>
+                  <TableRow>
                     <TableCell className="font-medium">{invoice.vendor_name}</TableCell>
                     <TableCell>
                       <div>
@@ -1174,9 +1199,24 @@ export default function ApListPage() {
                       {formatCurrency(invoice.invoice_amount)}
                     </TableCell>
                     <TableCell className="text-right">
-                      <span className={cn(invoice.outstanding_amount > 0 && 'text-warning font-medium')}>
-                        {formatCurrency(invoice.outstanding_amount)}
-                      </span>
+                      <div className="flex flex-col items-end gap-1">
+                        <span className={cn(invoice.outstanding_amount > 0 && 'text-warning font-medium')}>
+                          {formatCurrency(invoice.outstanding_amount)}
+                        </span>
+                        {prs.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => setExpandedInvoiceId(isExpanded ? null : invoice.id)}
+                            className="text-[10px] px-1.5 py-0.5 rounded bg-muted hover:bg-muted-foreground/10 text-muted-foreground"
+                            title={language === 'en' ? 'View payment requests' : 'Lihat pengajuan pembayaran'}
+                          >
+                            PR: {pendingCount > 0 && `${pendingCount} ${language === 'en' ? 'active' : 'aktif'}`}
+                            {pendingCount > 0 && paidCount > 0 && ' · '}
+                            {paidCount > 0 && `${paidCount} paid`}
+                            {' '}{isExpanded ? '▲' : '▼'}
+                          </button>
+                        )}
+                      </div>
                     </TableCell>
                     <TableCell>
                       <Badge className={cn('text-xs', statusConfig[invoice.status]?.className)}>
@@ -1290,7 +1330,79 @@ export default function ApListPage() {
                       </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ))
+                  {isExpanded && prs.length > 0 && (
+                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableCell colSpan={8} className="p-4">
+                        <div className="text-sm">
+                          <div className="flex flex-wrap gap-x-6 gap-y-1 mb-2">
+                            <span>
+                              <span className="text-muted-foreground">{language === 'en' ? 'Invoice:' : 'Invoice:'}</span>{' '}
+                              <span className="font-medium">{formatCurrency(invoice.invoice_amount)}</span>
+                            </span>
+                            <span>
+                              <span className="text-muted-foreground">{language === 'en' ? 'Paid:' : 'Terbayar:'}</span>{' '}
+                              <span className="font-medium text-success">{formatCurrency(invoice.paid_amount)}</span>
+                            </span>
+                            <span>
+                              <span className="text-muted-foreground">{language === 'en' ? 'Outstanding:' : 'Sisa:'}</span>{' '}
+                              <span className={cn('font-medium', invoice.outstanding_amount > 0 && 'text-warning')}>
+                                {formatCurrency(invoice.outstanding_amount)}
+                              </span>
+                            </span>
+                          </div>
+                          <div className="rounded border bg-background overflow-hidden">
+                            <table className="w-full text-xs">
+                              <thead className="bg-muted/50 text-muted-foreground">
+                                <tr>
+                                  <th className="text-left px-3 py-1.5">{language === 'en' ? 'PR No' : 'No. PR'}</th>
+                                  <th className="text-left px-3 py-1.5">{language === 'en' ? 'Date' : 'Tanggal'}</th>
+                                  <th className="text-right px-3 py-1.5">{language === 'en' ? 'Submitted' : 'Diajukan'}</th>
+                                  <th className="text-right px-3 py-1.5">{language === 'en' ? 'Approved' : 'Disetujui'}</th>
+                                  <th className="text-left px-3 py-1.5">Status</th>
+                                  <th className="text-left px-3 py-1.5">{language === 'en' ? 'Notes' : 'Catatan'}</th>
+                                </tr>
+                              </thead>
+                              <tbody>
+                                {prs.map((pr) => (
+                                  <tr key={pr.id} className="border-t">
+                                    <td className="px-3 py-1.5 font-medium">{pr.request_no}</td>
+                                    <td className="px-3 py-1.5">{formatDate(pr.request_date)}</td>
+                                    <td className="px-3 py-1.5 text-right">{formatCurrency(pr.submitted_amount)}</td>
+                                    <td className="px-3 py-1.5 text-right">
+                                      {pr.approved_amount != null ? formatCurrency(pr.approved_amount) : '-'}
+                                    </td>
+                                    <td className="px-3 py-1.5">
+                                      <Badge variant="outline" className="text-[10px]">{pr.status}</Badge>
+                                    </td>
+                                    <td className="px-3 py-1.5 text-muted-foreground truncate max-w-[240px]">
+                                      {pr.notes || '-'}
+                                    </td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                          {invoice.outstanding_amount > 0 && prs.some(p => p.status === 'DRAFT') && (
+                            <p className="text-xs text-orange-600 mt-2">
+                              {language === 'en'
+                                ? 'Action: submit the DRAFT payment request to settle the remaining outstanding.'
+                                : 'Tindakan: submit PR DRAFT di atas untuk melunasi sisa outstanding.'}
+                            </p>
+                          )}
+                          {invoice.outstanding_amount > 0 && !prs.some(p => p.status === 'DRAFT' || p.status === 'PENDING' || p.status === 'APPROVED') && (
+                            <p className="text-xs text-orange-600 mt-2">
+                              {language === 'en'
+                                ? 'Action: create a new payment request for the remaining outstanding.'
+                                : 'Tindakan: buat pengajuan pembayaran baru untuk sisa outstanding.'}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </React.Fragment>
+                  );
+                })
               )}
             </TableBody>
           </Table>
