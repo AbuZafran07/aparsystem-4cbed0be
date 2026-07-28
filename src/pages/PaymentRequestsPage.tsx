@@ -959,6 +959,73 @@ export default function PaymentRequestsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Mark as Paid Dialog */}
+      <Dialog open={isPayDialogOpen} onOpenChange={setIsPayDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{language === 'en' ? 'Mark as Paid' : 'Tandai Dibayar'}</DialogTitle>
+            <DialogDescription>
+              {selectedRequest?.request_no} - {selectedRequest?.vendor_name}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="rounded-md border p-3 bg-muted/40 text-sm space-y-1">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{language === 'en' ? 'Approved amount' : 'Nilai Approved'}</span>
+                <span className="font-medium">
+                  {selectedRequest ? formatCurrency(selectedRequest.approved_amount ?? selectedRequest.submitted_amount) : '-'}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{language === 'en' ? 'Invoice outstanding' : 'Sisa Invoice'}</span>
+                <span className="font-medium">{selectedRequest ? formatCurrency(selectedRequest.outstanding_amount) : '-'}</span>
+              </div>
+              {selectedRequest && (selectedRequest.approved_amount ?? selectedRequest.submitted_amount) < selectedRequest.outstanding_amount && (
+                <p className="text-xs text-orange-600 pt-1">
+                  {language === 'en'
+                    ? 'A new DRAFT payment request for the remaining amount will be auto-created.'
+                    : 'PR baru untuk sisa outstanding akan otomatis dibuat sebagai DRAFT.'}
+                </p>
+              )}
+            </div>
+            <div>
+              <label className="text-sm font-medium">{language === 'en' ? 'Bank Account' : 'Rekening Bank'} *</label>
+              <Select value={payBankAccountId} onValueChange={setPayBankAccountId}>
+                <SelectTrigger className="mt-1">
+                  <SelectValue placeholder={language === 'en' ? 'Select bank account' : 'Pilih rekening bank'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {bankAccounts.map((b) => (
+                    <SelectItem key={b.id} value={b.id}>
+                      {b.bank_name} - {b.account_no} ({b.account_name})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">{language === 'en' ? 'Reference No' : 'No. Referensi'}</label>
+              <Input
+                value={payReferenceNo}
+                onChange={(e) => setPayReferenceNo(e.target.value)}
+                placeholder={language === 'en' ? 'Optional' : 'Opsional'}
+                className="mt-1"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsPayDialogOpen(false)} disabled={processing}>
+              {language === 'en' ? 'Cancel' : 'Batal'}
+            </Button>
+            <Button onClick={handleMarkAsPaid} disabled={processing}>
+              {processing && <Loader2 className="w-4 h-4 animate-spin mr-2" />}
+              <Check className="w-4 h-4 mr-2" />
+              {language === 'en' ? 'Confirm Paid' : 'Konfirmasi Dibayar'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
