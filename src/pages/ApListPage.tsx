@@ -739,8 +739,9 @@ export default function ApListPage() {
 
   const canDelete = (status: InvoiceStatus) => canDeleteAp(status);
 
-  const canRecordPayment = (status: InvoiceStatus, outstanding: number) => {
-    return (isFinance || isPurchasing) && (status === 'APPROVED' || status === 'PARTIAL') && outstanding > 0;
+  const canRecordPayment = (status: InvoiceStatus, outstanding: number, paid = 0) => {
+    const isPartiallyPaid = paid > 0 && outstanding > 0;
+    return (isFinance || isPurchasing) && (status === 'APPROVED' || status === 'PARTIAL' || isPartiallyPaid) && outstanding > 0;
   };
 
   const canMarkAsPaid = (status: InvoiceStatus, outstanding: number, invoiceAmount: number) => {
@@ -769,7 +770,7 @@ export default function ApListPage() {
   };
 
   const canPrintPaymentRequest = (status: InvoiceStatus) => {
-    return status === 'SUBMITTED' || status === 'APPROVED';
+    return status === 'SUBMITTED' || status === 'APPROVED' || status === 'PARTIAL';
   };
 
   const canRequestRevision = (status: InvoiceStatus) => {
@@ -1313,7 +1314,7 @@ export default function ApListPage() {
                               {language === 'en' ? 'Create Payment Request' : 'Buat Pengajuan Pembayaran'}
                             </DropdownMenuItem>
                           )}
-                          {canRecordPayment(invoice.status, invoice.outstanding_amount) && (
+                          {canRecordPayment(invoice.status, invoice.outstanding_amount, invoice.paid_amount) && (
                             <DropdownMenuItem className="gap-2" onClick={() => handleOpenPayment(invoice)}>
                               <CreditCard className="w-4 h-4" />
                               {t('btn.recordPayment')}
