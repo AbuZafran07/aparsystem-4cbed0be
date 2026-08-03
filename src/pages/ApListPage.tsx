@@ -770,7 +770,7 @@ export default function ApListPage() {
   };
 
   const canPrintPaymentRequest = (status: InvoiceStatus) => {
-    return status === 'SUBMITTED' || status === 'APPROVED';
+    return status === 'SUBMITTED' || status === 'APPROVED' || status === 'PARTIAL';
   };
 
   const canRequestRevision = (status: InvoiceStatus) => {
