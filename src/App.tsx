@@ -44,6 +44,13 @@ import AuditExportPage from "@/pages/audit/AuditExportPage";
 import AuditAlertPage from "@/pages/audit/AuditAlertPage";
 import AuditSettingsPage from "@/pages/audit/AuditSettingsPage";
 import { AuditConfigProvider } from "@/contexts/AuditConfigContext";
+import ChartOfAccountsPage from "@/pages/accounting/ChartOfAccountsPage";
+import FiscalPeriodsPage from "@/pages/accounting/FiscalPeriodsPage";
+import AccountingRulesPage from "@/pages/accounting/AccountingRulesPage";
+import JournalEntriesPage from "@/pages/accounting/JournalEntriesPage";
+import GeneralLedgerPage from "@/pages/accounting/GeneralLedgerPage";
+import TrialBalancePage from "@/pages/accounting/TrialBalancePage";
+import FinancialStatementsPage from "@/pages/accounting/FinancialStatementsPage";
 import NotFound from "@/pages/NotFound";
 const queryClient = new QueryClient();
 
@@ -107,6 +114,15 @@ const App = () => (
                 <Route path="/import-export" element={<ImportExportPage />} />
                 <Route path="/export-center" element={<Navigate to="/import-export" replace />} />
                 
+                {/* Accounting (Finance ERP Phase 1) */}
+                <Route path="/accounting/coa" element={<ChartOfAccountsPage />} />
+                <Route path="/accounting/fiscal-periods" element={<FiscalPeriodsPage />} />
+                <Route path="/accounting/rules" element={<AccountingRulesPage />} />
+                <Route path="/accounting/journal-entries" element={<JournalEntriesPage />} />
+                <Route path="/accounting/general-ledger" element={<GeneralLedgerPage />} />
+                <Route path="/accounting/trial-balance" element={<TrialBalancePage />} />
+                <Route path="/accounting/financial-statements" element={<FinancialStatementsPage />} />
+
                 {/* System */}
                 <Route path="/audit-logs" element={<AuditLogsPage />} />
                 <Route path="/users" element={<UserManagementPage />} />

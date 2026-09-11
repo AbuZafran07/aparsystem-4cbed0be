@@ -219,6 +219,17 @@ export function useRoleAccess() {
     const systemMenuItems = ['auditLogs', 'userManagement', 'systemSettings'];
     const superAdminOnly = ['backupRestore', 'integrationSettings'];
 
+    // Accounting (Finance ERP Phase 1) - FINANCE/ADMIN/SUPER_ADMIN only, per PRD 7.1
+    const accountingMenuItems = [
+      'chartOfAccounts',
+      'fiscalPeriods',
+      'accountingRules',
+      'journalEntries',
+      'generalLedger',
+      'trialBalance',
+      'financialStatements',
+    ];
+
     // SALES: view-only access limited to AR-related menus
     const salesMenuItems = [
       'dashboard',
@@ -233,9 +244,9 @@ export function useRoleAccess() {
 
     const roleMenuAccess: Record<UserRole, string[]> = {
       PURCHASING: [...allMenuItems, 'auditLogs'],
-      FINANCE: [...allMenuItems, 'auditLogs'],
-      ADMIN: [...allMenuItems, ...systemMenuItems],
-      SUPER_ADMIN: [...allMenuItems, ...systemMenuItems, ...superAdminOnly],
+      FINANCE: [...allMenuItems, 'auditLogs', ...accountingMenuItems],
+      ADMIN: [...allMenuItems, ...systemMenuItems, ...accountingMenuItems],
+      SUPER_ADMIN: [...allMenuItems, ...systemMenuItems, ...superAdminOnly, ...accountingMenuItems],
       SALES: salesMenuItems,
     };
 

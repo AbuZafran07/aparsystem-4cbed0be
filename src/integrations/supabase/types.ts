@@ -14,6 +14,309 @@ export type Database = {
   }
   public: {
     Tables: {
+      accounting_rules: {
+        Row: {
+          created_at: string
+          credit_account_id: string
+          debit_account_id: string
+          id: string
+          is_active: boolean
+          source_type: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          credit_account_id: string
+          debit_account_id: string
+          id?: string
+          is_active?: boolean
+          source_type: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          credit_account_id?: string
+          debit_account_id?: string
+          id?: string
+          is_active?: boolean
+          source_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "accounting_rules_credit_account_id_fkey"
+            columns: ["credit_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "accounting_rules_debit_account_id_fkey"
+            columns: ["debit_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      chart_of_accounts: {
+        Row: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_control_account: boolean
+          name: string
+          normal_balance: Database["public"]["Enums"]["normal_balance"]
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_control_account?: boolean
+          name: string
+          normal_balance: Database["public"]["Enums"]["normal_balance"]
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_type?: Database["public"]["Enums"]["account_type"]
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_control_account?: boolean
+          name?: string
+          normal_balance?: Database["public"]["Enums"]["normal_balance"]
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_of_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      fiscal_periods: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          end_date: string
+          fiscal_year: number
+          id: string
+          period_no: number
+          start_date: string
+          status: Database["public"]["Enums"]["fiscal_period_status"]
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          end_date: string
+          fiscal_year: number
+          id?: string
+          period_no: number
+          start_date: string
+          status?: Database["public"]["Enums"]["fiscal_period_status"]
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          end_date?: string
+          fiscal_year?: number
+          id?: string
+          period_no?: number
+          start_date?: string
+          status?: Database["public"]["Enums"]["fiscal_period_status"]
+        }
+        Relationships: []
+      }
+      general_ledger: {
+        Row: {
+          account_id: string
+          created_at: string
+          credit: number
+          debit: number
+          id: string
+          journal_line_id: string
+          posting_date: string
+          source_id: string | null
+          source_type: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          credit?: number
+          debit?: number
+          id?: string
+          journal_line_id: string
+          posting_date: string
+          source_id?: string | null
+          source_type?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          credit?: number
+          debit?: number
+          id?: string
+          journal_line_id?: string
+          posting_date?: string
+          source_id?: string | null
+          source_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "general_ledger_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "general_ledger_journal_line_id_fkey"
+            columns: ["journal_line_id"]
+            isOneToOne: true
+            referencedRelation: "journal_entry_lines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journal_entries: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          entry_date: string
+          id: string
+          journal_no: string
+          posted_at: string | null
+          posted_by: string | null
+          reversed_journal_id: string | null
+          source_id: string | null
+          source_type: string | null
+          status: Database["public"]["Enums"]["journal_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          entry_date: string
+          id?: string
+          journal_no: string
+          posted_at?: string | null
+          posted_by?: string | null
+          reversed_journal_id?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: Database["public"]["Enums"]["journal_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          entry_date?: string
+          id?: string
+          journal_no?: string
+          posted_at?: string | null
+          posted_by?: string | null
+          reversed_journal_id?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: Database["public"]["Enums"]["journal_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entries_reversed_journal_id_fkey"
+            columns: ["reversed_journal_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journal_entry_lines: {
+        Row: {
+          account_id: string
+          created_at: string
+          credit: number
+          customer_id: string | null
+          debit: number
+          description: string | null
+          id: string
+          journal_id: string
+          line_no: number
+          vendor_id: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          credit?: number
+          customer_id?: string | null
+          debit?: number
+          description?: string | null
+          id?: string
+          journal_id: string
+          line_no: number
+          vendor_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          credit?: number
+          customer_id?: string | null
+          debit?: number
+          description?: string | null
+          id?: string
+          journal_id?: string
+          line_no?: number
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entry_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ap_invoices: {
         Row: {
           approved_at: string | null
@@ -490,6 +793,7 @@ export type Database = {
           account_no: string
           bank_name: string
           created_at: string
+          gl_account_id: string | null
           id: string
           is_active: boolean
         }
@@ -498,6 +802,7 @@ export type Database = {
           account_no: string
           bank_name: string
           created_at?: string
+          gl_account_id?: string | null
           id?: string
           is_active?: boolean
         }
@@ -506,10 +811,19 @@ export type Database = {
           account_no?: string
           bank_name?: string
           created_at?: string
+          gl_account_id?: string | null
           id?: string
           is_active?: boolean
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "bank_accounts_gl_account_id_fkey"
+            columns: ["gl_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       billing_email_logs: {
         Row: {
@@ -1266,9 +1580,47 @@ export type Database = {
         }
         Returns: Json
       }
+      close_fiscal_period: {
+        Args: { _hard?: boolean; _period_id: string }
+        Returns: Json
+      }
+      create_journal_entry: {
+        Args: {
+          _description: string
+          _entry_date: string
+          _lines: Json
+          _source_id: string | null
+          _source_type: string | null
+        }
+        Returns: Json
+      }
+      create_opening_balance_journal: {
+        Args: Record<PropertyKey, never>
+        Returns: Json
+      }
+      generate_journal_no: {
+        Args: Record<PropertyKey, never>
+        Returns: string
+      }
+      post_journal_entry: {
+        Args: { _journal_id: string }
+        Returns: Json
+      }
+      reopen_fiscal_period: {
+        Args: { _period_id: string }
+        Returns: Json
+      }
+      reverse_journal_entry: {
+        Args: { _journal_id: string; _reason: string }
+        Returns: Json
+      }
     }
     Enums: {
+      account_type: "ASSET" | "LIABILITY" | "EQUITY" | "REVENUE" | "EXPENSE"
       email_status: "SENT" | "FAILED"
+      fiscal_period_status: "OPEN" | "SOFT_CLOSE" | "HARD_CLOSE"
+      journal_status: "DRAFT" | "POSTED" | "REVERSED" | "VOIDED"
+      normal_balance: "DEBIT" | "CREDIT"
       record_status:
         | "DRAFT"
         | "SUBMITTED"
@@ -1406,7 +1758,11 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_type: ["ASSET", "LIABILITY", "EQUITY", "REVENUE", "EXPENSE"],
       email_status: ["SENT", "FAILED"],
+      fiscal_period_status: ["OPEN", "SOFT_CLOSE", "HARD_CLOSE"],
+      journal_status: ["DRAFT", "POSTED", "REVERSED", "VOIDED"],
+      normal_balance: ["DEBIT", "CREDIT"],
       record_status: [
         "DRAFT",
         "SUBMITTED",

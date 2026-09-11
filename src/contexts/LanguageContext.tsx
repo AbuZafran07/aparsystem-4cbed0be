@@ -17,6 +17,7 @@ const translations: TranslationMap = {
   'section.billing': { en: 'BILLING', id: 'PENAGIHAN' },
   'section.masterData': { en: 'MASTER DATA', id: 'MASTER DATA' },
   'section.reports': { en: 'REPORTS', id: 'LAPORAN' },
+  'section.accounting': { en: 'ACCOUNTING', id: 'AKUNTANSI' },
   'section.system': { en: 'SYSTEM', id: 'SISTEM' },
 
   // Menu Items
@@ -48,6 +49,13 @@ const translations: TranslationMap = {
   'menu.systemSettings': { en: 'System Settings', id: 'Pengaturan Sistem' },
   'menu.backupRestore': { en: 'Backup & Restore', id: 'Backup & Restore' },
   'menu.integrationSettings': { en: 'Integration Settings', id: 'Integrasi WMS' },
+  'menu.chartOfAccounts': { en: 'Chart of Accounts', id: 'Bagan Akun' },
+  'menu.fiscalPeriods': { en: 'Fiscal Periods', id: 'Periode Fiskal' },
+  'menu.accountingRules': { en: 'Accounting Rules', id: 'Rule Akuntansi' },
+  'menu.journalEntries': { en: 'Journal Entries', id: 'Jurnal Umum' },
+  'menu.generalLedger': { en: 'General Ledger', id: 'Buku Besar' },
+  'menu.trialBalance': { en: 'Trial Balance', id: 'Neraca Saldo' },
+  'menu.financialStatements': { en: 'Financial Statements', id: 'Laporan Keuangan' },
 
   // Common Buttons
   'btn.save': { en: 'Save', id: 'Simpan' },

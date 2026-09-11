@@ -6,6 +6,7 @@ import {
   TrendingUp, FileBarChart, FileBarChart2, DollarSign, Download, ArrowUpDown,
   ScrollText, Settings, UserCog, ClipboardList, Database, Plug,
   PanelLeftClose, PanelLeftOpen, Bell, List, PieChart,
+  BookOpen, CalendarClock, GitBranch, BookText, Scale, LineChart,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -76,6 +77,18 @@ const menuStructure: MenuSection[] = [
       { key: 'cashflow', translationKey: 'menu.cashflow', icon: DollarSign, path: '/cashflow' },
       { key: 'exportCenter', translationKey: 'menu.exportCenter', icon: Download, path: '/export-center' },
       { key: 'importExportCenter', translationKey: 'menu.importExportCenter', icon: ArrowUpDown, path: '/import-export' },
+    ],
+  },
+  {
+    sectionKey: 'section.accounting',
+    items: [
+      { key: 'chartOfAccounts', translationKey: 'menu.chartOfAccounts', icon: BookOpen, path: '/accounting/coa' },
+      { key: 'fiscalPeriods', translationKey: 'menu.fiscalPeriods', icon: CalendarClock, path: '/accounting/fiscal-periods' },
+      { key: 'accountingRules', translationKey: 'menu.accountingRules', icon: GitBranch, path: '/accounting/rules' },
+      { key: 'journalEntries', translationKey: 'menu.journalEntries', icon: BookText, path: '/accounting/journal-entries' },
+      { key: 'generalLedger', translationKey: 'menu.generalLedger', icon: FileBarChart2, path: '/accounting/general-ledger' },
+      { key: 'trialBalance', translationKey: 'menu.trialBalance', icon: Scale, path: '/accounting/trial-balance' },
+      { key: 'financialStatements', translationKey: 'menu.financialStatements', icon: LineChart, path: '/accounting/financial-statements' },
     ],
   },
   {

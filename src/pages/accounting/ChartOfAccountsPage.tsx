@@ -13,73 +13,69 @@ import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
 } from '@/components/ui/dialog';
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import type { Tables } from '@/integrations/supabase/types';
+import type { Database, Tables } from '@/integrations/supabase/types';
 
-type BankAccount = Tables<'bank_accounts'>;
-type GlAccount = Tables<'chart_of_accounts'>;
+type Account = Tables<'chart_of_accounts'>;
+type AccountType = Database['public']['Enums']['account_type'];
+type NormalBalance = Database['public']['Enums']['normal_balance'];
 
-export default function BankAccountsPage() {
+const ACCOUNT_TYPES: AccountType[] = ['ASSET', 'LIABILITY', 'EQUITY', 'REVENUE', 'EXPENSE'];
+const NORMAL_BALANCES: NormalBalance[] = ['DEBIT', 'CREDIT'];
+
+export default function ChartOfAccountsPage() {
   const { language } = useLanguage();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingAccount, setEditingAccount] = useState<BankAccount | null>(null);
-  
-  const [formBankName, setFormBankName] = useState('');
-  const [formAccountNo, setFormAccountNo] = useState('');
-  const [formAccountName, setFormAccountName] = useState('');
+  const [editingAccount, setEditingAccount] = useState<Account | null>(null);
+
+  const [formCode, setFormCode] = useState('');
+  const [formName, setFormName] = useState('');
+  const [formType, setFormType] = useState<AccountType>('ASSET');
+  const [formNormalBalance, setFormNormalBalance] = useState<NormalBalance>('DEBIT');
+  const [formControl, setFormControl] = useState(false);
   const [formActive, setFormActive] = useState(true);
-  const [formGlAccountId, setFormGlAccountId] = useState<string>('');
 
   const { data: accounts = [], isLoading } = useQuery({
-    queryKey: ['bank_accounts'],
+    queryKey: ['chart_of_accounts'],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('bank_accounts')
+        .from('chart_of_accounts')
         .select('*')
-        .order('bank_name');
-      if (error) throw error;
-      return data;
-    },
-  });
-
-  const { data: glAccounts = [] } = useQuery({
-    queryKey: ['chart_of_accounts', 'active'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('chart_of_accounts').select('*').eq('is_active', true).order('code');
+        .order('code');
       if (error) throw error;
       return data;
     },
   });
 
   const saveMutation = useMutation({
-    mutationFn: async (account: Partial<BankAccount>) => {
+    mutationFn: async (account: Partial<Account>) => {
       if (editingAccount) {
-        const { error } = await supabase.from('bank_accounts').update(account).eq('id', editingAccount.id);
+        const { error } = await supabase.from('chart_of_accounts').update(account).eq('id', editingAccount.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from('bank_accounts').insert([account as any]);
+        const { error } = await supabase.from('chart_of_accounts').insert([account as any]);
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bank_accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['chart_of_accounts'] });
       closeDialog();
       toast({
         title: language === 'en' ? 'Success' : 'Berhasil',
         description: editingAccount
-          ? (language === 'en' ? 'Bank account updated' : 'Rekening bank diupdate')
-          : (language === 'en' ? 'Bank account created' : 'Rekening bank dibuat'),
+          ? (language === 'en' ? 'Account updated' : 'Akun diupdate')
+          : (language === 'en' ? 'Account created' : 'Akun dibuat'),
       });
     },
     onError: (error: Error) => {
@@ -89,38 +85,46 @@ export default function BankAccountsPage() {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('bank_accounts').delete().eq('id', id);
+      const { error } = await supabase.from('chart_of_accounts').delete().eq('id', id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['bank_accounts'] });
+      queryClient.invalidateQueries({ queryKey: ['chart_of_accounts'] });
       toast({
         title: language === 'en' ? 'Success' : 'Berhasil',
-        description: language === 'en' ? 'Bank account deleted' : 'Rekening bank dihapus',
+        description: language === 'en' ? 'Account deleted' : 'Akun dihapus',
       });
     },
     onError: (error: Error) => {
-      toast({ title: 'Error', description: error.message, variant: 'destructive' });
+      toast({
+        title: 'Error',
+        description: language === 'en'
+          ? 'Cannot delete: account is referenced by journal entries or other accounts'
+          : 'Tidak bisa dihapus: akun sudah dipakai di jurnal atau akun lain',
+        variant: 'destructive',
+      });
     },
   });
 
   const openCreate = () => {
     setEditingAccount(null);
-    setFormBankName('');
-    setFormAccountNo('');
-    setFormAccountName('');
+    setFormCode('');
+    setFormName('');
+    setFormType('ASSET');
+    setFormNormalBalance('DEBIT');
+    setFormControl(false);
     setFormActive(true);
-    setFormGlAccountId('');
     setIsDialogOpen(true);
   };
 
-  const openEdit = (account: BankAccount) => {
+  const openEdit = (account: Account) => {
     setEditingAccount(account);
-    setFormBankName(account.bank_name);
-    setFormAccountNo(account.account_no);
-    setFormAccountName(account.account_name);
+    setFormCode(account.code);
+    setFormName(account.name);
+    setFormType(account.account_type);
+    setFormNormalBalance(account.normal_balance);
+    setFormControl(account.is_control_account);
     setFormActive(account.is_active);
-    setFormGlAccountId(account.gl_account_id || '');
     setIsDialogOpen(true);
   };
 
@@ -130,45 +134,58 @@ export default function BankAccountsPage() {
   };
 
   const handleSave = () => {
-    if (!formBankName.trim() || !formAccountNo.trim() || !formAccountName.trim()) {
-      toast({ title: 'Error', description: language === 'en' ? 'Please fill all required fields' : 'Harap isi semua field wajib', variant: 'destructive' });
+    if (!formCode.trim() || !formName.trim()) {
+      toast({ title: 'Error', description: language === 'en' ? 'Code and name are required' : 'Kode dan nama wajib diisi', variant: 'destructive' });
       return;
     }
     saveMutation.mutate({
-      bank_name: formBankName,
-      account_no: formAccountNo,
-      account_name: formAccountName,
+      code: formCode.trim(),
+      name: formName.trim(),
+      account_type: formType,
+      normal_balance: formNormalBalance,
+      is_control_account: formControl,
       is_active: formActive,
-      gl_account_id: formGlAccountId || null,
     });
   };
 
-  const handleDelete = (account: BankAccount) => {
-    if (confirm(language === 'en' ? `Delete ${account.bank_name} - ${account.account_no}?` : `Hapus ${account.bank_name} - ${account.account_no}?`)) {
+  const handleDelete = (account: Account) => {
+    if (confirm(language === 'en' ? `Delete ${account.code} - ${account.name}?` : `Hapus ${account.code} - ${account.name}?`)) {
       deleteMutation.mutate(account.id);
     }
   };
 
   const filtered = accounts.filter(a =>
-    a.bank_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    a.account_no.includes(searchQuery) ||
-    a.account_name.toLowerCase().includes(searchQuery.toLowerCase())
+    a.code.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    a.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const typeLabel = (t: AccountType) => {
+    const map: Record<AccountType, { en: string; id: string }> = {
+      ASSET: { en: 'Asset', id: 'Aset' },
+      LIABILITY: { en: 'Liability', id: 'Liabilitas' },
+      EQUITY: { en: 'Equity', id: 'Ekuitas' },
+      REVENUE: { en: 'Revenue', id: 'Pendapatan' },
+      EXPENSE: { en: 'Expense', id: 'Beban' },
+    };
+    return map[t][language];
+  };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground">
-            {language === 'en' ? 'Bank Accounts' : 'Rekening Bank'}
+            {language === 'en' ? 'Chart of Accounts' : 'Bagan Akun'}
           </h1>
           <p className="text-muted-foreground mt-1">
-            {language === 'en' ? 'Manage bank accounts' : 'Kelola rekening bank'}
+            {language === 'en'
+              ? 'Placeholder accounts - review with Finance/Accounting before production use'
+              : 'Akun bersifat placeholder - review bersama Finance/Accounting sebelum dipakai produksi'}
           </p>
         </div>
         <Button className="gap-2" onClick={openCreate}>
           <Plus className="w-4 h-4" />
-          {language === 'en' ? 'Add Account' : 'Tambah Rekening'}
+          {language === 'en' ? 'Add Account' : 'Tambah Akun'}
         </Button>
       </div>
 
@@ -191,24 +208,32 @@ export default function BankAccountsPage() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>{language === 'en' ? 'Bank Name' : 'Nama Bank'}</TableHead>
-                <TableHead>{language === 'en' ? 'Account No' : 'No Rekening'}</TableHead>
-                <TableHead>{language === 'en' ? 'Account Name' : 'Nama Rekening'}</TableHead>
+                <TableHead>{language === 'en' ? 'Code' : 'Kode'}</TableHead>
+                <TableHead>{language === 'en' ? 'Name' : 'Nama'}</TableHead>
+                <TableHead>{language === 'en' ? 'Type' : 'Tipe'}</TableHead>
+                <TableHead>{language === 'en' ? 'Normal Balance' : 'Saldo Normal'}</TableHead>
+                <TableHead>{language === 'en' ? 'Control' : 'Akun Kontrol'}</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="w-[100px]">{language === 'en' ? 'Actions' : 'Aksi'}</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8">{language === 'en' ? 'Loading...' : 'Memuat...'}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8">{language === 'en' ? 'Loading...' : 'Memuat...'}</TableCell></TableRow>
               ) : filtered.length === 0 ? (
-                <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{language === 'en' ? 'No bank accounts found' : 'Tidak ada rekening bank'}</TableCell></TableRow>
+                <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{language === 'en' ? 'No accounts found' : 'Tidak ada akun'}</TableCell></TableRow>
               ) : (
                 filtered.map((account) => (
                   <TableRow key={account.id}>
-                    <TableCell className="font-medium">{account.bank_name}</TableCell>
-                    <TableCell>{account.account_no}</TableCell>
-                    <TableCell>{account.account_name}</TableCell>
+                    <TableCell className="font-mono">{account.code}</TableCell>
+                    <TableCell className="font-medium">{account.name}</TableCell>
+                    <TableCell>{typeLabel(account.account_type)}</TableCell>
+                    <TableCell>{account.normal_balance}</TableCell>
+                    <TableCell>
+                      {account.is_control_account && (
+                        <Badge variant="outline">{language === 'en' ? 'Control' : 'Kontrol'}</Badge>
+                      )}
+                    </TableCell>
                     <TableCell>
                       <Badge variant={account.is_active ? 'default' : 'secondary'}>
                         {account.is_active ? (language === 'en' ? 'Active' : 'Aktif') : (language === 'en' ? 'Inactive' : 'Nonaktif')}
@@ -240,31 +265,38 @@ export default function BankAccountsPage() {
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{editingAccount ? (language === 'en' ? 'Edit Bank Account' : 'Edit Rekening') : (language === 'en' ? 'Add Bank Account' : 'Tambah Rekening')}</DialogTitle>
+            <DialogTitle>{editingAccount ? (language === 'en' ? 'Edit Account' : 'Edit Akun') : (language === 'en' ? 'Add Account' : 'Tambah Akun')}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label>{language === 'en' ? 'Bank Name' : 'Nama Bank'} *</Label>
-              <Input value={formBankName} onChange={(e) => setFormBankName(e.target.value)} placeholder="e.g., Bank BCA" />
+              <Label>{language === 'en' ? 'Code' : 'Kode'} *</Label>
+              <Input value={formCode} onChange={(e) => setFormCode(e.target.value)} placeholder="e.g., 1200" />
             </div>
             <div className="space-y-2">
-              <Label>{language === 'en' ? 'Account Number' : 'Nomor Rekening'} *</Label>
-              <Input value={formAccountNo} onChange={(e) => setFormAccountNo(e.target.value)} />
+              <Label>{language === 'en' ? 'Name' : 'Nama'} *</Label>
+              <Input value={formName} onChange={(e) => setFormName(e.target.value)} placeholder="e.g., Accounts Receivable" />
             </div>
             <div className="space-y-2">
-              <Label>{language === 'en' ? 'Account Name' : 'Nama Rekening'} *</Label>
-              <Input value={formAccountName} onChange={(e) => setFormAccountName(e.target.value)} />
-            </div>
-            <div className="space-y-2">
-              <Label>{language === 'en' ? 'GL Account (for accounting)' : 'Akun GL (untuk akuntansi)'}</Label>
-              <Select value={formGlAccountId} onValueChange={setFormGlAccountId}>
-                <SelectTrigger><SelectValue placeholder={language === 'en' ? 'Not mapped' : 'Belum dipetakan'} /></SelectTrigger>
+              <Label>{language === 'en' ? 'Account Type' : 'Tipe Akun'}</Label>
+              <Select value={formType} onValueChange={(v) => setFormType(v as AccountType)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  {glAccounts.map((a: GlAccount) => (
-                    <SelectItem key={a.id} value={a.id}>{a.code} - {a.name}</SelectItem>
-                  ))}
+                  {ACCOUNT_TYPES.map(t => <SelectItem key={t} value={t}>{typeLabel(t)}</SelectItem>)}
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>{language === 'en' ? 'Normal Balance' : 'Saldo Normal'}</Label>
+              <Select value={formNormalBalance} onValueChange={(v) => setFormNormalBalance(v as NormalBalance)}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {NORMAL_BALANCES.map(b => <SelectItem key={b} value={b}>{b}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={formControl} onCheckedChange={setFormControl} />
+              <Label>{language === 'en' ? 'Control account (e.g. AR/AP)' : 'Akun kontrol (mis. AR/AP)'}</Label>
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={formActive} onCheckedChange={setFormActive} />
