@@ -627,6 +627,403 @@ export const generateCustomerTemplate = async (): Promise<void> => {
   saveAs(blob, 'Template_Import_Customer.xlsx');
 };
 
+// ==================== SALES IMPORT ====================
+
+export const SALES_HEADERS_MAP: Record<string, string> = {
+  'nama sales': 'sales_name',
+  'telepon': 'phone',
+  'email': 'email',
+};
+
+export const generateSalesTemplate = async (): Promise<void> => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Template Sales');
+
+  const headers = ['Nama Sales', 'Telepon', 'Email'];
+  worksheet.addRow(headers);
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } };
+  worksheet.addRow(['Budi Santoso', '0812-3456-7890', 'budi@kemika.co.id']);
+  worksheet.addRow(['Siti Rahma', '0813-9876-5432', 'siti@kemika.co.id']);
+  worksheet.columns.forEach(column => { column.width = 22; });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, 'Template_Import_Sales.xlsx');
+};
+
+export const validateAndMapSalesData = (rows: any[][]): ImportResult => {
+  const errors: ImportError[] = [];
+  const data: any[] = [];
+
+  if (rows.length < 2) {
+    errors.push({ row: 0, message: 'File is empty or has no data rows' });
+    return { success: false, data: [], errors };
+  }
+
+  const headers = rows[0].map((h: any) => String(h || '').toLowerCase().trim());
+  const headerMap: Record<number, string> = {};
+  headers.forEach((header, index) => {
+    const mappedKey = SALES_HEADERS_MAP[header];
+    if (mappedKey) headerMap[index] = mappedKey;
+  });
+
+  const mappedHeaders = Object.values(headerMap);
+  if (!mappedHeaders.includes('sales_name')) {
+    errors.push({ row: 1, message: 'Missing required column: Nama Sales' });
+    return { success: false, data: [], errors };
+  }
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.every((cell: any) => cell === null || cell === undefined || cell === '')) continue;
+
+    const rowData: Record<string, any> = {};
+    Object.entries(headerMap).forEach(([colIndex, key]) => {
+      rowData[key] = row[parseInt(colIndex)];
+    });
+
+    const salesName = rowData.sales_name ? String(rowData.sales_name).trim() : '';
+    if (!salesName) {
+      errors.push({ row: i + 1, column: 'Nama Sales', message: 'Nama sales wajib diisi' });
+      continue;
+    }
+
+    data.push({
+      sales_name: salesName,
+      phone: rowData.phone ? String(rowData.phone).trim() : null,
+      email: rowData.email ? String(rowData.email).trim() : null,
+      is_active: true,
+    });
+  }
+
+  return { success: errors.length === 0, data, errors };
+};
+
+// ==================== PAYMENT TERMS IMPORT ====================
+
+export const PAYMENT_TERMS_HEADERS_MAP: Record<string, string> = {
+  'nama termin': 'terms_name',
+  'nama terms': 'terms_name',
+  'jumlah hari': 'days',
+  'hari': 'days',
+};
+
+export const generatePaymentTermsTemplate = async (): Promise<void> => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Template Termin');
+
+  const headers = ['Nama Termin', 'Jumlah Hari'];
+  worksheet.addRow(headers);
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } };
+  worksheet.addRow(['NET 30', 30]);
+  worksheet.addRow(['NET 60', 60]);
+  worksheet.columns.forEach(column => { column.width = 20; });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, 'Template_Import_Payment_Terms.xlsx');
+};
+
+export const validateAndMapPaymentTermsData = (rows: any[][]): ImportResult => {
+  const errors: ImportError[] = [];
+  const data: any[] = [];
+
+  if (rows.length < 2) {
+    errors.push({ row: 0, message: 'File is empty or has no data rows' });
+    return { success: false, data: [], errors };
+  }
+
+  const headers = rows[0].map((h: any) => String(h || '').toLowerCase().trim());
+  const headerMap: Record<number, string> = {};
+  headers.forEach((header, index) => {
+    const mappedKey = PAYMENT_TERMS_HEADERS_MAP[header];
+    if (mappedKey) headerMap[index] = mappedKey;
+  });
+
+  const mappedHeaders = Object.values(headerMap);
+  if (!mappedHeaders.includes('terms_name')) {
+    errors.push({ row: 1, message: 'Missing required column: Nama Termin' });
+    return { success: false, data: [], errors };
+  }
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.every((cell: any) => cell === null || cell === undefined || cell === '')) continue;
+
+    const rowData: Record<string, any> = {};
+    Object.entries(headerMap).forEach(([colIndex, key]) => {
+      rowData[key] = row[parseInt(colIndex)];
+    });
+
+    const termsName = rowData.terms_name ? String(rowData.terms_name).trim() : '';
+    if (!termsName) {
+      errors.push({ row: i + 1, column: 'Nama Termin', message: 'Nama termin wajib diisi' });
+      continue;
+    }
+
+    const days = parseAmount(rowData.days);
+    if (days === null || days < 0) {
+      errors.push({ row: i + 1, column: 'Jumlah Hari', message: 'Jumlah hari tidak valid' });
+      continue;
+    }
+
+    data.push({ terms_name: termsName, days, is_active: true });
+  }
+
+  return { success: errors.length === 0, data, errors };
+};
+
+// ==================== BANK ACCOUNTS IMPORT ====================
+
+export const BANK_ACCOUNT_HEADERS_MAP: Record<string, string> = {
+  'nama bank': 'bank_name',
+  'no rekening': 'account_no',
+  'nama pemilik rekening': 'account_name',
+  'nama rekening': 'account_name',
+  'kode akun gl': 'gl_account_code',
+};
+
+export const generateBankAccountTemplate = async (): Promise<void> => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Template Rekening');
+
+  const headers = ['Nama Bank', 'No Rekening', 'Nama Pemilik Rekening', 'Kode Akun GL'];
+  worksheet.addRow(headers);
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } };
+  worksheet.addRow(['Bank Mandiri', '1234567890', 'PT. Kemika Karya Pratama', '1100']);
+  worksheet.addRow(['Bank BCA', '0987654321', 'PT. Kemika Karya Pratama', '']);
+  worksheet.columns.forEach(column => { column.width = 24; });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, 'Template_Import_Bank_Accounts.xlsx');
+};
+
+export const validateAndMapBankAccountData = (
+  rows: any[][],
+  glAccounts: { id: string; code: string }[]
+): ImportResult => {
+  const errors: ImportError[] = [];
+  const data: any[] = [];
+
+  if (rows.length < 2) {
+    errors.push({ row: 0, message: 'File is empty or has no data rows' });
+    return { success: false, data: [], errors };
+  }
+
+  const headers = rows[0].map((h: any) => String(h || '').toLowerCase().trim());
+  const headerMap: Record<number, string> = {};
+  headers.forEach((header, index) => {
+    const mappedKey = BANK_ACCOUNT_HEADERS_MAP[header];
+    if (mappedKey) headerMap[index] = mappedKey;
+  });
+
+  const mappedHeaders = Object.values(headerMap);
+  if (!mappedHeaders.includes('bank_name') || !mappedHeaders.includes('account_no') || !mappedHeaders.includes('account_name')) {
+    errors.push({ row: 1, message: 'Missing required columns: Nama Bank, No Rekening, Nama Pemilik Rekening' });
+    return { success: false, data: [], errors };
+  }
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.every((cell: any) => cell === null || cell === undefined || cell === '')) continue;
+
+    const rowData: Record<string, any> = {};
+    Object.entries(headerMap).forEach(([colIndex, key]) => {
+      rowData[key] = row[parseInt(colIndex)];
+    });
+
+    const bankName = rowData.bank_name ? String(rowData.bank_name).trim() : '';
+    const accountNo = rowData.account_no ? String(rowData.account_no).trim() : '';
+    const accountName = rowData.account_name ? String(rowData.account_name).trim() : '';
+    let hasError = false;
+
+    if (!bankName) {
+      errors.push({ row: i + 1, column: 'Nama Bank', message: 'Nama bank wajib diisi' });
+      hasError = true;
+    }
+    if (!accountNo) {
+      errors.push({ row: i + 1, column: 'No Rekening', message: 'No rekening wajib diisi' });
+      hasError = true;
+    }
+    if (!accountName) {
+      errors.push({ row: i + 1, column: 'Nama Pemilik Rekening', message: 'Nama pemilik rekening wajib diisi' });
+      hasError = true;
+    }
+
+    let glAccountId: string | null = null;
+    const glCode = rowData.gl_account_code ? String(rowData.gl_account_code).trim() : '';
+    if (glCode) {
+      const acc = glAccounts.find(a => a.code === glCode);
+      if (!acc) {
+        errors.push({ row: i + 1, column: 'Kode Akun GL', message: `Akun dengan kode "${glCode}" tidak ditemukan` });
+        hasError = true;
+      } else {
+        glAccountId = acc.id;
+      }
+    }
+
+    if (!hasError) {
+      data.push({
+        bank_name: bankName,
+        account_no: accountNo,
+        account_name: accountName,
+        gl_account_id: glAccountId,
+        is_active: true,
+      });
+    }
+  }
+
+  return { success: errors.length === 0, data, errors };
+};
+
+// ==================== CHART OF ACCOUNTS IMPORT ====================
+
+export const COA_HEADERS_MAP: Record<string, string> = {
+  'kode akun': 'code',
+  'nama akun': 'name',
+  'tipe akun': 'account_type',
+  'saldo normal': 'normal_balance',
+  'kode akun induk': 'parent_code',
+  'akun kontrol': 'is_control_account',
+};
+
+const ACCOUNT_TYPE_ALIASES: Record<string, string> = {
+  'aset': 'ASSET', 'asset': 'ASSET',
+  'liabilitas': 'LIABILITY', 'liability': 'LIABILITY', 'kewajiban': 'LIABILITY',
+  'ekuitas': 'EQUITY', 'equity': 'EQUITY',
+  'pendapatan': 'REVENUE', 'revenue': 'REVENUE',
+  'beban': 'EXPENSE', 'expense': 'EXPENSE',
+};
+
+const NORMAL_BALANCE_ALIASES: Record<string, string> = {
+  'debit': 'DEBIT', 'debet': 'DEBIT',
+  'kredit': 'CREDIT', 'credit': 'CREDIT',
+};
+
+export const generateChartOfAccountsTemplate = async (): Promise<void> => {
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Template Bagan Akun');
+
+  const headers = ['Kode Akun', 'Nama Akun', 'Tipe Akun', 'Saldo Normal', 'Kode Akun Induk', 'Akun Kontrol'];
+  worksheet.addRow(headers);
+  const headerRow = worksheet.getRow(1);
+  headerRow.font = { bold: true };
+  headerRow.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFCCCCCC' } };
+  worksheet.addRow(['1000', 'ASET', 'Aset', 'Debit', '', 'Tidak']);
+  worksheet.addRow(['1110', 'Kas', 'Aset', 'Debit', '1000', 'Tidak']);
+  worksheet.addRow(['1210', 'Piutang Usaha', 'Aset', 'Debit', '1000', 'Ya']);
+  worksheet.columns.forEach(column => { column.width = 20; });
+
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  saveAs(blob, 'Template_Import_Chart_of_Accounts.xlsx');
+};
+
+// Two-pass mapping so a row can reference a parent code defined earlier in the
+// same file, resolved after all rows in the batch have been validated.
+export const validateAndMapChartOfAccountsData = (
+  rows: any[][],
+  existingAccounts: { id: string; code: string }[]
+): ImportResult => {
+  const errors: ImportError[] = [];
+  const staged: { code: string; name: string; account_type: string; normal_balance: string; parent_code: string; is_control_account: boolean }[] = [];
+
+  if (rows.length < 2) {
+    errors.push({ row: 0, message: 'File is empty or has no data rows' });
+    return { success: false, data: [], errors };
+  }
+
+  const headers = rows[0].map((h: any) => String(h || '').toLowerCase().trim());
+  const headerMap: Record<number, string> = {};
+  headers.forEach((header, index) => {
+    const mappedKey = COA_HEADERS_MAP[header];
+    if (mappedKey) headerMap[index] = mappedKey;
+  });
+
+  const mappedHeaders = Object.values(headerMap);
+  const requiredHeaders = ['code', 'name', 'account_type', 'normal_balance'];
+  const missingHeaders = requiredHeaders.filter(h => !mappedHeaders.includes(h));
+  if (missingHeaders.length > 0) {
+    errors.push({ row: 1, message: `Missing required columns: Kode Akun, Nama Akun, Tipe Akun, Saldo Normal` });
+    return { success: false, data: [], errors };
+  }
+
+  const knownCodes = new Set(existingAccounts.map(a => a.code));
+
+  for (let i = 1; i < rows.length; i++) {
+    const row = rows[i];
+    if (!row || row.every((cell: any) => cell === null || cell === undefined || cell === '')) continue;
+
+    const rowData: Record<string, any> = {};
+    Object.entries(headerMap).forEach(([colIndex, key]) => {
+      rowData[key] = row[parseInt(colIndex)];
+    });
+
+    const code = rowData.code ? String(rowData.code).trim() : '';
+    const name = rowData.name ? String(rowData.name).trim() : '';
+    let hasError = false;
+
+    if (!code) {
+      errors.push({ row: i + 1, column: 'Kode Akun', message: 'Kode akun wajib diisi' });
+      hasError = true;
+    } else if (knownCodes.has(code)) {
+      errors.push({ row: i + 1, column: 'Kode Akun', message: `Kode akun "${code}" sudah ada` });
+      hasError = true;
+    }
+    if (!name) {
+      errors.push({ row: i + 1, column: 'Nama Akun', message: 'Nama akun wajib diisi' });
+      hasError = true;
+    }
+
+    const typeRaw = String(rowData.account_type || '').toLowerCase().trim();
+    const accountType = ACCOUNT_TYPE_ALIASES[typeRaw];
+    if (!accountType) {
+      errors.push({ row: i + 1, column: 'Tipe Akun', message: 'Tipe akun harus salah satu dari: Aset, Liabilitas, Ekuitas, Pendapatan, Beban' });
+      hasError = true;
+    }
+
+    const balanceRaw = String(rowData.normal_balance || '').toLowerCase().trim();
+    const normalBalance = NORMAL_BALANCE_ALIASES[balanceRaw];
+    if (!normalBalance) {
+      errors.push({ row: i + 1, column: 'Saldo Normal', message: 'Saldo normal harus Debit atau Kredit' });
+      hasError = true;
+    }
+
+    const parentCode = rowData.parent_code ? String(rowData.parent_code).trim() : '';
+    if (parentCode && !knownCodes.has(parentCode)) {
+      errors.push({ row: i + 1, column: 'Kode Akun Induk', message: `Kode akun induk "${parentCode}" tidak ditemukan` });
+      hasError = true;
+    }
+
+    const controlRaw = String(rowData.is_control_account || '').toLowerCase().trim();
+    const isControl = ['ya', 'yes', 'true', '1'].includes(controlRaw);
+
+    if (!hasError) {
+      if (code) knownCodes.add(code); // allow later rows in the same file to reference this as parent
+      staged.push({ code, name, account_type: accountType, normal_balance: normalBalance, parent_code: parentCode, is_control_account: isControl });
+    }
+  }
+
+  const data = staged.map(s => ({
+    code: s.code,
+    name: s.name,
+    account_type: s.account_type,
+    normal_balance: s.normal_balance,
+    parent_code: s.parent_code || null, // resolved to parent_id by the caller after insert, since new codes in this same batch don't have ids yet
+    is_control_account: s.is_control_account,
+    is_active: true,
+  }));
+
+  return { success: errors.length === 0, data, errors };
+};
+
 export const validateAndMapCustomerData = (rows: any[][]): ImportResult => {
   const errors: ImportError[] = [];
   const data: any[] = [];

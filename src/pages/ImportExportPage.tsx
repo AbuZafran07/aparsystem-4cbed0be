@@ -6,21 +6,34 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-import { 
+import {
   ArrowUpDown, Upload, Download, FileSpreadsheet, CheckCircle, XCircle, AlertCircle,
-  Loader2, RefreshCw, FileDown, Users, Building2
+  Loader2, RefreshCw, FileDown, Users, Building2, UserCircle, Clock, Landmark, BookOpen
 } from 'lucide-react';
-import { 
+import {
   generateApTemplate, generateArTemplate, generateVendorTemplate, generateCustomerTemplate,
-  parseExcelFile, validateAndMapVendorData, validateAndMapCustomerData
+  generateSalesTemplate, generatePaymentTermsTemplate, generateBankAccountTemplate, generateChartOfAccountsTemplate,
+  parseExcelFile, validateAndMapVendorData, validateAndMapCustomerData,
+  validateAndMapSalesData, validateAndMapPaymentTermsData, validateAndMapBankAccountData, validateAndMapChartOfAccountsData,
 } from '@/lib/importUtils';
 import { exportToExcel, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
 import type { Database } from '@/integrations/supabase/types';
 
 type ImportBatch = Database['public']['Tables']['import_batches']['Row'];
+type MasterDataType = 'vendor' | 'customer' | 'sales' | 'payment_terms' | 'bank_account' | 'chart_of_accounts';
+
+const MASTER_DATA_TABLE: Record<MasterDataType, string> = {
+  vendor: 'vendors',
+  customer: 'customers',
+  sales: 'sales',
+  payment_terms: 'payment_terms',
+  bank_account: 'bank_accounts',
+  chart_of_accounts: 'chart_of_accounts',
+};
 
 const statusColors: Record<string, string> = {
   completed: 'bg-green-500/10 text-green-500 border-green-500/20',
@@ -32,6 +45,7 @@ const statusColors: Record<string, string> = {
 export default function ImportExportPage() {
   const { t, language } = useLanguage();
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const [importHistory, setImportHistory] = useState<ImportBatch[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -39,6 +53,18 @@ export default function ImportExportPage() {
   const [isImporting, setIsImporting] = useState<string | null>(null);
   const vendorFileRef = useRef<HTMLInputElement>(null);
   const customerFileRef = useRef<HTMLInputElement>(null);
+  const salesFileRef = useRef<HTMLInputElement>(null);
+  const paymentTermsFileRef = useRef<HTMLInputElement>(null);
+  const bankAccountFileRef = useRef<HTMLInputElement>(null);
+  const coaFileRef = useRef<HTMLInputElement>(null);
+  const masterDataFileRefs: Record<MasterDataType, React.RefObject<HTMLInputElement>> = {
+    vendor: vendorFileRef,
+    customer: customerFileRef,
+    sales: salesFileRef,
+    payment_terms: paymentTermsFileRef,
+    bank_account: bankAccountFileRef,
+    chart_of_accounts: coaFileRef,
+  };
 
   useEffect(() => {
     fetchImportHistory();
@@ -68,37 +94,125 @@ export default function ImportExportPage() {
     });
   };
 
-  const handleImportMasterData = async (type: 'vendor' | 'customer', e: React.ChangeEvent<HTMLInputElement>) => {
+  // Records the batch in import_batches (+ import_row_errors on failed rows) so
+  // the History tab reflects every master-data import, not just AP/AR.
+  const logImportBatch = async (
+    entity: string,
+    fileName: string,
+    totalRows: number,
+    successRows: number,
+    errors: { row: number; column?: string; message: string }[]
+  ) => {
+    if (!user) return;
+    const status = errors.length === 0 ? 'completed' : successRows > 0 ? 'partial' : 'failed';
+    const { data: batch, error: batchError } = await supabase
+      .from('import_batches')
+      .insert({
+        entity,
+        file_name: fileName,
+        status,
+        total_rows: totalRows,
+        success_rows: successRows,
+        failed_rows: errors.length,
+        uploaded_by: user.id,
+      })
+      .select('id')
+      .single();
+
+    if (batchError || !batch) {
+      console.error('Failed to log import batch:', batchError);
+      return;
+    }
+
+    if (errors.length > 0) {
+      await supabase.from('import_row_errors').insert(
+        errors.map(err => ({
+          batch_id: batch.id,
+          row_number: err.row,
+          column_name: err.column || null,
+          error_message: err.message,
+        }))
+      );
+    }
+  };
+
+  const handleImportMasterData = async (type: MasterDataType, e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     setIsImporting(type);
     try {
       const rows = await parseExcelFile(file);
-      const result = type === 'vendor' ? validateAndMapVendorData(rows) : validateAndMapCustomerData(rows);
+      let result: { success: boolean; data: any[]; errors: { row: number; column?: string; message: string }[] };
+      let insertedCount = 0;
+
+      if (type === 'vendor') {
+        result = validateAndMapVendorData(rows);
+      } else if (type === 'customer') {
+        result = validateAndMapCustomerData(rows);
+      } else if (type === 'sales') {
+        result = validateAndMapSalesData(rows);
+      } else if (type === 'payment_terms') {
+        result = validateAndMapPaymentTermsData(rows);
+      } else if (type === 'bank_account') {
+        const { data: glAccounts } = await supabase.from('chart_of_accounts').select('id, code');
+        result = validateAndMapBankAccountData(rows, glAccounts || []);
+      } else {
+        const { data: existingAccounts } = await supabase.from('chart_of_accounts').select('id, code');
+        result = validateAndMapChartOfAccountsData(rows, existingAccounts || []);
+      }
 
       if (result.errors.length > 0) {
         toast({
           title: 'Error',
-          description: result.errors.map(err => `Baris ${err.row}: ${err.message}`).join('\n'),
+          description: result.errors.slice(0, 5).map(err => `Baris ${err.row}: ${err.message}`).join('\n')
+            + (result.errors.length > 5 ? `\n... dan ${result.errors.length - 5} error lainnya` : ''),
           variant: 'destructive',
         });
       }
 
       if (result.data.length > 0) {
-        const table = type === 'vendor' ? 'vendors' : 'customers';
-        const { error } = await supabase.from(table).insert(result.data);
-        if (error) throw error;
+        if (type === 'chart_of_accounts') {
+          // Insert sequentially so a row can reference a parent account code
+          // created earlier in the same file (its id isn't known until inserted).
+          const codeToId = new Map<string, string>();
+          for (const row of result.data) {
+            const { parent_code, ...insertRow } = row;
+            const parentId = parent_code ? codeToId.get(parent_code) || null : null;
+            if (parent_code && !parentId) {
+              // Parent code refers to an existing account already fetched with its real id
+              const existing = (await supabase.from('chart_of_accounts').select('id').eq('code', parent_code).maybeSingle()).data;
+              if (existing) codeToId.set(parent_code, existing.id);
+            }
+            const { data: inserted, error } = await supabase
+              .from('chart_of_accounts')
+              .insert({ ...insertRow, parent_id: codeToId.get(parent_code) || null })
+              .select('id')
+              .single();
+            if (error) throw error;
+            codeToId.set(row.code, inserted.id);
+            insertedCount++;
+          }
+        } else {
+          const table = MASTER_DATA_TABLE[type];
+          const { error } = await (supabase.from(table as any) as any).insert(result.data);
+          if (error) throw error;
+          insertedCount = result.data.length;
+        }
+
         toast({
           title: language === 'en' ? 'Success' : 'Berhasil',
-          description: `${result.data.length} ${type} berhasil diimport`,
+          description: `${insertedCount} ${type} ${language === 'en' ? 'imported successfully' : 'berhasil diimport'}`,
         });
       }
+
+      await logImportBatch(type, file.name, rows.length - 1, insertedCount, result.errors);
+      fetchImportHistory();
     } catch (error: any) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
     } finally {
       setIsImporting(null);
-      if (vendorFileRef.current) vendorFileRef.current.value = '';
-      if (customerFileRef.current) customerFileRef.current.value = '';
+      const ref = masterDataFileRefs[type].current;
+      if (ref) ref.value = '';
     }
   };
 
@@ -266,6 +380,160 @@ export default function ImportExportPage() {
                   </div>
                   <div className="flex items-center justify-end">
                     <Button variant="link" size="sm" onClick={() => generateCustomerTemplate()}>
+                      <FileDown className="w-4 h-4 mr-1" />
+                      {t('importExport.downloadTemplate') || 'Download Template'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Sales Import */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCircle className="w-5 h-5" />
+                    {language === 'en' ? 'Import Sales' : 'Import Sales'}
+                  </CardTitle>
+                  <CardDescription>
+                    {language === 'en' ? 'Upload Excel file to bulk import sales rep data' : 'Upload file Excel untuk import data sales secara massal'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <input ref={salesFileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => handleImportMasterData('sales', e)} />
+                  <div
+                    className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => salesFileRef.current?.click()}
+                  >
+                    {isImporting === 'sales' ? (
+                      <Loader2 className="w-12 h-12 mx-auto text-primary mb-4 animate-spin" />
+                    ) : (
+                      <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                    )}
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {language === 'en' ? 'Click to select Excel file' : 'Klik untuk pilih file Excel'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {language === 'en' ? 'Columns: Nama Sales, Telepon, Email' : 'Kolom: Nama Sales, Telepon, Email'}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-end">
+                    <Button variant="link" size="sm" onClick={() => generateSalesTemplate()}>
+                      <FileDown className="w-4 h-4 mr-1" />
+                      {t('importExport.downloadTemplate') || 'Download Template'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Payment Terms Import */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Clock className="w-5 h-5" />
+                    {language === 'en' ? 'Import Payment Terms' : 'Import Termin Pembayaran'}
+                  </CardTitle>
+                  <CardDescription>
+                    {language === 'en' ? 'Upload Excel file to bulk import payment terms' : 'Upload file Excel untuk import termin pembayaran secara massal'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <input ref={paymentTermsFileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => handleImportMasterData('payment_terms', e)} />
+                  <div
+                    className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => paymentTermsFileRef.current?.click()}
+                  >
+                    {isImporting === 'payment_terms' ? (
+                      <Loader2 className="w-12 h-12 mx-auto text-primary mb-4 animate-spin" />
+                    ) : (
+                      <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                    )}
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {language === 'en' ? 'Click to select Excel file' : 'Klik untuk pilih file Excel'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {language === 'en' ? 'Columns: Nama Termin, Jumlah Hari' : 'Kolom: Nama Termin, Jumlah Hari'}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-end">
+                    <Button variant="link" size="sm" onClick={() => generatePaymentTermsTemplate()}>
+                      <FileDown className="w-4 h-4 mr-1" />
+                      {t('importExport.downloadTemplate') || 'Download Template'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Bank Accounts Import */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Landmark className="w-5 h-5" />
+                    {language === 'en' ? 'Import Bank Accounts' : 'Import Rekening Bank'}
+                  </CardTitle>
+                  <CardDescription>
+                    {language === 'en' ? 'Upload Excel file to bulk import bank accounts' : 'Upload file Excel untuk import rekening bank secara massal'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <input ref={bankAccountFileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => handleImportMasterData('bank_account', e)} />
+                  <div
+                    className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => bankAccountFileRef.current?.click()}
+                  >
+                    {isImporting === 'bank_account' ? (
+                      <Loader2 className="w-12 h-12 mx-auto text-primary mb-4 animate-spin" />
+                    ) : (
+                      <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                    )}
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {language === 'en' ? 'Click to select Excel file' : 'Klik untuk pilih file Excel'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {language === 'en' ? 'Columns: Nama Bank, No Rekening, Nama Pemilik Rekening, Kode Akun GL (optional)' : 'Kolom: Nama Bank, No Rekening, Nama Pemilik Rekening, Kode Akun GL (opsional)'}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-end">
+                    <Button variant="link" size="sm" onClick={() => generateBankAccountTemplate()}>
+                      <FileDown className="w-4 h-4 mr-1" />
+                      {t('importExport.downloadTemplate') || 'Download Template'}
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Chart of Accounts Import */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5" />
+                    {language === 'en' ? 'Import Chart of Accounts' : 'Import Bagan Akun'}
+                  </CardTitle>
+                  <CardDescription>
+                    {language === 'en' ? 'Upload Excel file to bulk import GL accounts' : 'Upload file Excel untuk import akun GL secara massal'}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <input ref={coaFileRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={(e) => handleImportMasterData('chart_of_accounts', e)} />
+                  <div
+                    className="border-2 border-dashed border-border rounded-lg p-8 text-center cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => coaFileRef.current?.click()}
+                  >
+                    {isImporting === 'chart_of_accounts' ? (
+                      <Loader2 className="w-12 h-12 mx-auto text-primary mb-4 animate-spin" />
+                    ) : (
+                      <Upload className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                    )}
+                    <p className="text-sm text-muted-foreground mb-2">
+                      {language === 'en' ? 'Click to select Excel file' : 'Klik untuk pilih file Excel'}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {language === 'en'
+                        ? 'Columns: Kode Akun, Nama Akun, Tipe Akun, Saldo Normal, Kode Akun Induk, Akun Kontrol'
+                        : 'Kolom: Kode Akun, Nama Akun, Tipe Akun, Saldo Normal, Kode Akun Induk, Akun Kontrol'}
+                    </p>
+                  </div>
+                  <div className="flex items-center justify-end">
+                    <Button variant="link" size="sm" onClick={() => generateChartOfAccountsTemplate()}>
                       <FileDown className="w-4 h-4 mr-1" />
                       {t('importExport.downloadTemplate') || 'Download Template'}
                     </Button>
