@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { TablePagination, usePagination } from '@/components/TablePagination';
-import { Plus, Search, Filter, Eye, Edit, Trash2, Mail, FileText, MoreHorizontal, Loader2, Check, X, Download, Upload, CreditCard, FileDown, MessageCircle, Phone, Send, ChevronsUpDown } from 'lucide-react';
+import { Plus, Search, Filter, Eye, Edit, Trash2, Mail, FileText, MoreHorizontal, Loader2, Check, X, Download, Upload, CreditCard, FileDown, MessageCircle, Phone, Send, ChevronsUpDown, Printer } from 'lucide-react';
 import { InvoiceScanButton } from '@/components/InvoiceScanButton';
 import { Card, CardContent } from '@/components/ui/card';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -69,6 +69,7 @@ import {
 } from '@/lib/billingUtils';
 import type { Database } from '@/integrations/supabase/types';
 import { dispatchSalesPulseEvent } from '@/lib/salespulseDispatch';
+import { generateInvoiceHTML, printInvoiceHTML, downloadInvoicePDF } from '@/lib/invoiceUtils';
 
 interface BankAccount {
   id: string;
@@ -1113,6 +1114,58 @@ export default function ArListPage() {
     }
   };
 
+  const buildInvoiceHtmlFor = async (invoice: ArInvoice) => {
+    const customer = customers.find(c => c.id === invoice.customer_id);
+    const { data: items } = await supabase
+      .from('ar_invoice_items')
+      .select('*')
+      .eq('ar_invoice_id', invoice.id)
+      .order('line_no');
+
+    return generateInvoiceHTML({
+      invoiceNumber: invoice.invoice_number,
+      invoiceDate: invoice.invoice_date,
+      dueDate: invoice.due_date,
+      orderNumber: invoice.order_number,
+      customerName: invoice.customer_name,
+      customerAddress: customer?.address || undefined,
+      salesName: invoice.sales_name,
+      items: ((items as any[]) || []).map((it) => ({
+        description: it.description,
+        quantity: it.quantity,
+        unit: it.unit,
+        unitPrice: it.unit_price,
+        amount: it.amount,
+      })),
+      invoiceAmount: invoice.invoice_amount,
+      notes: invoice.notes,
+      companyName: companyProfile?.company_name || 'PT. Kemika Karya Pratama',
+      companyBrandName: companyProfile?.brand_name,
+      companyAddress: companyProfile?.address,
+      companyPhone: companyProfile?.phone,
+      companyEmail: companyProfile?.email,
+      companyWebsite: companyProfile?.website,
+      bankAccounts: bankAccounts.map((b) => ({ bankName: b.bank_name, accountNo: b.account_no, accountName: b.account_name })),
+    });
+  };
+
+  const handlePrintInvoice = async (invoice: ArInvoice) => {
+    const html = await buildInvoiceHtmlFor(invoice);
+    printInvoiceHTML(html);
+    toast.success(language === 'en' ? 'Invoice opened for printing' : 'Invoice dibuka untuk dicetak');
+  };
+
+  const handleDownloadInvoicePdf = async (invoice: ArInvoice) => {
+    const html = await buildInvoiceHtmlFor(invoice);
+    const loadingId = toast.loading(language === 'en' ? 'Preparing invoice PDF...' : 'Menyiapkan PDF invoice...');
+    try {
+      await downloadInvoicePDF(html, `Invoice-${invoice.invoice_number}`);
+      toast.success(language === 'en' ? 'Invoice PDF downloaded' : 'PDF invoice berhasil diunduh', { id: loadingId });
+    } catch {
+      toast.error(language === 'en' ? 'Failed to generate invoice PDF' : 'Gagal membuat PDF invoice', { id: loadingId });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -1297,6 +1350,10 @@ export default function ArListPage() {
                           <DropdownMenuItem className="gap-2" onClick={() => handleOpenView(invoice)}>
                             <Eye className="w-4 h-4" />
                             {t('btn.view')}
+                          </DropdownMenuItem>
+                          <DropdownMenuItem className="gap-2" onClick={() => handleDownloadInvoicePdf(invoice)}>
+                            <Printer className="w-4 h-4" />
+                            {language === 'en' ? 'Print Invoice (PDF)' : 'Cetak Invoice (PDF)'}
                           </DropdownMenuItem>
                           {canEdit(invoice.status) && (
                             <DropdownMenuItem className="gap-2" onClick={() => handleOpenEdit(invoice)}>

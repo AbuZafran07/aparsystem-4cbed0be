@@ -28,7 +28,7 @@ const translations: TranslationMap = {
   // Menu Items
   'menu.dashboard': { en: 'Dashboard', id: 'Dashboard' },
   'menu.accountsPayable': { en: 'Accounts Payable (AP)', id: 'Hutang Usaha' },
-  'menu.accountsReceivable': { en: 'Accounts Receivable (AR)', id: 'Piutang Usaha' },
+  'menu.accountsReceivable': { en: 'Accounts Receivable (AR)', id: 'Invoice Penjualan & Piutang' },
   'menu.apPayments': { en: 'AP Payments', id: 'Pembayaran Hutang Usaha' },
   'menu.arReceipts': { en: 'AR Receipts', id: 'Pembayaran Piutang Usaha' },
   'menu.billingLetters': { en: 'Billing Letters', id: 'Surat Tagihan' },

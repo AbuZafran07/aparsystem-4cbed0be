@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { ArrowLeft, Save, Loader2, Send, MessageCircle, Trash2, ChevronsUpDown, Check } from 'lucide-react';
+import { ArrowLeft, Save, Loader2, Send, MessageCircle, Trash2, ChevronsUpDown, Check, Printer, Download } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +19,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 import { dispatchSalesPulseEvent } from '@/lib/salespulseDispatch';
+import { generateInvoiceHTML, printInvoiceHTML, downloadInvoicePDF } from '@/lib/invoiceUtils';
 
 type InvoiceStatus = Database['public']['Enums']['record_status'];
 
@@ -276,6 +277,60 @@ export default function ArInvoiceDetailPage() {
     }
   };
 
+  const buildInvoiceHtml = async () => {
+    if (!invoice) return null;
+    const [{ data: profile }, { data: banks }, { data: items }] = await Promise.all([
+      supabase.from('company_profile').select('*').limit(1).maybeSingle(),
+      supabase.from('bank_accounts').select('bank_name, account_no, account_name').eq('is_active', true).order('bank_name'),
+      supabase.from('ar_invoice_items').select('*').eq('ar_invoice_id', invoice.id).order('line_no'),
+    ]);
+
+    return generateInvoiceHTML({
+      invoiceNumber: invoice.invoice_number,
+      invoiceDate: invoice.invoice_date,
+      dueDate: invoice.due_date,
+      orderNumber: invoice.order_number,
+      customerName: invoice.customer_name,
+      customerAddress: invoice.customers?.address,
+      salesName: invoice.sales_name,
+      items: ((items as any[]) || []).map((it) => ({
+        description: it.description,
+        quantity: it.quantity,
+        unit: it.unit,
+        unitPrice: it.unit_price,
+        amount: it.amount,
+      })),
+      invoiceAmount: invoice.invoice_amount,
+      notes: invoice.notes,
+      companyName: profile?.company_name || 'PT. Kemika Karya Pratama',
+      companyBrandName: profile?.brand_name,
+      companyAddress: profile?.address,
+      companyPhone: profile?.phone,
+      companyEmail: profile?.email,
+      companyWebsite: profile?.website,
+      bankAccounts: (banks || []).map((b) => ({ bankName: b.bank_name, accountNo: b.account_no, accountName: b.account_name })),
+    });
+  };
+
+  const handlePrintInvoice = async () => {
+    const html = await buildInvoiceHtml();
+    if (!html) return;
+    printInvoiceHTML(html);
+    toast.success('Invoice dibuka untuk dicetak');
+  };
+
+  const handleDownloadInvoicePdf = async () => {
+    const html = await buildInvoiceHtml();
+    if (!html) return;
+    const loadingId = toast.loading('Menyiapkan PDF invoice...');
+    try {
+      await downloadInvoicePDF(html, `Invoice-${invoice.invoice_number}`);
+      toast.success('PDF invoice berhasil diunduh', { id: loadingId });
+    } catch {
+      toast.error('Gagal membuat PDF invoice', { id: loadingId });
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[60vh]">
@@ -439,9 +494,19 @@ export default function ArInvoiceDetailPage() {
             <p className="text-muted-foreground">{invoice.invoice_number} - {invoice.customer_name}</p>
           </div>
         </div>
-        {canEdit && (
-          <Button onClick={() => navigate(`/ar/${invoice.id}/edit`)}>Edit Invoice</Button>
-        )}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" onClick={handleDownloadInvoicePdf}>
+            <Download className="h-4 w-4 mr-2" />
+            Unduh Invoice (PDF)
+          </Button>
+          <Button variant="outline" size="sm" onClick={handlePrintInvoice}>
+            <Printer className="h-4 w-4 mr-2" />
+            Cetak Invoice
+          </Button>
+          {canEdit && (
+            <Button onClick={() => navigate(`/ar/${invoice.id}/edit`)}>Edit Invoice</Button>
+          )}
+        </div>
       </div>
 
       {/* Info Cards */}

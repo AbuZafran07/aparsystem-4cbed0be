@@ -232,6 +232,56 @@ export type Database = {
           },
         ]
       }
+      ar_invoice_items: {
+        Row: {
+          amount: number
+          ar_invoice_id: string
+          created_at: string
+          created_by: string | null
+          description: string
+          id: string
+          line_no: number
+          quantity: number | null
+          unit: string | null
+          unit_price: number | null
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          ar_invoice_id: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          line_no?: number
+          quantity?: number | null
+          unit?: string | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          ar_invoice_id?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          id?: string
+          line_no?: number
+          quantity?: number | null
+          unit?: string | null
+          unit_price?: number | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ar_invoice_items_ar_invoice_id_fkey"
+            columns: ["ar_invoice_id"]
+            isOneToOne: false
+            referencedRelation: "ar_invoices"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ar_invoices: {
         Row: {
           approved_at: string | null
