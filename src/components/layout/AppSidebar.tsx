@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard, FileText, Receipt, CreditCard, Wallet, Mail, MailCheck,
@@ -7,6 +7,7 @@ import {
   ScrollText, Settings, UserCog, ClipboardList, Database, Plug,
   PanelLeftClose, PanelLeftOpen, Bell, List, PieChart,
   BookOpen, CalendarClock, GitBranch, BookText, Scale, LineChart,
+  ChevronRight, ChevronDown,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -110,6 +111,24 @@ const menuStructure: MenuSection[] = [
     ],
   },
 ];
+
+// Sections rendered as top-level standalone navigation (always expanded, no
+// accordion). Every other section becomes a collapsible group.
+const STANDALONE_SECTION_KEYS = ['section.dashboard'];
+
+function isItemActive(pathname: string, item: MenuItem): boolean {
+  return pathname === item.path || (item.path !== '/dashboard' && pathname.startsWith(item.path));
+}
+
+function findActiveSectionKey(pathname: string): string | null {
+  for (const section of menuStructure) {
+    if (STANDALONE_SECTION_KEYS.includes(section.sectionKey)) continue;
+    if (section.items.some(item => isItemActive(pathname, item))) {
+      return section.sectionKey;
+    }
+  }
+  return null;
+}
 
 // ── Audit sidebar items ────────────────────────────────────────────────────
 interface AuditItem {
@@ -243,6 +262,64 @@ export default function AppSidebar({ onNavigate, collapsed = false, onToggleColl
     }))
     .filter(section => section.items.length > 0);
 
+  // Accordion: only one collapsible group open at a time. Navigating to a
+  // page auto-opens whichever group contains it, so context is never lost.
+  const [openSection, setOpenSection] = useState<string | null>(() => findActiveSectionKey(location.pathname));
+
+  useEffect(() => {
+    const active = findActiveSectionKey(location.pathname);
+    if (active) setOpenSection(active);
+  }, [location.pathname]);
+
+  const toggleSection = (key: string) => {
+    setOpenSection(prev => (prev === key ? null : key));
+  };
+
+  const renderMenuItem = (item: MenuItem, opts?: { compact?: boolean }) => {
+    const isActive = isItemActive(location.pathname, item);
+    const Icon = item.icon;
+    const label = t(item.translationKey);
+    const compact = opts?.compact;
+
+    const linkContent = (
+      <NavLink
+        key={item.key}
+        to={item.path}
+        onClick={onNavigate}
+        className={cn(
+          'relative flex items-center rounded-lg text-sm font-medium transition-all duration-200',
+          collapsed
+            ? 'justify-center px-0 py-2.5'
+            : compact
+              ? 'gap-3 pl-7 pr-3 py-2 text-[13px]'
+              : 'gap-3 px-3 py-2.5',
+          isActive
+            ? 'bg-sidebar-accent text-sidebar-foreground'
+            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
+        )}
+      >
+        {isActive && <div className="sidebar-active-indicator" />}
+        <Icon className={cn(
+          'flex-shrink-0 transition-all duration-200',
+          collapsed ? 'w-5 h-5' : compact ? 'w-4 h-4' : 'w-[18px] h-[18px]'
+        )} />
+        {!collapsed && <span className="truncate">{label}</span>}
+      </NavLink>
+    );
+
+    if (collapsed) {
+      return (
+        <Tooltip key={item.key}>
+          <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
+          <TooltipContent side="right" sideOffset={8} className="font-medium">
+            {label}
+          </TooltipContent>
+        </Tooltip>
+      );
+    }
+    return linkContent;
+  };
+
   return (
     <TooltipProvider delayDuration={0}>
       <aside className="h-full bg-sidebar flex flex-col overflow-hidden">
@@ -278,63 +355,75 @@ export default function AppSidebar({ onNavigate, collapsed = false, onToggleColl
         )}>
           {isAuditRoute ? (
             <AuditNavMenu collapsed={collapsed} onNavigate={onNavigate} />
-          ) : (
+          ) : collapsed ? (
+            // Icon-only mode: flat list, grouping conveyed only by a divider.
             filteredSections.map((section, sectionIdx) => (
-              <div key={section.sectionKey} className={cn(sectionIdx > 0 && 'mt-5')}>
-                {!collapsed && (
-                  <div className="px-3 mb-2">
-                    <span className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
-                      {t(section.sectionKey)}
-                    </span>
-                  </div>
-                )}
-                {collapsed && sectionIdx > 0 && (
+              <div key={section.sectionKey} className={cn(sectionIdx > 0 && 'mt-2')}>
+                {sectionIdx > 0 && (
                   <div className="mx-2 mb-2 border-t border-sidebar-border/20" />
                 )}
                 <div className="space-y-0.5">
-                  {section.items.map(item => {
-                    const isActive = location.pathname === item.path ||
-                      (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
-                    const Icon = item.icon;
-                    const label = t(item.translationKey);
-
-                    const linkContent = (
-                      <NavLink
-                        key={item.key}
-                        to={item.path}
-                        onClick={onNavigate}
-                        className={cn(
-                          'relative flex items-center rounded-lg text-sm font-medium transition-all duration-200',
-                          collapsed ? 'justify-center px-0 py-2.5' : 'gap-3 px-3 py-2.5',
-                          isActive
-                            ? 'bg-sidebar-accent text-sidebar-foreground'
-                            : 'text-sidebar-foreground/70 hover:bg-sidebar-accent/50 hover:text-sidebar-foreground'
-                        )}
-                      >
-                        {isActive && <div className="sidebar-active-indicator" />}
-                        <Icon className={cn(
-                          'flex-shrink-0 transition-all duration-200',
-                          collapsed ? 'w-5 h-5' : 'w-[18px] h-[18px]'
-                        )} />
-                        {!collapsed && <span className="truncate">{label}</span>}
-                      </NavLink>
-                    );
-
-                    if (collapsed) {
-                      return (
-                        <Tooltip key={item.key}>
-                          <TooltipTrigger asChild>{linkContent}</TooltipTrigger>
-                          <TooltipContent side="right" sideOffset={8} className="font-medium">
-                            {label}
-                          </TooltipContent>
-                        </Tooltip>
-                      );
-                    }
-                    return linkContent;
-                  })}
+                  {section.items.map(item => renderMenuItem(item))}
                 </div>
               </div>
             ))
+          ) : (
+            <div className="space-y-1">
+              {filteredSections.map((section) => {
+                if (STANDALONE_SECTION_KEYS.includes(section.sectionKey)) {
+                  return (
+                    <div key={section.sectionKey} className="mb-5">
+                      <div className="px-3 mb-2">
+                        <span className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+                          {t(section.sectionKey)}
+                        </span>
+                      </div>
+                      <div className="space-y-0.5">
+                        {section.items.map(item => renderMenuItem(item))}
+                      </div>
+                    </div>
+                  );
+                }
+
+                const isOpen = openSection === section.sectionKey;
+                const hasActive = section.items.some(item => isItemActive(location.pathname, item));
+
+                return (
+                  <div key={section.sectionKey}>
+                    <button
+                      type="button"
+                      onClick={() => toggleSection(section.sectionKey)}
+                      aria-expanded={isOpen}
+                      className={cn(
+                        'w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2.5',
+                        'text-[10px] font-semibold uppercase tracking-wider transition-colors duration-200',
+                        'hover:bg-sidebar-accent/30',
+                        hasActive || isOpen ? 'text-sidebar-foreground' : 'text-sidebar-foreground/40'
+                      )}
+                    >
+                      <span className="truncate">{t(section.sectionKey)}</span>
+                      {isOpen ? (
+                        <ChevronDown className="w-3.5 h-3.5 flex-shrink-0" />
+                      ) : (
+                        <ChevronRight className="w-3.5 h-3.5 flex-shrink-0" />
+                      )}
+                    </button>
+                    <div
+                      className={cn(
+                        'grid transition-[grid-template-rows] duration-200 ease-in-out',
+                        isOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'
+                      )}
+                    >
+                      <div className="overflow-hidden">
+                        <div className="space-y-0.5 pt-0.5 pb-1">
+                          {section.items.map(item => renderMenuItem(item, { compact: true }))}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           )}
         </nav>
 
