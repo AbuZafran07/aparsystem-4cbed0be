@@ -10,7 +10,7 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.17"
+    PostgrestVersion: "14.5"
   }
   public: {
     Tables: {
@@ -55,264 +55,6 @@ export type Database = {
             columns: ["debit_account_id"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      chart_of_accounts: {
-        Row: {
-          account_type: Database["public"]["Enums"]["account_type"]
-          code: string
-          created_at: string
-          id: string
-          is_active: boolean
-          is_control_account: boolean
-          name: string
-          normal_balance: Database["public"]["Enums"]["normal_balance"]
-          parent_id: string | null
-          updated_at: string
-        }
-        Insert: {
-          account_type: Database["public"]["Enums"]["account_type"]
-          code: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          is_control_account?: boolean
-          name: string
-          normal_balance: Database["public"]["Enums"]["normal_balance"]
-          parent_id?: string | null
-          updated_at?: string
-        }
-        Update: {
-          account_type?: Database["public"]["Enums"]["account_type"]
-          code?: string
-          created_at?: string
-          id?: string
-          is_active?: boolean
-          is_control_account?: boolean
-          name?: string
-          normal_balance?: Database["public"]["Enums"]["normal_balance"]
-          parent_id?: string | null
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "chart_of_accounts_parent_id_fkey"
-            columns: ["parent_id"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      fiscal_periods: {
-        Row: {
-          closed_at: string | null
-          closed_by: string | null
-          created_at: string
-          end_date: string
-          fiscal_year: number
-          id: string
-          period_no: number
-          start_date: string
-          status: Database["public"]["Enums"]["fiscal_period_status"]
-        }
-        Insert: {
-          closed_at?: string | null
-          closed_by?: string | null
-          created_at?: string
-          end_date: string
-          fiscal_year: number
-          id?: string
-          period_no: number
-          start_date: string
-          status?: Database["public"]["Enums"]["fiscal_period_status"]
-        }
-        Update: {
-          closed_at?: string | null
-          closed_by?: string | null
-          created_at?: string
-          end_date?: string
-          fiscal_year?: number
-          id?: string
-          period_no?: number
-          start_date?: string
-          status?: Database["public"]["Enums"]["fiscal_period_status"]
-        }
-        Relationships: []
-      }
-      general_ledger: {
-        Row: {
-          account_id: string
-          created_at: string
-          credit: number
-          debit: number
-          id: string
-          journal_line_id: string
-          posting_date: string
-          source_id: string | null
-          source_type: string | null
-        }
-        Insert: {
-          account_id: string
-          created_at?: string
-          credit?: number
-          debit?: number
-          id?: string
-          journal_line_id: string
-          posting_date: string
-          source_id?: string | null
-          source_type?: string | null
-        }
-        Update: {
-          account_id?: string
-          created_at?: string
-          credit?: number
-          debit?: number
-          id?: string
-          journal_line_id?: string
-          posting_date?: string
-          source_id?: string | null
-          source_type?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "general_ledger_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "general_ledger_journal_line_id_fkey"
-            columns: ["journal_line_id"]
-            isOneToOne: true
-            referencedRelation: "journal_entry_lines"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      journal_entries: {
-        Row: {
-          created_at: string
-          created_by: string
-          description: string | null
-          entry_date: string
-          id: string
-          journal_no: string
-          posted_at: string | null
-          posted_by: string | null
-          reversed_journal_id: string | null
-          source_id: string | null
-          source_type: string | null
-          status: Database["public"]["Enums"]["journal_status"]
-          updated_at: string
-        }
-        Insert: {
-          created_at?: string
-          created_by: string
-          description?: string | null
-          entry_date: string
-          id?: string
-          journal_no: string
-          posted_at?: string | null
-          posted_by?: string | null
-          reversed_journal_id?: string | null
-          source_id?: string | null
-          source_type?: string | null
-          status?: Database["public"]["Enums"]["journal_status"]
-          updated_at?: string
-        }
-        Update: {
-          created_at?: string
-          created_by?: string
-          description?: string | null
-          entry_date?: string
-          id?: string
-          journal_no?: string
-          posted_at?: string | null
-          posted_by?: string | null
-          reversed_journal_id?: string | null
-          source_id?: string | null
-          source_type?: string | null
-          status?: Database["public"]["Enums"]["journal_status"]
-          updated_at?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "journal_entries_reversed_journal_id_fkey"
-            columns: ["reversed_journal_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
-      journal_entry_lines: {
-        Row: {
-          account_id: string
-          created_at: string
-          credit: number
-          customer_id: string | null
-          debit: number
-          description: string | null
-          id: string
-          journal_id: string
-          line_no: number
-          vendor_id: string | null
-        }
-        Insert: {
-          account_id: string
-          created_at?: string
-          credit?: number
-          customer_id?: string | null
-          debit?: number
-          description?: string | null
-          id?: string
-          journal_id: string
-          line_no: number
-          vendor_id?: string | null
-        }
-        Update: {
-          account_id?: string
-          created_at?: string
-          credit?: number
-          customer_id?: string | null
-          debit?: number
-          description?: string | null
-          id?: string
-          journal_id?: string
-          line_no?: number
-          vendor_id?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "journal_entry_lines_account_id_fkey"
-            columns: ["account_id"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_entry_lines_customer_id_fkey"
-            columns: ["customer_id"]
-            isOneToOne: false
-            referencedRelation: "customers"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_entry_lines_journal_id_fkey"
-            columns: ["journal_id"]
-            isOneToOne: false
-            referencedRelation: "journal_entries"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "journal_entry_lines_vendor_id_fkey"
-            columns: ["vendor_id"]
-            isOneToOne: false
-            referencedRelation: "vendors"
             referencedColumns: ["id"]
           },
         ]
@@ -1059,6 +801,53 @@ export type Database = {
           },
         ]
       }
+      chart_of_accounts: {
+        Row: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          code: string
+          created_at: string
+          id: string
+          is_active: boolean
+          is_control_account: boolean
+          name: string
+          normal_balance: Database["public"]["Enums"]["normal_balance"]
+          parent_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_type: Database["public"]["Enums"]["account_type"]
+          code: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_control_account?: boolean
+          name: string
+          normal_balance: Database["public"]["Enums"]["normal_balance"]
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_type?: Database["public"]["Enums"]["account_type"]
+          code?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          is_control_account?: boolean
+          name?: string
+          normal_balance?: Database["public"]["Enums"]["normal_balance"]
+          parent_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_of_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       company_profile: {
         Row: {
           address: string | null
@@ -1151,6 +940,93 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      fiscal_periods: {
+        Row: {
+          closed_at: string | null
+          closed_by: string | null
+          created_at: string
+          end_date: string
+          fiscal_year: number
+          id: string
+          period_no: number
+          start_date: string
+          status: Database["public"]["Enums"]["fiscal_period_status"]
+        }
+        Insert: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          end_date: string
+          fiscal_year: number
+          id?: string
+          period_no: number
+          start_date: string
+          status?: Database["public"]["Enums"]["fiscal_period_status"]
+        }
+        Update: {
+          closed_at?: string | null
+          closed_by?: string | null
+          created_at?: string
+          end_date?: string
+          fiscal_year?: number
+          id?: string
+          period_no?: number
+          start_date?: string
+          status?: Database["public"]["Enums"]["fiscal_period_status"]
+        }
+        Relationships: []
+      }
+      general_ledger: {
+        Row: {
+          account_id: string
+          created_at: string
+          credit: number
+          debit: number
+          id: string
+          journal_line_id: string
+          posting_date: string
+          source_id: string | null
+          source_type: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          credit?: number
+          debit?: number
+          id?: string
+          journal_line_id: string
+          posting_date: string
+          source_id?: string | null
+          source_type?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          credit?: number
+          debit?: number
+          id?: string
+          journal_line_id?: string
+          posting_date?: string
+          source_id?: string | null
+          source_type?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "general_ledger_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "general_ledger_journal_line_id_fkey"
+            columns: ["journal_line_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entry_lines"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       import_batches: {
         Row: {
@@ -1246,6 +1122,130 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      journal_entries: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          entry_date: string
+          id: string
+          journal_no: string
+          posted_at: string | null
+          posted_by: string | null
+          reversed_journal_id: string | null
+          source_id: string | null
+          source_type: string | null
+          status: Database["public"]["Enums"]["journal_status"]
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          entry_date: string
+          id?: string
+          journal_no: string
+          posted_at?: string | null
+          posted_by?: string | null
+          reversed_journal_id?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: Database["public"]["Enums"]["journal_status"]
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          entry_date?: string
+          id?: string
+          journal_no?: string
+          posted_at?: string | null
+          posted_by?: string | null
+          reversed_journal_id?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          status?: Database["public"]["Enums"]["journal_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entries_reversed_journal_id_fkey"
+            columns: ["reversed_journal_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      journal_entry_lines: {
+        Row: {
+          account_id: string
+          created_at: string
+          credit: number
+          customer_id: string | null
+          debit: number
+          description: string | null
+          id: string
+          journal_id: string
+          line_no: number
+          vendor_id: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          credit?: number
+          customer_id?: string | null
+          debit?: number
+          description?: string | null
+          id?: string
+          journal_id: string
+          line_no: number
+          vendor_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          credit?: number
+          customer_id?: string | null
+          debit?: number
+          description?: string | null
+          id?: string
+          journal_id?: string
+          line_no?: number
+          vendor_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "journal_entry_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "journal_entry_lines_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -1560,7 +1560,24 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      close_fiscal_period: {
+        Args: { _hard?: boolean; _period_id: string }
+        Returns: Json
+      }
+      create_journal_entry: {
+        Args: {
+          _description: string
+          _entry_date: string
+          _lines: Json
+          _source_id: string
+          _source_type: string
+        }
+        Returns: Json
+      }
+      create_opening_balance_journal: { Args: never; Returns: Json }
+      generate_journal_no: { Args: never; Returns: string }
       generate_payment_request_no: { Args: never; Returns: string }
+      get_or_create_fiscal_period: { Args: { _date: string }; Returns: string }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
@@ -1572,46 +1589,18 @@ export type Database = {
         }
         Returns: boolean
       }
+      post_journal_entry: { Args: { _journal_id: string }; Returns: Json }
+      reopen_fiscal_period: { Args: { _period_id: string }; Returns: Json }
+      reverse_journal_entry: {
+        Args: { _journal_id: string; _reason: string }
+        Returns: Json
+      }
       settle_payment_request: {
         Args: {
           _bank_account_id: string
           _reference_no: string
           _request_id: string
         }
-        Returns: Json
-      }
-      close_fiscal_period: {
-        Args: { _hard?: boolean; _period_id: string }
-        Returns: Json
-      }
-      create_journal_entry: {
-        Args: {
-          _description: string
-          _entry_date: string
-          _lines: Json
-          _source_id: string | null
-          _source_type: string | null
-        }
-        Returns: Json
-      }
-      create_opening_balance_journal: {
-        Args: Record<PropertyKey, never>
-        Returns: Json
-      }
-      generate_journal_no: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
-      post_journal_entry: {
-        Args: { _journal_id: string }
-        Returns: Json
-      }
-      reopen_fiscal_period: {
-        Args: { _period_id: string }
-        Returns: Json
-      }
-      reverse_journal_entry: {
-        Args: { _journal_id: string; _reason: string }
         Returns: Json
       }
     }
@@ -1646,12 +1635,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1675,11 +1664,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1700,11 +1689,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1725,11 +1714,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -1742,11 +1731,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
