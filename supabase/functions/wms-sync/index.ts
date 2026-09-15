@@ -66,8 +66,19 @@ const PlanOrderSchema = z.object({
   created_by_name: z.string().trim().max(255).optional(),
 });
 
+const StockMovementSchema = z.object({
+  wms_id: z.string().trim().min(1).max(100),
+  transaction_type: z.enum(["STOCK_IN", "STOCK_OUT", "STOCK_ADJUSTMENT"]),
+  transaction_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Format: YYYY-MM-DD"),
+  total_cost: z.number(),
+  product_ref: z.string().trim().max(255).nullable().optional(),
+  warehouse_ref: z.string().trim().max(255).nullable().optional(),
+  quantity: z.number().nullable().optional(),
+  source_reference: z.string().trim().max(255).nullable().optional(),
+});
+
 const SyncRequestSchema = z.object({
-  entity: z.enum(["customer", "vendor", "sales_order", "plan_order"]),
+  entity: z.enum(["customer", "vendor", "sales_order", "plan_order", "stock_movement"]),
   action: z.enum(["upsert", "sync_batch"]),
   data: z.any(),
 }).refine((val) => {
@@ -77,6 +88,7 @@ const SyncRequestSchema = z.object({
     vendor: z.union([VendorSchema, z.array(VendorSchema)]),
     sales_order: z.union([SalesOrderSchema, z.array(SalesOrderSchema)]),
     plan_order: z.union([PlanOrderSchema, z.array(PlanOrderSchema)]),
+    stock_movement: z.union([StockMovementSchema, z.array(StockMovementSchema)]),
   };
   const schema = schemaMap[val.entity];
   return schema ? schema.safeParse(val.data).success : false;
@@ -539,6 +551,52 @@ Deno.serve(async (req) => {
         } catch (e) {
           results.failed++;
           results.errors.push(`Plan Order "${(item as any).po_number || (item as any).vendor_invoice_number}": ${e.message}`);
+        }
+      }
+    } else if (entity === "stock_movement") {
+      for (const item of items) {
+        try {
+          const smData = StockMovementSchema.parse(item);
+
+          // Idempotent on wms_id: if this movement was already synced,
+          // treat the call as a no-op success rather than duplicating it
+          // (and its auto-posted journal).
+          const { data: existing } = await supabase
+            .from("inventory_transactions")
+            .select("id")
+            .eq("wms_id", smData.wms_id)
+            .maybeSingle();
+
+          if (existing) {
+            results.synced_ids.push(existing.id);
+            results.success++;
+            continue;
+          }
+
+          // Journal posting happens automatically via the
+          // trg_inventory_transaction_auto_post AFTER INSERT trigger.
+          const { data: newRow, error } = await supabase
+            .from("inventory_transactions")
+            .insert({
+              wms_id: smData.wms_id,
+              transaction_type: smData.transaction_type,
+              transaction_date: smData.transaction_date,
+              total_cost: smData.total_cost,
+              product_ref: smData.product_ref || null,
+              warehouse_ref: smData.warehouse_ref || null,
+              quantity: smData.quantity ?? null,
+              source_reference: smData.source_reference || null,
+            })
+            .select("id")
+            .single();
+
+          if (error) throw new Error(error.message);
+
+          results.synced_ids.push(newRow.id);
+          results.success++;
+        } catch (e) {
+          results.failed++;
+          results.errors.push(`Stock Movement "${(item as any).wms_id}": ${e.message}`);
         }
       }
     }
