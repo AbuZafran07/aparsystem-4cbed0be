@@ -212,7 +212,7 @@ function AuditNavMenu({ collapsed, onNavigate }: { collapsed: boolean; onNavigat
               </div>
               {!collapsed && (
                 <>
-                  <span className="truncate flex-1">{item.label}</span>
+                  <span className="flex-1 whitespace-normal break-words leading-tight">{item.label}</span>
                   {item.badge && item.badge > 0 ? (
                     <span className="ml-auto flex-shrink-0 min-w-[18px] h-[18px] text-[10px] font-bold bg-red-500 text-white rounded-full flex items-center justify-center px-1">
                       {item.badge > 9 ? '9+' : item.badge}
@@ -303,7 +303,7 @@ export default function AppSidebar({ onNavigate, collapsed = false, onToggleColl
           'flex-shrink-0 transition-all duration-200',
           collapsed ? 'w-5 h-5' : compact ? 'w-4 h-4' : 'w-[18px] h-[18px]'
         )} />
-        {!collapsed && <span className="truncate">{label}</span>}
+        {!collapsed && <span className="whitespace-normal break-words leading-tight">{label}</span>}
       </NavLink>
     );
 
