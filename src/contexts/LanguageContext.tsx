@@ -11,21 +11,26 @@ interface TranslationMap {
 
 // All locked UI labels and buttons - EXACT as specified
 const translations: TranslationMap = {
-  // Section Headers
+  // Section Headers (Zahir Accounting-style navigation grouping)
   'section.overview': { en: 'OVERVIEW', id: 'RINGKASAN' },
   'section.transactions': { en: 'TRANSACTIONS', id: 'TRANSAKSI' },
   'section.billing': { en: 'BILLING', id: 'PENAGIHAN' },
-  'section.masterData': { en: 'MASTER DATA', id: 'MASTER DATA' },
+  'section.masterData': { en: 'MASTER DATA', id: 'DATA-DATA' },
   'section.reports': { en: 'REPORTS', id: 'LAPORAN' },
   'section.accounting': { en: 'ACCOUNTING', id: 'AKUNTANSI' },
   'section.system': { en: 'SYSTEM', id: 'SISTEM' },
+  'section.dashboard': { en: 'DASHBOARD', id: 'DASHBOARD' },
+  'section.generalLedger': { en: 'GENERAL LEDGER', id: 'BUKU BESAR' },
+  'section.sales': { en: 'SALES', id: 'PENJUALAN' },
+  'section.purchase': { en: 'PURCHASE', id: 'PEMBELIAN' },
+  'section.closing': { en: 'CLOSING', id: 'TUTUP BUKU' },
 
   // Menu Items
   'menu.dashboard': { en: 'Dashboard', id: 'Dashboard' },
-  'menu.accountsPayable': { en: 'Accounts Payable (AP)', id: 'Hutang Vendor (AP)' },
-  'menu.accountsReceivable': { en: 'Accounts Receivable (AR)', id: 'Piutang Customer (AR)' },
-  'menu.apPayments': { en: 'AP Payments', id: 'Pembayaran AP' },
-  'menu.arReceipts': { en: 'AR Receipts', id: 'Penerimaan AR' },
+  'menu.accountsPayable': { en: 'Accounts Payable (AP)', id: 'Hutang Usaha' },
+  'menu.accountsReceivable': { en: 'Accounts Receivable (AR)', id: 'Piutang Usaha' },
+  'menu.apPayments': { en: 'AP Payments', id: 'Pembayaran Hutang Usaha' },
+  'menu.arReceipts': { en: 'AR Receipts', id: 'Pembayaran Piutang Usaha' },
   'menu.billingLetters': { en: 'Billing Letters', id: 'Surat Tagihan' },
   'menu.billingEmailLogs': { en: 'Billing Email Logs', id: 'Log Email Tagihan' },
   'menu.vendors': { en: 'Vendors', id: 'Vendor' },
@@ -49,10 +54,10 @@ const translations: TranslationMap = {
   'menu.systemSettings': { en: 'System Settings', id: 'Pengaturan Sistem' },
   'menu.backupRestore': { en: 'Backup & Restore', id: 'Backup & Restore' },
   'menu.integrationSettings': { en: 'Integration Settings', id: 'Integrasi WMS' },
-  'menu.chartOfAccounts': { en: 'Chart of Accounts', id: 'Bagan Akun' },
-  'menu.fiscalPeriods': { en: 'Fiscal Periods', id: 'Periode Fiskal' },
+  'menu.chartOfAccounts': { en: 'Chart of Accounts', id: 'Daftar Rekening Perkiraan' },
+  'menu.fiscalPeriods': { en: 'Fiscal Periods', id: 'Tutup Buku / Periode Fiskal' },
   'menu.accountingRules': { en: 'Accounting Rules', id: 'Rule Akuntansi' },
-  'menu.journalEntries': { en: 'Journal Entries', id: 'Jurnal Umum' },
+  'menu.journalEntries': { en: 'Journal Entries', id: 'Transaksi Jurnal Umum' },
   'menu.generalLedger': { en: 'General Ledger', id: 'Buku Besar' },
   'menu.trialBalance': { en: 'Trial Balance', id: 'Neraca Saldo' },
   'menu.financialStatements': { en: 'Financial Statements', id: 'Laporan Keuangan' },

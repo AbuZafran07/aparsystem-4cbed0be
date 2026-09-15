@@ -31,36 +31,22 @@ interface MenuSection {
   items: MenuItem[];
 }
 
+// Section order follows Zahir Accounting's navigation structure. Cosmetic
+// grouping only - every path below is unchanged from before, items are just
+// regrouped under different section headers.
 const menuStructure: MenuSection[] = [
   {
-    sectionKey: 'section.overview',
+    sectionKey: 'section.dashboard',
     items: [
       { key: 'dashboard', translationKey: 'menu.dashboard', icon: LayoutDashboard, path: '/dashboard' },
       { key: 'customerStatus', translationKey: 'menu.customerStatus', icon: Users, path: '/customer-status' },
     ],
   },
   {
-    sectionKey: 'section.transactions',
-    items: [
-      { key: 'accountsPayable', translationKey: 'menu.accountsPayable', icon: FileText, path: '/ap' },
-      { key: 'accountsReceivable', translationKey: 'menu.accountsReceivable', icon: Receipt, path: '/ar' },
-      { key: 'apPayments', translationKey: 'menu.apPayments', icon: CreditCard, path: '/ap-payments' },
-      { key: 'arReceipts', translationKey: 'menu.arReceipts', icon: Wallet, path: '/ar-receipts' },
-    ],
-  },
-  {
-    sectionKey: 'section.billing',
-    items: [
-      { key: 'billingLetters', translationKey: 'menu.billingLetters', icon: Mail, path: '/billing-letters' },
-      { key: 'billingEmailLogs', translationKey: 'menu.billingEmailLogs', icon: MailCheck, path: '/billing-email-logs' },
-      { key: 'paymentRequests', translationKey: 'menu.paymentRequestsAp', icon: ClipboardList, path: '/payment-requests' },
-    ],
-  },
-  {
     sectionKey: 'section.masterData',
     items: [
-      { key: 'vendors', translationKey: 'menu.vendors', icon: Building2, path: '/vendors' },
       { key: 'customers', translationKey: 'menu.customers', icon: Users, path: '/customers' },
+      { key: 'vendors', translationKey: 'menu.vendors', icon: Building2, path: '/vendors' },
       { key: 'sales', translationKey: 'menu.sales', icon: UserCircle, path: '/sales' },
       { key: 'paymentTerms', translationKey: 'menu.paymentTerms', icon: Clock, path: '/payment-terms' },
       { key: 'bankAccounts', translationKey: 'menu.bankAccounts', icon: Landmark, path: '/bank-accounts' },
@@ -68,27 +54,49 @@ const menuStructure: MenuSection[] = [
     ],
   },
   {
+    sectionKey: 'section.generalLedger',
+    items: [
+      { key: 'chartOfAccounts', translationKey: 'menu.chartOfAccounts', icon: BookOpen, path: '/accounting/coa' },
+      { key: 'journalEntries', translationKey: 'menu.journalEntries', icon: BookText, path: '/accounting/journal-entries' },
+      { key: 'generalLedger', translationKey: 'menu.generalLedger', icon: FileBarChart2, path: '/accounting/general-ledger' },
+      { key: 'accountingRules', translationKey: 'menu.accountingRules', icon: GitBranch, path: '/accounting/rules' },
+    ],
+  },
+  {
+    sectionKey: 'section.sales',
+    items: [
+      { key: 'accountsReceivable', translationKey: 'menu.accountsReceivable', icon: Receipt, path: '/ar' },
+      { key: 'arReceipts', translationKey: 'menu.arReceipts', icon: Wallet, path: '/ar-receipts' },
+      { key: 'billingLetters', translationKey: 'menu.billingLetters', icon: Mail, path: '/billing-letters' },
+      { key: 'billingEmailLogs', translationKey: 'menu.billingEmailLogs', icon: MailCheck, path: '/billing-email-logs' },
+    ],
+  },
+  {
+    sectionKey: 'section.purchase',
+    items: [
+      { key: 'accountsPayable', translationKey: 'menu.accountsPayable', icon: FileText, path: '/ap' },
+      { key: 'apPayments', translationKey: 'menu.apPayments', icon: CreditCard, path: '/ap-payments' },
+      { key: 'paymentRequests', translationKey: 'menu.paymentRequestsAp', icon: ClipboardList, path: '/payment-requests' },
+    ],
+  },
+  {
     sectionKey: 'section.reports',
     items: [
-      { key: 'apAging', translationKey: 'menu.apAging', icon: TrendingDown, path: '/ap-aging' },
+      { key: 'financialStatements', translationKey: 'menu.financialStatements', icon: LineChart, path: '/accounting/financial-statements' },
+      { key: 'trialBalance', translationKey: 'menu.trialBalance', icon: Scale, path: '/accounting/trial-balance' },
       { key: 'arAging', translationKey: 'menu.arAging', icon: TrendingUp, path: '/ar-aging' },
-      { key: 'apReport', translationKey: 'menu.apReport', icon: FileBarChart, path: '/ap-report' },
+      { key: 'apAging', translationKey: 'menu.apAging', icon: TrendingDown, path: '/ap-aging' },
       { key: 'arReport', translationKey: 'menu.arReport', icon: FileBarChart2, path: '/ar-report' },
+      { key: 'apReport', translationKey: 'menu.apReport', icon: FileBarChart, path: '/ap-report' },
       { key: 'cashflow', translationKey: 'menu.cashflow', icon: DollarSign, path: '/cashflow' },
       { key: 'exportCenter', translationKey: 'menu.exportCenter', icon: Download, path: '/export-center' },
       { key: 'importExportCenter', translationKey: 'menu.importExportCenter', icon: ArrowUpDown, path: '/import-export' },
     ],
   },
   {
-    sectionKey: 'section.accounting',
+    sectionKey: 'section.closing',
     items: [
-      { key: 'chartOfAccounts', translationKey: 'menu.chartOfAccounts', icon: BookOpen, path: '/accounting/coa' },
       { key: 'fiscalPeriods', translationKey: 'menu.fiscalPeriods', icon: CalendarClock, path: '/accounting/fiscal-periods' },
-      { key: 'accountingRules', translationKey: 'menu.accountingRules', icon: GitBranch, path: '/accounting/rules' },
-      { key: 'journalEntries', translationKey: 'menu.journalEntries', icon: BookText, path: '/accounting/journal-entries' },
-      { key: 'generalLedger', translationKey: 'menu.generalLedger', icon: FileBarChart2, path: '/accounting/general-ledger' },
-      { key: 'trialBalance', translationKey: 'menu.trialBalance', icon: Scale, path: '/accounting/trial-balance' },
-      { key: 'financialStatements', translationKey: 'menu.financialStatements', icon: LineChart, path: '/accounting/financial-statements' },
     ],
   },
   {
