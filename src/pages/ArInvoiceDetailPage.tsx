@@ -26,6 +26,7 @@ type InvoiceStatus = Database['public']['Enums']['record_status'];
 interface Customer { id: string; customer_name: string; billing_email: string | null; address: string | null; }
 interface Sales { id: string; sales_name: string; }
 interface PaymentTerms { id: string; terms_name: string; days: number; }
+interface TaxCode { id: string; code: string; name: string; rate: number; }
 interface Comment { id: string; comment: string; created_at: string; user_id: string; user_name: string; }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -65,6 +66,7 @@ export default function ArInvoiceDetailPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [salesList, setSalesList] = useState<Sales[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms[]>([]);
+  const [taxCodes, setTaxCodes] = useState<TaxCode[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
@@ -80,6 +82,7 @@ export default function ArInvoiceDetailPage() {
     terms_id: '',
     invoice_amount: '',
     notes: '',
+    tax_code_id: '',
   });
 
   useEffect(() => {
@@ -88,14 +91,22 @@ export default function ArInvoiceDetailPage() {
   }, [id, isCreateMode, isEditMode]);
 
   const fetchDropdowns = async () => {
-    const [customersRes, salesRes, termsRes] = await Promise.all([
+    const [customersRes, salesRes, termsRes, taxRes] = await Promise.all([
       supabase.from('customers').select('id, customer_name, billing_email, address').eq('is_active', true).order('customer_name'),
       supabase.from('sales').select('id, sales_name').eq('is_active', true).order('sales_name'),
       supabase.from('payment_terms').select('id, terms_name, days').eq('is_active', true).order('days'),
+      supabase.from('tax_codes').select('id, code, name, rate').eq('is_active', true).eq('tax_type', 'OUTPUT').order('code'),
     ]);
     setCustomers(customersRes.data || []);
     setSalesList(salesRes.data || []);
     setPaymentTerms(termsRes.data || []);
+    setTaxCodes(taxRes.data || []);
+  };
+
+  const taxCodeLabel = (id: string | null) => {
+    if (!id) return '-';
+    const tc = taxCodes.find(t => t.id === id);
+    return tc ? `${tc.code} - ${tc.name}` : '-';
   };
 
   const fetchInvoice = async () => {
@@ -126,6 +137,7 @@ export default function ArInvoiceDetailPage() {
           terms_id: data.terms_id || '',
           invoice_amount: data.invoice_amount.toString(),
           notes: data.notes || '',
+          tax_code_id: (data as any).tax_code_id || '',
         });
       }
 
@@ -189,6 +201,7 @@ export default function ArInvoiceDetailPage() {
             invoice_amount: invoiceAmount,
             outstanding_amount: invoiceAmount - (invoice.paid_amount || 0),
             notes: formData.notes || null,
+            tax_code_id: formData.tax_code_id || null,
           })
           .eq('id', invoice.id);
         if (error) throw error;
@@ -216,6 +229,7 @@ export default function ArInvoiceDetailPage() {
             invoice_amount: invoiceAmount,
             outstanding_amount: invoiceAmount,
             notes: formData.notes || null,
+            tax_code_id: formData.tax_code_id || null,
             created_by: user?.id || '',
             status: 'DRAFT',
           }])
@@ -453,6 +467,17 @@ export default function ArInvoiceDetailPage() {
                 <Input type="number" value={formData.invoice_amount} onChange={(e) => setFormData({ ...formData, invoice_amount: e.target.value })} />
               </div>
 
+              <div className="space-y-2">
+                <Label>Kode Pajak (Opsional)</Label>
+                <Select value={formData.tax_code_id || 'none'} onValueChange={(v) => setFormData({ ...formData, tax_code_id: v === 'none' ? '' : v })}>
+                  <SelectTrigger><SelectValue placeholder="Tanpa Pajak" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Tanpa Pajak</SelectItem>
+                    {taxCodes.map((t) => (<SelectItem key={t.id} value={t.id}>{t.code} - {t.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="col-span-1 md:col-span-2 space-y-2">
                 <Label>Catatan</Label>
                 <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={3} />
@@ -625,6 +650,31 @@ export default function ArInvoiceDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Tax Info */}
+      {invoice.tax_code_id && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Informasi Pajak</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 text-sm">
+              <div>
+                <p className="text-muted-foreground">Kode Pajak</p>
+                <p className="font-medium">{taxCodeLabel(invoice.tax_code_id)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">DPP (Dasar Pengenaan Pajak)</p>
+                <p className="font-medium">{formatCurrency(invoice.dpp_amount || 0)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">PPN</p>
+                <p className="font-medium">{formatCurrency(invoice.tax_amount || 0)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Activity Timeline */}
       <Card>

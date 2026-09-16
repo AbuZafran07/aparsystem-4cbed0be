@@ -65,6 +65,7 @@ export type Database = {
           approved_by: string | null
           created_at: string
           created_by: string
+          dpp_amount: number | null
           due_date: string
           id: string
           invoice_amount: number
@@ -80,6 +81,8 @@ export type Database = {
           rejected_reason: string | null
           sp_po_date: string
           status: Database["public"]["Enums"]["record_status"]
+          tax_amount: number | null
+          tax_code_id: string | null
           terms_id: string | null
           updated_at: string
           vendor_id: string
@@ -90,6 +93,7 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           created_by: string
+          dpp_amount?: number | null
           due_date: string
           id?: string
           invoice_amount?: number
@@ -105,6 +109,8 @@ export type Database = {
           rejected_reason?: string | null
           sp_po_date: string
           status?: Database["public"]["Enums"]["record_status"]
+          tax_amount?: number | null
+          tax_code_id?: string | null
           terms_id?: string | null
           updated_at?: string
           vendor_id: string
@@ -115,6 +121,7 @@ export type Database = {
           approved_by?: string | null
           created_at?: string
           created_by?: string
+          dpp_amount?: number | null
           due_date?: string
           id?: string
           invoice_amount?: number
@@ -130,12 +137,21 @@ export type Database = {
           rejected_reason?: string | null
           sp_po_date?: string
           status?: Database["public"]["Enums"]["record_status"]
+          tax_amount?: number | null
+          tax_code_id?: string | null
           terms_id?: string | null
           updated_at?: string
           vendor_id?: string
           vendor_invoice_number?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "ap_invoices_tax_code_id_fkey"
+            columns: ["tax_code_id"]
+            isOneToOne: false
+            referencedRelation: "tax_codes"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "ap_invoices_terms_id_fkey"
             columns: ["terms_id"]
@@ -290,6 +306,7 @@ export type Database = {
           created_by: string
           customer_id: string
           doc_sent_date: string | null
+          dpp_amount: number | null
           due_date: string
           id: string
           invoice_amount: number
@@ -306,6 +323,8 @@ export type Database = {
           sales_id: string | null
           sp_po_date: string
           status: Database["public"]["Enums"]["record_status"]
+          tax_amount: number | null
+          tax_code_id: string | null
           terms_id: string | null
           updated_at: string
           wms_so_number: string | null
@@ -317,6 +336,7 @@ export type Database = {
           created_by: string
           customer_id: string
           doc_sent_date?: string | null
+          dpp_amount?: number | null
           due_date: string
           id?: string
           invoice_amount?: number
@@ -333,6 +353,8 @@ export type Database = {
           sales_id?: string | null
           sp_po_date: string
           status?: Database["public"]["Enums"]["record_status"]
+          tax_amount?: number | null
+          tax_code_id?: string | null
           terms_id?: string | null
           updated_at?: string
           wms_so_number?: string | null
@@ -344,6 +366,7 @@ export type Database = {
           created_by?: string
           customer_id?: string
           doc_sent_date?: string | null
+          dpp_amount?: number | null
           due_date?: string
           id?: string
           invoice_amount?: number
@@ -360,6 +383,8 @@ export type Database = {
           sales_id?: string | null
           sp_po_date?: string
           status?: Database["public"]["Enums"]["record_status"]
+          tax_amount?: number | null
+          tax_code_id?: string | null
           terms_id?: string | null
           updated_at?: string
           wms_so_number?: string | null
@@ -377,6 +402,13 @@ export type Database = {
             columns: ["sales_id"]
             isOneToOne: false
             referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ar_invoices_tax_code_id_fkey"
+            columns: ["tax_code_id"]
+            isOneToOne: false
+            referencedRelation: "tax_codes"
             referencedColumns: ["id"]
           },
           {
@@ -1627,6 +1659,47 @@ export type Database = {
           so_number?: string | null
         }
         Relationships: []
+      }
+      tax_codes: {
+        Row: {
+          code: string
+          created_at: string
+          gl_account_id: string | null
+          id: string
+          is_active: boolean
+          name: string
+          rate: number
+          tax_type: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          gl_account_id?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          rate: number
+          tax_type: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          gl_account_id?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          rate?: number
+          tax_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tax_codes_gl_account_id_fkey"
+            columns: ["gl_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       user_roles: {
         Row: {

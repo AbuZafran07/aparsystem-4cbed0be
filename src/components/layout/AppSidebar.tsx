@@ -7,7 +7,7 @@ import {
   ScrollText, Settings, UserCog, ClipboardList, Database, Plug,
   PanelLeftClose, PanelLeftOpen, Bell, List, PieChart,
   BookOpen, CalendarClock, GitBranch, BookText, Scale, LineChart,
-  ChevronRight, ChevronDown, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, ListChecks,
+  ChevronRight, ChevronDown, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, ListChecks, Percent,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -52,6 +52,7 @@ const menuStructure: MenuSection[] = [
       { key: 'paymentTerms', translationKey: 'menu.paymentTerms', icon: Clock, path: '/payment-terms' },
       { key: 'bankAccounts', translationKey: 'menu.bankAccounts', icon: Landmark, path: '/bank-accounts' },
       { key: 'companyProfile', translationKey: 'menu.companyProfile', icon: Building, path: '/company-profile' },
+      { key: 'taxCodes', translationKey: 'menu.taxCodes', icon: Percent, path: '/tax-codes' },
     ],
   },
   {

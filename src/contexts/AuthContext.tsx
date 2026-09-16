@@ -228,6 +228,7 @@ export function useRoleAccess() {
       'generalLedger',
       'trialBalance',
       'financialStatements',
+      'taxCodes',
     ];
 
     // Kas & Bank (core cash/bank module) - FINANCE/ADMIN/SUPER_ADMIN only, matches

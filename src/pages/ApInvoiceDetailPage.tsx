@@ -23,6 +23,7 @@ type InvoiceStatus = Database['public']['Enums']['record_status'];
 
 interface Vendor { id: string; vendor_name: string; address?: string | null; bank_name?: string | null; bank_account_no?: string | null; }
 interface PaymentTerms { id: string; terms_name: string; days: number; }
+interface TaxCode { id: string; code: string; name: string; rate: number; }
 interface Comment { id: string; comment: string; created_at: string; user_id: string; user_name: string; }
 
 const statusConfig: Record<string, { label: string; className: string }> = {
@@ -61,6 +62,7 @@ export default function ApInvoiceDetailPage() {
   const [invoice, setInvoice] = useState<any>(null);
   const [vendors, setVendors] = useState<Vendor[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms[]>([]);
+  const [taxCodes, setTaxCodes] = useState<TaxCode[]>([]);
   const [comments, setComments] = useState<Comment[]>([]);
   const [newComment, setNewComment] = useState('');
   const [sendingComment, setSendingComment] = useState(false);
@@ -76,6 +78,7 @@ export default function ApInvoiceDetailPage() {
     terms_id: '',
     invoice_amount: '',
     notes: '',
+    tax_code_id: '',
   });
 
   useEffect(() => {
@@ -84,12 +87,20 @@ export default function ApInvoiceDetailPage() {
   }, [id, isCreateMode]);
 
   const fetchDropdowns = async () => {
-    const [vendorsRes, termsRes] = await Promise.all([
+    const [vendorsRes, termsRes, taxRes] = await Promise.all([
       supabase.from('vendors').select('id, vendor_name, address, bank_name, bank_account_no').eq('is_active', true).order('vendor_name'),
       supabase.from('payment_terms').select('id, terms_name, days').eq('is_active', true).order('days'),
+      supabase.from('tax_codes').select('id, code, name, rate').eq('is_active', true).eq('tax_type', 'INPUT').order('code'),
     ]);
     setVendors(vendorsRes.data || []);
     setPaymentTerms(termsRes.data || []);
+    setTaxCodes(taxRes.data || []);
+  };
+
+  const taxCodeLabel = (id: string | null) => {
+    if (!id) return '-';
+    const tc = taxCodes.find(t => t.id === id);
+    return tc ? `${tc.code} - ${tc.name}` : '-';
   };
 
   const fetchInvoice = async () => {
@@ -120,6 +131,7 @@ export default function ApInvoiceDetailPage() {
           terms_id: data.terms_id || '',
           invoice_amount: data.invoice_amount.toString(),
           notes: data.notes || '',
+          tax_code_id: (data as any).tax_code_id || '',
         });
       }
 
@@ -182,6 +194,7 @@ export default function ApInvoiceDetailPage() {
             invoice_amount: invoiceAmount,
             outstanding_amount: invoiceAmount - (invoice.paid_amount || 0),
             notes: formData.notes || null,
+            tax_code_id: formData.tax_code_id || null,
           })
           .eq('id', invoice.id);
         if (error) throw error;
@@ -202,6 +215,7 @@ export default function ApInvoiceDetailPage() {
             invoice_amount: invoiceAmount,
             outstanding_amount: invoiceAmount,
             notes: formData.notes || null,
+            tax_code_id: formData.tax_code_id || null,
             created_by: user?.id || '',
             status: 'DRAFT',
           }])
@@ -394,6 +408,17 @@ export default function ApInvoiceDetailPage() {
                 <Input type="number" value={formData.invoice_amount} onChange={(e) => setFormData({ ...formData, invoice_amount: e.target.value })} />
               </div>
 
+              <div className="space-y-2">
+                <Label>Kode Pajak (Opsional)</Label>
+                <Select value={formData.tax_code_id || 'none'} onValueChange={(v) => setFormData({ ...formData, tax_code_id: v === 'none' ? '' : v })}>
+                  <SelectTrigger><SelectValue placeholder="Tanpa Pajak" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Tanpa Pajak</SelectItem>
+                    {taxCodes.map((t) => (<SelectItem key={t.id} value={t.id}>{t.code} - {t.name}</SelectItem>))}
+                  </SelectContent>
+                </Select>
+              </div>
+
               <div className="col-span-1 md:col-span-2 space-y-2">
                 <Label>Catatan</Label>
                 <Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={3} />
@@ -550,6 +575,31 @@ export default function ApInvoiceDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Tax Info */}
+      {invoice.tax_code_id && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Informasi Pajak</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-y-3 text-sm">
+              <div>
+                <p className="text-muted-foreground">Kode Pajak</p>
+                <p className="font-medium">{taxCodeLabel(invoice.tax_code_id)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">DPP (Dasar Pengenaan Pajak)</p>
+                <p className="font-medium">{formatCurrency(invoice.dpp_amount || 0)}</p>
+              </div>
+              <div>
+                <p className="text-muted-foreground">PPN</p>
+                <p className="font-medium">{formatCurrency(invoice.tax_amount || 0)}</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Activity Timeline */}
       <Card>
