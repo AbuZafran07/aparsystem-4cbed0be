@@ -40,6 +40,7 @@ export default function CustomersPage() {
   const [formAddress, setFormAddress] = useState('');
   const [formPhone, setFormPhone] = useState('');
   const [formBillingEmail, setFormBillingEmail] = useState('');
+  const [formNpwp, setFormNpwp] = useState('');
   const [formActive, setFormActive] = useState(true);
 
   const { data: customers = [], isLoading } = useQuery({
@@ -102,6 +103,7 @@ export default function CustomersPage() {
     setFormAddress('');
     setFormPhone('');
     setFormBillingEmail('');
+    setFormNpwp('');
     setFormActive(true);
     setIsDialogOpen(true);
   };
@@ -112,6 +114,7 @@ export default function CustomersPage() {
     setFormAddress(customer.address || '');
     setFormPhone(customer.phone || '');
     setFormBillingEmail(customer.billing_email || '');
+    setFormNpwp((customer as any).npwp || '');
     setFormActive(customer.is_active);
     setIsDialogOpen(true);
   };
@@ -131,8 +134,9 @@ export default function CustomersPage() {
       address: formAddress || null,
       phone: formPhone || null,
       billing_email: formBillingEmail || null,
+      npwp: formNpwp || null,
       is_active: formActive,
-    });
+    } as any);
   };
 
   const handleDelete = (customer: Customer) => {
@@ -320,6 +324,10 @@ export default function CustomersPage() {
                 <Label>{language === 'en' ? 'Billing Email' : 'Email Penagihan'}</Label>
                 <Input type="email" value={formBillingEmail} onChange={(e) => setFormBillingEmail(e.target.value)} />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>NPWP</Label>
+              <Input value={formNpwp} onChange={(e) => setFormNpwp(e.target.value)} placeholder="00.000.000.0-000.000" />
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={formActive} onCheckedChange={setFormActive} />

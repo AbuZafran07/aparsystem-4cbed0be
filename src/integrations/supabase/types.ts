@@ -1021,6 +1021,7 @@ export type Database = {
           email: string | null
           id: string
           logo_url: string | null
+          npwp: string | null
           phone: string | null
           updated_at: string
           website: string | null
@@ -1032,6 +1033,7 @@ export type Database = {
           email?: string | null
           id?: string
           logo_url?: string | null
+          npwp?: string | null
           phone?: string | null
           updated_at?: string
           website?: string | null
@@ -1043,6 +1045,7 @@ export type Database = {
           email?: string | null
           id?: string
           logo_url?: string | null
+          npwp?: string | null
           phone?: string | null
           updated_at?: string
           website?: string | null
@@ -1057,6 +1060,7 @@ export type Database = {
           customer_name: string
           id: string
           is_active: boolean
+          npwp: string | null
           phone: string | null
           updated_at: string
         }
@@ -1067,6 +1071,7 @@ export type Database = {
           customer_name: string
           id?: string
           is_active?: boolean
+          npwp?: string | null
           phone?: string | null
           updated_at?: string
         }
@@ -1077,6 +1082,7 @@ export type Database = {
           customer_name?: string
           id?: string
           is_active?: boolean
+          npwp?: string | null
           phone?: string | null
           updated_at?: string
         }
@@ -1731,6 +1737,7 @@ export type Database = {
           email: string | null
           id: string
           is_active: boolean
+          npwp: string | null
           phone: string | null
           updated_at: string
           vendor_name: string
@@ -1743,6 +1750,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean
+          npwp?: string | null
           phone?: string | null
           updated_at?: string
           vendor_name: string
@@ -1755,6 +1763,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean
+          npwp?: string | null
           phone?: string | null
           updated_at?: string
           vendor_name?: string

@@ -25,6 +25,7 @@ export interface InvoiceHtmlData {
   orderNumber?: string;
   customerName: string;
   customerAddress?: string;
+  customerNpwp?: string | null;
   salesName?: string | null;
   items: InvoiceItemLine[];
   invoiceAmount: number;
@@ -36,6 +37,7 @@ export interface InvoiceHtmlData {
   companyPhone?: string;
   companyEmail?: string;
   companyWebsite?: string;
+  companyNpwp?: string | null;
   bankAccounts?: InvoiceBankAccount[];
 }
 
@@ -102,6 +104,7 @@ export const generateInvoiceHTML = (data: InvoiceHtmlData): string => {
     orderNumber: escapeHtml(data.orderNumber),
     customerName: escapeHtml(data.customerName),
     customerAddress: escapeHtml(data.customerAddress),
+    customerNpwp: escapeHtml(data.customerNpwp || undefined),
     salesName: escapeHtml(data.salesName || undefined),
     notes: escapeHtml(data.notes || undefined),
     companyName: escapeHtml(data.companyName),
@@ -110,6 +113,7 @@ export const generateInvoiceHTML = (data: InvoiceHtmlData): string => {
     companyPhone: escapeHtml(data.companyPhone),
     companyEmail: escapeHtml(data.companyEmail),
     companyWebsite: escapeHtml(data.companyWebsite),
+    companyNpwp: escapeHtml(data.companyNpwp || undefined),
   };
 
   const items: InvoiceItemLine[] = data.items.length > 0
@@ -223,6 +227,7 @@ export const generateInvoiceHTML = (data: InvoiceHtmlData): string => {
           ${s.companyBrandName && s.companyBrandName !== s.companyName ? `<div class="company-brand">${s.companyBrandName}</div>` : ''}
           ${s.companyAddress ? `<div class="company-detail">${s.companyAddress}</div>` : ''}
           ${companyContactLine ? `<div class="company-detail">${companyContactLine}</div>` : ''}
+          ${s.companyNpwp ? `<div class="company-detail">NPWP: ${s.companyNpwp}</div>` : ''}
         </div>
         <div class="invoice-title-block">
           <div class="invoice-title">INVOICE</div>
@@ -235,6 +240,7 @@ export const generateInvoiceHTML = (data: InvoiceHtmlData): string => {
           <div class="bill-to-label">Ditagihkan Kepada</div>
           <div class="bill-to-name">${s.customerName}</div>
           ${s.customerAddress ? `<div>${s.customerAddress}</div>` : ''}
+          ${s.customerNpwp ? `<div>NPWP: ${s.customerNpwp}</div>` : ''}
         </div>
         <div class="invoice-meta">
           <div class="meta-row"><span class="meta-label">Tanggal Invoice</span><span>${formatDateID(s.invoiceDate)}</span></div>

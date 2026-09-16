@@ -115,6 +115,7 @@ interface Customer {
   customer_name: string;
   billing_email: string | null;
   address: string | null;
+  npwp: string | null;
 }
 
 interface Sales {
@@ -297,7 +298,7 @@ export default function ArListPage() {
       // Fetch customers for dropdown
       const { data: customersData } = await supabase
         .from('customers')
-        .select('id, customer_name, billing_email, address')
+        .select('id, customer_name, billing_email, address, npwp')
         .eq('is_active', true)
         .order('customer_name');
 
@@ -1129,6 +1130,7 @@ export default function ArListPage() {
       orderNumber: invoice.order_number,
       customerName: invoice.customer_name,
       customerAddress: customer?.address || undefined,
+      customerNpwp: customer?.npwp,
       salesName: invoice.sales_name,
       items: ((items as any[]) || []).map((it) => ({
         description: it.description,
@@ -1145,6 +1147,7 @@ export default function ArListPage() {
       companyPhone: companyProfile?.phone,
       companyEmail: companyProfile?.email,
       companyWebsite: companyProfile?.website,
+      companyNpwp: companyProfile?.npwp,
       bankAccounts: bankAccounts.map((b) => ({ bankName: b.bank_name, accountNo: b.account_no, accountName: b.account_name })),
     });
   };

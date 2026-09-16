@@ -18,6 +18,7 @@ interface CompanyProfile {
   phone: string | null;
   email: string | null;
   website: string | null;
+  npwp: string | null;
   logo_url: string | null;
   updated_at: string;
 }
@@ -41,6 +42,7 @@ export default function CompanyProfilePage() {
     phone: '',
     email: '',
     website: '',
+    npwp: '',
     logo_url: '',
   });
 
@@ -69,6 +71,7 @@ export default function CompanyProfilePage() {
           phone: data.phone || '',
           email: data.email || '',
           website: data.website || '',
+          npwp: data.npwp || '',
           logo_url: data.logo_url || '',
         });
       }
@@ -179,6 +182,7 @@ export default function CompanyProfilePage() {
             phone: formData.phone || null,
             email: formData.email || null,
             website: formData.website || null,
+            npwp: formData.npwp || null,
             logo_url: formData.logo_url || null,
             updated_at: new Date().toISOString(),
           })
@@ -196,6 +200,7 @@ export default function CompanyProfilePage() {
             phone: formData.phone || null,
             email: formData.email || null,
             website: formData.website || null,
+            npwp: formData.npwp || null,
             logo_url: formData.logo_url || null,
           });
 
@@ -327,16 +332,29 @@ export default function CompanyProfilePage() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="website">{t('companyProfile.website') || 'Website'}</Label>
-              <Input
-                id="website"
-                name="website"
-                value={formData.website}
-                onChange={handleInputChange}
-                placeholder="https://www.company.com"
-                disabled={!isSuperAdmin}
-              />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="website">{t('companyProfile.website') || 'Website'}</Label>
+                <Input
+                  id="website"
+                  name="website"
+                  value={formData.website}
+                  onChange={handleInputChange}
+                  placeholder="https://www.company.com"
+                  disabled={!isSuperAdmin}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="npwp">NPWP</Label>
+                <Input
+                  id="npwp"
+                  name="npwp"
+                  value={formData.npwp}
+                  onChange={handleInputChange}
+                  placeholder="00.000.000.0-000.000"
+                  disabled={!isSuperAdmin}
+                />
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -451,6 +469,7 @@ export default function CompanyProfilePage() {
                 {formData.email && <p>Email: {formData.email}</p>}
               </div>
               {formData.website && <p>Website: {formData.website}</p>}
+              {formData.npwp && <p>NPWP: {formData.npwp}</p>}
             </div>
           </div>
         </CardContent>

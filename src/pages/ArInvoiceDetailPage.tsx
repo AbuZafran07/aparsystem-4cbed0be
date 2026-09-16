@@ -114,7 +114,7 @@ export default function ArInvoiceDetailPage() {
       setLoading(true);
       const { data, error } = await supabase
         .from('ar_invoices')
-        .select('*, customers(customer_name, billing_email, address), sales(sales_name)')
+        .select('*, customers(customer_name, billing_email, address, npwp), sales(sales_name)')
         .eq('id', id!)
         .maybeSingle();
 
@@ -306,6 +306,7 @@ export default function ArInvoiceDetailPage() {
       orderNumber: invoice.order_number,
       customerName: invoice.customer_name,
       customerAddress: invoice.customers?.address,
+      customerNpwp: invoice.customers?.npwp,
       salesName: invoice.sales_name,
       items: ((items as any[]) || []).map((it) => ({
         description: it.description,
@@ -317,6 +318,7 @@ export default function ArInvoiceDetailPage() {
       invoiceAmount: invoice.invoice_amount,
       notes: invoice.notes,
       companyName: profile?.company_name || 'PT. Kemika Karya Pratama',
+      companyNpwp: profile?.npwp,
       companyBrandName: profile?.brand_name,
       companyAddress: profile?.address,
       companyPhone: profile?.phone,

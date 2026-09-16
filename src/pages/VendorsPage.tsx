@@ -42,6 +42,7 @@ export default function VendorsPage() {
   const [formEmail, setFormEmail] = useState('');
   const [formBankName, setFormBankName] = useState('');
   const [formBankAccountNo, setFormBankAccountNo] = useState('');
+  const [formNpwp, setFormNpwp] = useState('');
   const [formActive, setFormActive] = useState(true);
 
   const { data: vendors = [], isLoading } = useQuery({
@@ -109,6 +110,7 @@ export default function VendorsPage() {
     setFormEmail('');
     setFormBankName('');
     setFormBankAccountNo('');
+    setFormNpwp('');
     setFormActive(true);
     setIsDialogOpen(true);
   };
@@ -121,6 +123,7 @@ export default function VendorsPage() {
     setFormEmail(vendor.email || '');
     setFormBankName((vendor as any).bank_name || '');
     setFormBankAccountNo((vendor as any).bank_account_no || '');
+    setFormNpwp((vendor as any).npwp || '');
     setFormActive(vendor.is_active);
     setIsDialogOpen(true);
   };
@@ -142,6 +145,7 @@ export default function VendorsPage() {
       email: formEmail || null,
       bank_name: formBankName || null,
       bank_account_no: formBankAccountNo || null,
+      npwp: formNpwp || null,
       is_active: formActive,
     } as any);
   };
@@ -341,6 +345,10 @@ export default function VendorsPage() {
                 <Label>{language === 'en' ? 'Bank Account No' : 'No. Rekening'}</Label>
                 <Input value={formBankAccountNo} onChange={(e) => setFormBankAccountNo(e.target.value)} placeholder="e.g., 1234567890" />
               </div>
+            </div>
+            <div className="space-y-2">
+              <Label>NPWP</Label>
+              <Input value={formNpwp} onChange={(e) => setFormNpwp(e.target.value)} placeholder="00.000.000.0-000.000" />
             </div>
             <div className="flex items-center gap-2">
               <Switch checked={formActive} onCheckedChange={setFormActive} />
