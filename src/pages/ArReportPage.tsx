@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Download, Receipt, RefreshCw, Loader2, Search, FileText, FileSpreadsheet, CreditCard } from 'lucide-react';
+import { Download, Receipt, RefreshCw, Loader2, Search, FileText, FileSpreadsheet, CreditCard, Percent } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
@@ -47,6 +47,9 @@ interface ArInvoice {
   outstanding_amount: number;
   overdue_days: number;
   status: InvoiceStatus;
+  tax_code_id: string | null;
+  dpp_amount: number | null;
+  tax_amount: number | null;
 }
 
 interface Customer {
@@ -57,6 +60,12 @@ interface Customer {
 interface Sales {
   id: string;
   sales_name: string;
+}
+
+interface TaxCode {
+  id: string;
+  code: string;
+  name: string;
 }
 
 interface ArAllocation {
@@ -111,6 +120,7 @@ export default function ArReportPage() {
   const [invoices, setInvoices] = useState<ArInvoice[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [salesList, setSalesList] = useState<Sales[]>([]);
+  const [taxCodes, setTaxCodes] = useState<TaxCode[]>([]);
   const [arAllocations, setArAllocations] = useState<ArAllocation[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [customerFilter, setCustomerFilter] = useState('all');
@@ -124,6 +134,10 @@ export default function ArReportPage() {
   const [cardDateFrom, setCardDateFrom] = useState(firstDayOfMonth());
   const [cardDateTo, setCardDateTo] = useState(todayStr());
 
+  // PPN Keluaran (output VAT report)
+  const [ppnDateFrom, setPpnDateFrom] = useState(firstDayOfMonth());
+  const [ppnDateTo, setPpnDateTo] = useState(todayStr());
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -136,11 +150,13 @@ export default function ArReportPage() {
         { data: invoicesData, error: invoicesError },
         { data: customersData },
         { data: salesData },
+        { data: taxData },
         { data: allocData, error: allocError },
       ] = await Promise.all([
         supabase.from('ar_invoices').select(`*, customers (customer_name), sales (sales_name)`).order('invoice_date', { ascending: false }),
         supabase.from('customers').select('id, customer_name').eq('is_active', true).order('customer_name'),
         supabase.from('sales').select('id, sales_name').eq('is_active', true).order('sales_name'),
+        supabase.from('tax_codes').select('id, code, name'),
         supabase.from('ar_receipt_allocations').select('ar_invoice_id, amount, ar_receipts (receipt_date, reference_no)'),
       ]);
 
@@ -156,6 +172,7 @@ export default function ArReportPage() {
       setInvoices(formattedInvoices);
       setCustomers(customersData || []);
       setSalesList(salesData || []);
+      setTaxCodes(taxData || []);
       setArAllocations((allocData || []).map((a: any) => ({
         ar_invoice_id: a.ar_invoice_id,
         amount: a.amount,
@@ -301,6 +318,58 @@ export default function ArReportPage() {
     toast.success(language === 'en' ? 'Report exported' : 'Laporan diekspor');
   };
 
+  // ---- PPN Keluaran (output VAT) ----
+  const taxCodeLabel = (id: string | null) => {
+    if (!id) return '-';
+    const tc = taxCodes.find(t => t.id === id);
+    return tc ? `${tc.code} - ${tc.name}` : '-';
+  };
+
+  const ppnRows = useMemo(() => {
+    return invoices
+      .filter(inv => inv.tax_code_id && (inv.tax_amount || 0) > 0 && inv.invoice_date >= ppnDateFrom && inv.invoice_date <= ppnDateTo)
+      .map(inv => ({
+        date: inv.invoice_date,
+        invoiceNumber: inv.invoice_number,
+        customerName: inv.customer_name,
+        npwp: '', // customers has no NPWP field yet; left blank per spec
+        taxCode: taxCodeLabel(inv.tax_code_id),
+        dpp: inv.dpp_amount || 0,
+        tax: inv.tax_amount || 0,
+        total: inv.invoice_amount,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [invoices, taxCodes, ppnDateFrom, ppnDateTo]);
+
+  const ppnTotals = ppnRows.reduce((acc, r) => ({
+    dpp: acc.dpp + r.dpp,
+    tax: acc.tax + r.tax,
+    total: acc.total + r.total,
+  }), { dpp: 0, tax: 0, total: 0 });
+
+  const getPpnExportColumns = (): ExportColumn[] => [
+    { key: 'date', header: language === 'en' ? 'Date' : 'Tanggal', format: formatDateForExport },
+    { key: 'invoiceNumber', header: language === 'en' ? 'Invoice No' : 'No. Invoice' },
+    { key: 'customerName', header: language === 'en' ? 'Customer' : 'Pelanggan' },
+    { key: 'npwp', header: 'NPWP' },
+    { key: 'taxCode', header: language === 'en' ? 'Tax Code' : 'Kode Pajak' },
+    { key: 'dpp', header: 'DPP', format: formatCurrencyForExport },
+    { key: 'tax', header: 'PPN', format: formatCurrencyForExport },
+    { key: 'total', header: 'Total', format: formatCurrencyForExport },
+  ];
+
+  const handlePpnExport = (format: 'excel' | 'pdf') => {
+    const columns = getPpnExportColumns();
+    const filename = `PPN_Keluaran_${ppnDateFrom}_${ppnDateTo}`;
+    const title = language === 'en' ? 'Output VAT Report (PPN Keluaran)' : 'Laporan PPN Keluaran';
+    if (format === 'pdf') {
+      exportToPDF(ppnRows, columns, filename, title);
+    } else {
+      exportToExcel(ppnRows, columns, filename);
+    }
+    toast.success(language === 'en' ? 'Report exported' : 'Laporan diekspor');
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -336,6 +405,10 @@ export default function ArReportPage() {
           <TabsTrigger value="card">
             <CreditCard className="w-4 h-4 mr-2" />
             {language === 'en' ? 'AR Card' : 'Kartu Piutang'}
+          </TabsTrigger>
+          <TabsTrigger value="ppn">
+            <Percent className="w-4 h-4 mr-2" />
+            {language === 'en' ? 'Output VAT' : 'PPN Keluaran'}
           </TabsTrigger>
         </TabsList>
 
@@ -634,6 +707,100 @@ export default function ArReportPage() {
               </Card>
             </>
           )}
+        </TabsContent>
+
+        {/* ============ PPN KELUARAN (new) ============ */}
+        <TabsContent value="ppn" className="space-y-6">
+          <Card>
+            <CardContent className="pt-6 flex flex-wrap items-end gap-4">
+              <div className="space-y-2">
+                <Label>{language === 'en' ? 'From Date' : 'Dari Tanggal'}</Label>
+                <Input type="date" value={ppnDateFrom} onChange={(e) => setPpnDateFrom(e.target.value)} className="max-w-xs" />
+              </div>
+              <div className="space-y-2">
+                <Label>{language === 'en' ? 'To Date' : 'Sampai Tanggal'}</Label>
+                <Input type="date" value={ppnDateTo} onChange={(e) => setPpnDateTo(e.target.value)} className="max-w-xs" />
+              </div>
+              <div className="ml-auto flex gap-2">
+                <Button variant="outline" size="sm" onClick={() => handlePpnExport('excel')} disabled={ppnRows.length === 0}>
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />Excel
+                </Button>
+                <Button variant="outline" size="sm" onClick={() => handlePpnExport('pdf')} disabled={ppnRows.length === 0}>
+                  <FileText className="w-4 h-4 mr-2" />PDF
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">Total DPP</p>
+                <p className="text-xl font-bold text-foreground mt-1">{formatCurrency(ppnTotals.dpp)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">Total PPN</p>
+                <p className="text-xl font-bold text-primary mt-1">{formatCurrency(ppnTotals.tax)}</p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <p className="text-sm text-muted-foreground">Total</p>
+                <p className="text-xl font-bold text-foreground mt-1">{formatCurrency(ppnTotals.total)}</p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <Card>
+            <CardContent className="p-0">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{language === 'en' ? 'Date' : 'Tanggal'}</TableHead>
+                    <TableHead>{language === 'en' ? 'Invoice No' : 'No. Invoice'}</TableHead>
+                    <TableHead>{language === 'en' ? 'Customer' : 'Pelanggan'}</TableHead>
+                    <TableHead>NPWP</TableHead>
+                    <TableHead>{language === 'en' ? 'Tax Code' : 'Kode Pajak'}</TableHead>
+                    <TableHead className="text-right">DPP</TableHead>
+                    <TableHead className="text-right">PPN</TableHead>
+                    <TableHead className="text-right">Total</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {ppnRows.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                        {language === 'en' ? 'No data found' : 'Data tidak ditemukan'}
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    <>
+                      {ppnRows.map((r, idx) => (
+                        <TableRow key={idx}>
+                          <TableCell className="whitespace-nowrap">{formatDate(r.date)}</TableCell>
+                          <TableCell>{r.invoiceNumber}</TableCell>
+                          <TableCell>{r.customerName}</TableCell>
+                          <TableCell>{r.npwp || '-'}</TableCell>
+                          <TableCell>{r.taxCode}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(r.dpp)}</TableCell>
+                          <TableCell className="text-right">{formatCurrency(r.tax)}</TableCell>
+                          <TableCell className="text-right font-medium">{formatCurrency(r.total)}</TableCell>
+                        </TableRow>
+                      ))}
+                      <TableRow className="font-bold border-t-2">
+                        <TableCell colSpan={5}>Total</TableCell>
+                        <TableCell className="text-right">{formatCurrency(ppnTotals.dpp)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(ppnTotals.tax)}</TableCell>
+                        <TableCell className="text-right">{formatCurrency(ppnTotals.total)}</TableCell>
+                      </TableRow>
+                    </>
+                  )}
+                </TableBody>
+              </Table>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
