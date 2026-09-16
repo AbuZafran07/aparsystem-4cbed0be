@@ -801,6 +801,89 @@ export type Database = {
           },
         ]
       }
+      cash_bank_transactions: {
+        Row: {
+          amount: number
+          bank_account_id: string
+          contra_account_id: string | null
+          counter_bank_account_id: string | null
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          journal_id: string | null
+          reference_no: string | null
+          status: Database["public"]["Enums"]["record_status"]
+          transaction_date: string
+          transaction_no: string
+          transaction_type: string
+          updated_at: string
+        }
+        Insert: {
+          amount?: number
+          bank_account_id: string
+          contra_account_id?: string | null
+          counter_bank_account_id?: string | null
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          journal_id?: string | null
+          reference_no?: string | null
+          status?: Database["public"]["Enums"]["record_status"]
+          transaction_date: string
+          transaction_no: string
+          transaction_type: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string
+          contra_account_id?: string | null
+          counter_bank_account_id?: string | null
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          journal_id?: string | null
+          reference_no?: string | null
+          status?: Database["public"]["Enums"]["record_status"]
+          transaction_date?: string
+          transaction_no?: string
+          transaction_type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cash_bank_transactions_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_bank_transactions_counter_bank_account_id_fkey"
+            columns: ["counter_bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_bank_transactions_contra_account_id_fkey"
+            columns: ["contra_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_bank_transactions_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       cash_out_transactions: {
         Row: {
           bulan: string
@@ -1625,6 +1708,7 @@ export type Database = {
         Returns: Json
       }
       create_opening_balance_journal: { Args: never; Returns: Json }
+      generate_cash_bank_no: { Args: never; Returns: string }
       generate_journal_no: { Args: never; Returns: string }
       generate_payment_request_no: { Args: never; Returns: string }
       get_or_create_fiscal_period: { Args: { _date: string }; Returns: string }

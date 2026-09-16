@@ -230,6 +230,15 @@ export function useRoleAccess() {
       'financialStatements',
     ];
 
+    // Kas & Bank (core cash/bank module) - FINANCE/ADMIN/SUPER_ADMIN only, matches
+    // cash_bank_transactions RLS.
+    const cashBankMenuItems = [
+      'cashIn',
+      'cashOut',
+      'cashTransfer',
+      'cashBankTransactions',
+    ];
+
     // SALES: view-only access limited to AR-related menus
     const salesMenuItems = [
       'dashboard',
@@ -244,9 +253,9 @@ export function useRoleAccess() {
 
     const roleMenuAccess: Record<UserRole, string[]> = {
       PURCHASING: [...allMenuItems, 'auditLogs'],
-      FINANCE: [...allMenuItems, 'auditLogs', ...accountingMenuItems],
-      ADMIN: [...allMenuItems, ...systemMenuItems, ...accountingMenuItems],
-      SUPER_ADMIN: [...allMenuItems, ...systemMenuItems, ...superAdminOnly, ...accountingMenuItems],
+      FINANCE: [...allMenuItems, 'auditLogs', ...accountingMenuItems, ...cashBankMenuItems],
+      ADMIN: [...allMenuItems, ...systemMenuItems, ...accountingMenuItems, ...cashBankMenuItems],
+      SUPER_ADMIN: [...allMenuItems, ...systemMenuItems, ...superAdminOnly, ...accountingMenuItems, ...cashBankMenuItems],
       SALES: salesMenuItems,
     };
 

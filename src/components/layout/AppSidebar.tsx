@@ -7,7 +7,7 @@ import {
   ScrollText, Settings, UserCog, ClipboardList, Database, Plug,
   PanelLeftClose, PanelLeftOpen, Bell, List, PieChart,
   BookOpen, CalendarClock, GitBranch, BookText, Scale, LineChart,
-  ChevronRight, ChevronDown,
+  ChevronRight, ChevronDown, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, ListChecks,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -78,6 +78,15 @@ const menuStructure: MenuSection[] = [
       { key: 'accountsPayable', translationKey: 'menu.accountsPayable', icon: FileText, path: '/ap' },
       { key: 'apPayments', translationKey: 'menu.apPayments', icon: CreditCard, path: '/ap-payments' },
       { key: 'paymentRequests', translationKey: 'menu.paymentRequestsAp', icon: ClipboardList, path: '/payment-requests' },
+    ],
+  },
+  {
+    sectionKey: 'section.cashBank',
+    items: [
+      { key: 'cashIn', translationKey: 'menu.cashIn', icon: ArrowDownCircle, path: '/cash-bank/cash-in' },
+      { key: 'cashOut', translationKey: 'menu.cashOut', icon: ArrowUpCircle, path: '/cash-bank/cash-out' },
+      { key: 'cashTransfer', translationKey: 'menu.cashTransfer', icon: ArrowLeftRight, path: '/cash-bank/transfer' },
+      { key: 'cashBankTransactions', translationKey: 'menu.cashBankTransactions', icon: ListChecks, path: '/cash-bank/transactions' },
     ],
   },
   {

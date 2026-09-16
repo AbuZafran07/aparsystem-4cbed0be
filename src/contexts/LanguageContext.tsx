@@ -23,6 +23,7 @@ const translations: TranslationMap = {
   'section.generalLedger': { en: 'GENERAL LEDGER', id: 'BUKU BESAR' },
   'section.sales': { en: 'SALES', id: 'PENJUALAN' },
   'section.purchase': { en: 'PURCHASE', id: 'PEMBELIAN' },
+  'section.cashBank': { en: 'CASH & BANK', id: 'KAS & BANK' },
   'section.closing': { en: 'CLOSING', id: 'TUTUP BUKU' },
 
   // Menu Items
@@ -61,6 +62,10 @@ const translations: TranslationMap = {
   'menu.generalLedger': { en: 'General Ledger', id: 'Buku Besar' },
   'menu.trialBalance': { en: 'Trial Balance', id: 'Neraca Saldo' },
   'menu.financialStatements': { en: 'Financial Statements', id: 'Laporan Keuangan' },
+  'menu.cashIn': { en: 'Cash In', id: 'Kas Masuk' },
+  'menu.cashOut': { en: 'Cash Out', id: 'Kas Keluar' },
+  'menu.cashTransfer': { en: 'Cash Transfer', id: 'Transfer Kas' },
+  'menu.cashBankTransactions': { en: 'Cash & Bank Transactions', id: 'Daftar Transaksi Kas & Bank' },
 
   // Common Buttons
   'btn.save': { en: 'Save', id: 'Simpan' },

@@ -51,6 +51,10 @@ import JournalEntriesPage from "@/pages/accounting/JournalEntriesPage";
 import GeneralLedgerPage from "@/pages/accounting/GeneralLedgerPage";
 import TrialBalancePage from "@/pages/accounting/TrialBalancePage";
 import FinancialStatementsPage from "@/pages/accounting/FinancialStatementsPage";
+import CashInPage from "@/pages/cashbank/CashInPage";
+import CashOutPage from "@/pages/cashbank/CashOutPage";
+import CashTransferPage from "@/pages/cashbank/CashTransferPage";
+import CashBankTransactionsPage from "@/pages/cashbank/CashBankTransactionsPage";
 import NotFound from "@/pages/NotFound";
 const queryClient = new QueryClient();
 
@@ -122,6 +126,10 @@ const App = () => (
                 <Route path="/accounting/general-ledger" element={<GeneralLedgerPage />} />
                 <Route path="/accounting/trial-balance" element={<TrialBalancePage />} />
                 <Route path="/accounting/financial-statements" element={<FinancialStatementsPage />} />
+                <Route path="/cash-bank/cash-in" element={<CashInPage />} />
+                <Route path="/cash-bank/cash-out" element={<CashOutPage />} />
+                <Route path="/cash-bank/transfer" element={<CashTransferPage />} />
+                <Route path="/cash-bank/transactions" element={<CashBankTransactionsPage />} />
 
                 {/* System */}
                 <Route path="/audit-logs" element={<AuditLogsPage />} />
