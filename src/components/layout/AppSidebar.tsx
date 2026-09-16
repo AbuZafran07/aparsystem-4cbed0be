@@ -186,7 +186,7 @@ function AuditNavMenu({ collapsed, onNavigate }: { collapsed: boolean; onNavigat
     <div>
       {!collapsed && (
         <div className="px-3 mb-2">
-          <span className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+          <span className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
             Audit Cash Out
           </span>
         </div>
@@ -383,7 +383,7 @@ export default function AppSidebar({ onNavigate, collapsed = false, onToggleColl
                   return (
                     <div key={section.sectionKey} className="mb-5">
                       <div className="px-3 mb-2">
-                        <span className="text-[10px] font-semibold uppercase tracking-wider text-sidebar-foreground/40">
+                        <span className="text-xs font-semibold uppercase tracking-wide text-sidebar-foreground/60">
                           {t(section.sectionKey)}
                         </span>
                       </div>
@@ -405,9 +405,9 @@ export default function AppSidebar({ onNavigate, collapsed = false, onToggleColl
                       aria-expanded={isOpen}
                       className={cn(
                         'w-full flex items-center justify-between gap-2 rounded-lg px-3 py-2.5',
-                        'text-[10px] font-semibold uppercase tracking-wider transition-colors duration-200',
+                        'text-xs font-semibold uppercase tracking-wide transition-colors duration-200',
                         'hover:bg-sidebar-accent/30',
-                        hasActive || isOpen ? 'text-sidebar-foreground' : 'text-sidebar-foreground/40'
+                        hasActive || isOpen ? 'text-sidebar-foreground' : 'text-sidebar-foreground/60'
                       )}
                     >
                       <span className="truncate">{t(section.sectionKey)}</span>
