@@ -41,6 +41,8 @@ const translations: TranslationMap = {
   'menu.bankAccounts': { en: 'Bank Accounts', id: 'Rekening Bank' },
   'menu.companyProfile': { en: 'Company Profile', id: 'Profil Perusahaan' },
   'menu.taxCodes': { en: 'Tax Codes', id: 'Pajak' },
+  'menu.fixedAssets': { en: 'Fixed Assets', id: 'Harta Tetap' },
+  'menu.fixedAssetsReport': { en: 'Fixed Asset Report', id: 'Laporan Harta Tetap' },
   'menu.apAging': { en: 'AP Aging', id: 'Aging AP' },
   'menu.arAging': { en: 'AR Aging', id: 'Aging AR' },
   'menu.apReport': { en: 'AP Report', id: 'Laporan AP' },

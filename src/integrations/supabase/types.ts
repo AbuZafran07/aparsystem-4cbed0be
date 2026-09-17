@@ -1112,6 +1112,54 @@ export type Database = {
         }
         Relationships: []
       }
+      depreciation_entries: {
+        Row: {
+          amount: number
+          created_at: string
+          fixed_asset_id: string
+          id: string
+          journal_id: string | null
+          period_month: number
+          period_year: number
+          posted: boolean
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          fixed_asset_id: string
+          id?: string
+          journal_id?: string | null
+          period_month: number
+          period_year: number
+          posted?: boolean
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          fixed_asset_id?: string
+          id?: string
+          journal_id?: string | null
+          period_month?: number
+          period_year?: number
+          posted?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "depreciation_entries_fixed_asset_id_fkey"
+            columns: ["fixed_asset_id"]
+            isOneToOne: false
+            referencedRelation: "fixed_assets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "depreciation_entries_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       fiscal_periods: {
         Row: {
           closed_at: string | null
@@ -1147,6 +1195,101 @@ export type Database = {
           status?: Database["public"]["Enums"]["fiscal_period_status"]
         }
         Relationships: []
+      }
+      fixed_assets: {
+        Row: {
+          accum_deprec_account_id: string | null
+          accumulated_depreciation: number
+          acquisition_cost: number
+          acquisition_date: string
+          asset_account_id: string | null
+          asset_code: string
+          category: string | null
+          created_at: string
+          created_by: string
+          department_id: string | null
+          deprec_expense_account_id: string | null
+          depreciation_method: string
+          id: string
+          name: string
+          notes: string | null
+          salvage_value: number
+          status: string
+          updated_at: string
+          useful_life_months: number
+        }
+        Insert: {
+          accum_deprec_account_id?: string | null
+          accumulated_depreciation?: number
+          acquisition_cost?: number
+          acquisition_date: string
+          asset_account_id?: string | null
+          asset_code: string
+          category?: string | null
+          created_at?: string
+          created_by: string
+          department_id?: string | null
+          deprec_expense_account_id?: string | null
+          depreciation_method?: string
+          id?: string
+          name: string
+          notes?: string | null
+          salvage_value?: number
+          status?: string
+          updated_at?: string
+          useful_life_months: number
+        }
+        Update: {
+          accum_deprec_account_id?: string | null
+          accumulated_depreciation?: number
+          acquisition_cost?: number
+          acquisition_date?: string
+          asset_account_id?: string | null
+          asset_code?: string
+          category?: string | null
+          created_at?: string
+          created_by?: string
+          department_id?: string | null
+          deprec_expense_account_id?: string | null
+          depreciation_method?: string
+          id?: string
+          name?: string
+          notes?: string | null
+          salvage_value?: number
+          status?: string
+          updated_at?: string
+          useful_life_months?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fixed_assets_accum_deprec_account_id_fkey"
+            columns: ["accum_deprec_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_assets_asset_account_id_fkey"
+            columns: ["asset_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_assets_deprec_expense_account_id_fkey"
+            columns: ["deprec_expense_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_assets_department_id_fkey"
+            columns: ["department_id"]
+            isOneToOne: false
+            referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       general_ledger: {
         Row: {
@@ -1809,6 +1952,10 @@ export type Database = {
       reopen_fiscal_period: { Args: { _period_id: string }; Returns: Json }
       reverse_journal_entry: {
         Args: { _journal_id: string; _reason: string }
+        Returns: Json
+      }
+      run_monthly_depreciation: {
+        Args: { _month: number; _year: number }
         Returns: Json
       }
       settle_payment_request: {

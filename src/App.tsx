@@ -56,6 +56,8 @@ import CashOutPage from "@/pages/cashbank/CashOutPage";
 import CashTransferPage from "@/pages/cashbank/CashTransferPage";
 import CashBankTransactionsPage from "@/pages/cashbank/CashBankTransactionsPage";
 import TaxCodesPage from "@/pages/TaxCodesPage";
+import FixedAssetsPage from "@/pages/FixedAssetsPage";
+import FixedAssetReportPage from "@/pages/FixedAssetReportPage";
 import NotFound from "@/pages/NotFound";
 const queryClient = new QueryClient();
 
@@ -107,6 +109,8 @@ const App = () => (
                 <Route path="/bank-accounts" element={<BankAccountsPage />} />
                 <Route path="/company-profile" element={<CompanyProfilePage />} />
                 <Route path="/tax-codes" element={<TaxCodesPage />} />
+                <Route path="/fixed-assets" element={<FixedAssetsPage />} />
+                <Route path="/fixed-assets-report" element={<FixedAssetReportPage />} />
                 
                 {/* Reports */}
                 <Route path="/aging-report" element={<AgingReportPage />} />

@@ -240,6 +240,12 @@ export function useRoleAccess() {
       'cashBankTransactions',
     ];
 
+    // Fixed Assets - FINANCE/ADMIN/SUPER_ADMIN only, matches fixed_assets RLS.
+    const fixedAssetMenuItems = [
+      'fixedAssets',
+      'fixedAssetsReport',
+    ];
+
     // SALES: view-only access limited to AR-related menus
     const salesMenuItems = [
       'dashboard',
@@ -254,9 +260,9 @@ export function useRoleAccess() {
 
     const roleMenuAccess: Record<UserRole, string[]> = {
       PURCHASING: [...allMenuItems, 'auditLogs'],
-      FINANCE: [...allMenuItems, 'auditLogs', ...accountingMenuItems, ...cashBankMenuItems],
-      ADMIN: [...allMenuItems, ...systemMenuItems, ...accountingMenuItems, ...cashBankMenuItems],
-      SUPER_ADMIN: [...allMenuItems, ...systemMenuItems, ...superAdminOnly, ...accountingMenuItems, ...cashBankMenuItems],
+      FINANCE: [...allMenuItems, 'auditLogs', ...accountingMenuItems, ...cashBankMenuItems, ...fixedAssetMenuItems],
+      ADMIN: [...allMenuItems, ...systemMenuItems, ...accountingMenuItems, ...cashBankMenuItems, ...fixedAssetMenuItems],
+      SUPER_ADMIN: [...allMenuItems, ...systemMenuItems, ...superAdminOnly, ...accountingMenuItems, ...cashBankMenuItems, ...fixedAssetMenuItems],
       SALES: salesMenuItems,
     };
 
