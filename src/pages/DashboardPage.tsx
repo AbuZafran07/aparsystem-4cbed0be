@@ -3,8 +3,10 @@ import { FileText, Receipt, CreditCard, AlertTriangle, Clock, TrendingDown, Tren
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import KpiCard from '@/components/dashboard/KpiCard';
 import AgingChart from '@/components/dashboard/AgingChart';
+import FinancialOverview from '@/components/dashboard/FinancialOverview';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -340,6 +342,17 @@ export default function DashboardPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
+      <Tabs defaultValue="financial">
+        <TabsList>
+          <TabsTrigger value="financial">{language === 'en' ? 'Financial' : 'Keuangan'}</TabsTrigger>
+          <TabsTrigger value="ar-ap">{language === 'en' ? 'Receivables & Payables' : 'Piutang & Hutang'}</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="financial" className="pt-4">
+          <FinancialOverview />
+        </TabsContent>
+
+        <TabsContent value="ar-ap" className="space-y-6 pt-4">
       {/* Page Header */}
       <div>
         <h1 className="text-2xl font-bold text-foreground">Dashboard</h1>
@@ -717,6 +730,8 @@ export default function DashboardPage() {
           </Card>
         )}
       </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
