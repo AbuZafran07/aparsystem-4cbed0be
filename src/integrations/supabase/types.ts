@@ -1428,6 +1428,105 @@ export type Database = {
           },
         ]
       }
+      giro_transactions: {
+        Row: {
+          amount: number
+          bank_account_id: string | null
+          contra_account_id: string
+          created_at: string
+          created_by: string
+          due_date: string
+          giro_account_id: string
+          giro_no: string
+          giro_type: string
+          id: string
+          issue_date: string
+          journal_clear_id: string | null
+          journal_receive_id: string | null
+          notes: string | null
+          party_id: string
+          party_type: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          bank_account_id?: string | null
+          contra_account_id: string
+          created_at?: string
+          created_by: string
+          due_date: string
+          giro_account_id: string
+          giro_no: string
+          giro_type: string
+          id?: string
+          issue_date: string
+          journal_clear_id?: string | null
+          journal_receive_id?: string | null
+          notes?: string | null
+          party_id: string
+          party_type: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          bank_account_id?: string | null
+          contra_account_id?: string
+          created_at?: string
+          created_by?: string
+          due_date?: string
+          giro_account_id?: string
+          giro_no?: string
+          giro_type?: string
+          id?: string
+          issue_date?: string
+          journal_clear_id?: string | null
+          journal_receive_id?: string | null
+          notes?: string | null
+          party_id?: string
+          party_type?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "giro_transactions_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "giro_transactions_contra_account_id_fkey"
+            columns: ["contra_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "giro_transactions_giro_account_id_fkey"
+            columns: ["giro_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "giro_transactions_journal_clear_id_fkey"
+            columns: ["journal_clear_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "giro_transactions_journal_receive_id_fkey"
+            columns: ["journal_receive_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       import_batches: {
         Row: {
           entity: string
@@ -2054,8 +2153,35 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bounce_giro_transaction: {
+        Args: { _giro_id: string; _reason?: string }
+        Returns: Json
+      }
+      cancel_giro_transaction: {
+        Args: { _giro_id: string; _reason?: string }
+        Returns: Json
+      }
+      clear_giro_transaction: {
+        Args: { _bank_account_id: string; _clear_date: string; _giro_id: string }
+        Returns: Json
+      }
       close_fiscal_period: {
         Args: { _hard?: boolean; _period_id: string }
+        Returns: Json
+      }
+      create_giro_transaction: {
+        Args: {
+          _amount: number
+          _contra_account_id: string
+          _due_date: string
+          _giro_account_id: string
+          _giro_no: string
+          _giro_type: string
+          _issue_date: string
+          _notes?: string
+          _party_id: string
+          _party_type: string
+        }
         Returns: Json
       }
       create_journal_entry: {

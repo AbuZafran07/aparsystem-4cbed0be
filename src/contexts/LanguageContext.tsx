@@ -70,6 +70,8 @@ const translations: TranslationMap = {
   'menu.cashTransfer': { en: 'Cash Transfer', id: 'Transfer Kas' },
   'menu.cashBankTransactions': { en: 'Cash & Bank Transactions', id: 'Daftar Transaksi Kas & Bank' },
   'menu.bankReconciliation': { en: 'Bank Reconciliation', id: 'Rekonsiliasi Bank' },
+  'menu.giroIn': { en: 'Giro In', id: 'Giro Masuk' },
+  'menu.giroOut': { en: 'Giro Out', id: 'Giro Keluar' },
 
   // Common Buttons
   'btn.save': { en: 'Save', id: 'Simpan' },

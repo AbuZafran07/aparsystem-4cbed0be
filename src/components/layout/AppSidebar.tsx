@@ -8,6 +8,7 @@ import {
   PanelLeftClose, PanelLeftOpen, Bell, List, PieChart,
   BookOpen, CalendarClock, GitBranch, BookText, Scale, LineChart,
   ChevronRight, ChevronDown, ArrowDownCircle, ArrowUpCircle, ArrowLeftRight, ListChecks, Percent, Warehouse, CheckCircle2,
+  FileInput, FileOutput,
 } from 'lucide-react';
 import { useQuery } from '@tanstack/react-query';
 import { useLanguage } from '@/contexts/LanguageContext';
@@ -90,6 +91,8 @@ const menuStructure: MenuSection[] = [
       { key: 'cashTransfer', translationKey: 'menu.cashTransfer', icon: ArrowLeftRight, path: '/cash-bank/transfer' },
       { key: 'cashBankTransactions', translationKey: 'menu.cashBankTransactions', icon: ListChecks, path: '/cash-bank/transactions' },
       { key: 'bankReconciliation', translationKey: 'menu.bankReconciliation', icon: CheckCircle2, path: '/cash-bank/reconciliation' },
+      { key: 'giroIn', translationKey: 'menu.giroIn', icon: FileInput, path: '/cash-bank/giro-in' },
+      { key: 'giroOut', translationKey: 'menu.giroOut', icon: FileOutput, path: '/cash-bank/giro-out' },
     ],
   },
   {
