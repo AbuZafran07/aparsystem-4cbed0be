@@ -894,17 +894,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cash_bank_transactions_counter_bank_account_id_fkey"
-            columns: ["counter_bank_account_id"]
-            isOneToOne: false
-            referencedRelation: "bank_accounts"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "cash_bank_transactions_contra_account_id_fkey"
             columns: ["contra_account_id"]
             isOneToOne: false
             referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cash_bank_transactions_counter_bank_account_id_fkey"
+            columns: ["counter_bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
             referencedColumns: ["id"]
           },
           {
@@ -1276,17 +1276,17 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "fixed_assets_deprec_expense_account_id_fkey"
-            columns: ["deprec_expense_account_id"]
-            isOneToOne: false
-            referencedRelation: "chart_of_accounts"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "fixed_assets_department_id_fkey"
             columns: ["department_id"]
             isOneToOne: false
             referencedRelation: "departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "fixed_assets_deprec_expense_account_id_fkey"
+            columns: ["deprec_expense_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
             referencedColumns: ["id"]
           },
         ]
@@ -1406,6 +1406,56 @@ export type Database = {
             columns: ["batch_id"]
             isOneToOne: false
             referencedRelation: "import_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_transactions: {
+        Row: {
+          created_at: string
+          id: string
+          journal_id: string | null
+          product_ref: string | null
+          quantity: number | null
+          source_reference: string | null
+          total_cost: number
+          transaction_date: string
+          transaction_type: string
+          warehouse_ref: string | null
+          wms_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          journal_id?: string | null
+          product_ref?: string | null
+          quantity?: number | null
+          source_reference?: string | null
+          total_cost?: number
+          transaction_date: string
+          transaction_type: string
+          warehouse_ref?: string | null
+          wms_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          journal_id?: string | null
+          product_ref?: string | null
+          quantity?: number | null
+          source_reference?: string | null
+          total_cost?: number
+          transaction_date?: string
+          transaction_type?: string
+          warehouse_ref?: string | null
+          wms_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_transactions_journal_id_fkey"
+            columns: ["journal_id"]
+            isOneToOne: false
+            referencedRelation: "journal_entries"
             referencedColumns: ["id"]
           },
         ]
