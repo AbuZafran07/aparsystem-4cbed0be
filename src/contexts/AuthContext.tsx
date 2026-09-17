@@ -238,6 +238,7 @@ export function useRoleAccess() {
       'cashOut',
       'cashTransfer',
       'cashBankTransactions',
+      'bankReconciliation',
     ];
 
     // Fixed Assets - FINANCE/ADMIN/SUPER_ADMIN only, matches fixed_assets RLS.

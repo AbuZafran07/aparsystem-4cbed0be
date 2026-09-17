@@ -55,6 +55,7 @@ import CashInPage from "@/pages/cashbank/CashInPage";
 import CashOutPage from "@/pages/cashbank/CashOutPage";
 import CashTransferPage from "@/pages/cashbank/CashTransferPage";
 import CashBankTransactionsPage from "@/pages/cashbank/CashBankTransactionsPage";
+import BankReconciliationPage from "@/pages/cashbank/BankReconciliationPage";
 import TaxCodesPage from "@/pages/TaxCodesPage";
 import FixedAssetsPage from "@/pages/FixedAssetsPage";
 import FixedAssetReportPage from "@/pages/FixedAssetReportPage";
@@ -136,6 +137,7 @@ const App = () => (
                 <Route path="/cash-bank/cash-out" element={<CashOutPage />} />
                 <Route path="/cash-bank/transfer" element={<CashTransferPage />} />
                 <Route path="/cash-bank/transactions" element={<CashBankTransactionsPage />} />
+                <Route path="/cash-bank/reconciliation" element={<BankReconciliationPage />} />
 
                 {/* System */}
                 <Route path="/audit-logs" element={<AuditLogsPage />} />

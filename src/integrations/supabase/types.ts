@@ -649,6 +649,92 @@ export type Database = {
           },
         ]
       }
+      bank_reconciliation_cleared: {
+        Row: {
+          amount: number
+          created_at: string
+          gl_entry_id: string
+          id: string
+          reconciliation_id: string
+        }
+        Insert: {
+          amount?: number
+          created_at?: string
+          gl_entry_id: string
+          id?: string
+          reconciliation_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          gl_entry_id?: string
+          id?: string
+          reconciliation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_reconciliation_cleared_gl_entry_id_fkey"
+            columns: ["gl_entry_id"]
+            isOneToOne: false
+            referencedRelation: "general_ledger"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "bank_reconciliation_cleared_reconciliation_id_fkey"
+            columns: ["reconciliation_id"]
+            isOneToOne: false
+            referencedRelation: "bank_reconciliations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      bank_reconciliations: {
+        Row: {
+          bank_account_id: string
+          created_at: string
+          created_by: string
+          difference: number | null
+          id: string
+          notes: string | null
+          reconciled_at: string | null
+          statement_date: string
+          statement_ending_balance: number
+          status: string
+        }
+        Insert: {
+          bank_account_id: string
+          created_at?: string
+          created_by: string
+          difference?: number | null
+          id?: string
+          notes?: string | null
+          reconciled_at?: string | null
+          statement_date: string
+          statement_ending_balance?: number
+          status?: string
+        }
+        Update: {
+          bank_account_id?: string
+          created_at?: string
+          created_by?: string
+          difference?: number | null
+          id?: string
+          notes?: string | null
+          reconciled_at?: string | null
+          statement_date?: string
+          statement_ending_balance?: number
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bank_reconciliations_bank_account_id_fkey"
+            columns: ["bank_account_id"]
+            isOneToOne: false
+            referencedRelation: "bank_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       billing_email_logs: {
         Row: {
           ar_invoice_id: string
