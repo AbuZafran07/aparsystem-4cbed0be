@@ -78,6 +78,12 @@ interface BankAccount {
   account_name: string;
 }
 
+interface AccountOption {
+  id: string;
+  code: string;
+  name: string;
+}
+
 interface Customer {
   id: string;
   customer_name: string;
@@ -175,6 +181,7 @@ export default function ArListPage() {
   const [salesList, setSalesList] = useState<Sales[]>([]);
   const [paymentTerms, setPaymentTerms] = useState<PaymentTerms[]>([]);
   const [bankAccounts, setBankAccounts] = useState<BankAccount[]>([]);
+  const [pphAccounts, setPphAccounts] = useState<AccountOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -223,6 +230,9 @@ export default function ArListPage() {
     bank_account_id: '',
     reference_no: '',
     notes: '',
+    pph_amount: '',
+    pph_type: '',
+    pph_account_id: '',
   });
 
   const isFinance = user?.role === 'FINANCE' || user?.role === 'SUPER_ADMIN' || user?.role === 'ADMIN';
@@ -330,6 +340,15 @@ export default function ArListPage() {
         .order('bank_name');
 
       setBankAccounts(bankData || []);
+
+      // Fetch active accounts for the optional PPh-withheld picker
+      const { data: pphAccountData } = await supabase
+        .from('chart_of_accounts')
+        .select('id, code, name')
+        .eq('is_active', true)
+        .order('code');
+
+      setPphAccounts(pphAccountData || []);
 
       // Fetch company profile for billing letters
       const { data: profileData } = await supabase
@@ -805,6 +824,9 @@ export default function ArListPage() {
       bank_account_id: '',
       reference_no: '',
       notes: '',
+      pph_amount: '',
+      pph_type: '',
+      pph_account_id: '',
     });
     setIsReceiptDialogOpen(true);
   };
@@ -818,6 +840,16 @@ export default function ArListPage() {
     const amount = parseFloat(receiptData.amount);
     if (amount <= 0 || amount > selectedInvoice.outstanding_amount) {
       toast.error(language === 'en' ? 'Invalid receipt amount' : 'Jumlah penerimaan tidak valid');
+      return;
+    }
+
+    const pphAmount = parseFloat(receiptData.pph_amount) || 0;
+    if (pphAmount < 0 || pphAmount > amount) {
+      toast.error(language === 'en' ? 'PPh amount cannot exceed the receipt amount' : 'Jumlah PPh tidak boleh melebihi jumlah pelunasan');
+      return;
+    }
+    if (pphAmount > 0 && !receiptData.pph_account_id) {
+      toast.error(language === 'en' ? 'Please select a PPh account' : 'Mohon pilih akun PPh');
       return;
     }
 
@@ -847,6 +879,9 @@ export default function ArListPage() {
           receipt_id: receipt.id,
           ar_invoice_id: selectedInvoice.id,
           amount: amount,
+          pph_amount: pphAmount > 0 ? pphAmount : null,
+          pph_type: pphAmount > 0 ? (receiptData.pph_type || null) : null,
+          pph_account_id: pphAmount > 0 ? (receiptData.pph_account_id || null) : null,
         }]);
 
       if (allocError) throw allocError;
@@ -1827,7 +1862,7 @@ export default function ArListPage() {
 
       {/* Receipt Dialog */}
       <Dialog open={isReceiptDialogOpen} onOpenChange={setIsReceiptDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
               {language === 'en' ? 'Record Receipt' : 'Catat Penerimaan'}
@@ -1880,11 +1915,70 @@ export default function ArListPage() {
             </div>
             <div className="space-y-2">
               <Label>{language === 'en' ? 'Notes' : 'Catatan'}</Label>
-              <Textarea 
-                value={receiptData.notes} 
+              <Textarea
+                value={receiptData.notes}
                 onChange={(e) => setReceiptData({...receiptData, notes: e.target.value})}
                 rows={2}
               />
+            </div>
+
+            <div className="border-t pt-4 space-y-3">
+              <p className="text-sm font-medium text-muted-foreground">
+                {language === 'en' ? 'PPh Withheld by Customer (optional)' : 'PPh Dipotong Pelanggan (opsional)'}
+              </p>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>{language === 'en' ? 'PPh Amount' : 'Jumlah PPh'}</Label>
+                  <Input
+                    type="number"
+                    value={receiptData.pph_amount}
+                    onChange={(e) => setReceiptData({ ...receiptData, pph_amount: e.target.value })}
+                    max={receiptData.amount}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>{language === 'en' ? 'PPh Type' : 'Jenis PPh'}</Label>
+                  <Input
+                    placeholder="PPh22 / PPh23"
+                    value={receiptData.pph_type}
+                    onChange={(e) => setReceiptData({ ...receiptData, pph_type: e.target.value })}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>{language === 'en' ? 'PPh Account (COA)' : 'Akun PPh (COA)'}</Label>
+                <Select
+                  value={receiptData.pph_account_id || 'none'}
+                  onValueChange={(v) => setReceiptData({ ...receiptData, pph_account_id: v === 'none' ? '' : v })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder={language === 'en' ? 'Select account' : 'Pilih akun'} />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">-</SelectItem>
+                    {pphAccounts.map((a) => (
+                      <SelectItem key={a.id} value={a.id}>{a.code} - {a.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="rounded-lg bg-muted/50 p-3 space-y-1 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{language === 'en' ? 'Total Settlement' : 'Total Pelunasan'}</span>
+                <span className="font-medium">{formatCurrency(parseFloat(receiptData.amount) || 0)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{language === 'en' ? 'Total PPh' : 'Total PPh'}</span>
+                <span className="font-medium">{formatCurrency(parseFloat(receiptData.pph_amount) || 0)}</span>
+              </div>
+              <div className="flex justify-between border-t pt-1">
+                <span className="text-muted-foreground">{language === 'en' ? 'Net Cash Received' : 'Kas Diterima (net)'}</span>
+                <span className="font-semibold text-primary">
+                  {formatCurrency((parseFloat(receiptData.amount) || 0) - (parseFloat(receiptData.pph_amount) || 0))}
+                </span>
+              </div>
             </div>
           </div>
           <DialogFooter>

@@ -426,6 +426,9 @@ export type Database = {
           ar_invoice_id: string
           created_at: string
           id: string
+          pph_account_id: string | null
+          pph_amount: number | null
+          pph_type: string | null
           receipt_id: string
         }
         Insert: {
@@ -433,6 +436,9 @@ export type Database = {
           ar_invoice_id: string
           created_at?: string
           id?: string
+          pph_account_id?: string | null
+          pph_amount?: number | null
+          pph_type?: string | null
           receipt_id: string
         }
         Update: {
@@ -440,6 +446,9 @@ export type Database = {
           ar_invoice_id?: string
           created_at?: string
           id?: string
+          pph_account_id?: string | null
+          pph_amount?: number | null
+          pph_type?: string | null
           receipt_id?: string
         }
         Relationships: [
@@ -448,6 +457,13 @@ export type Database = {
             columns: ["ar_invoice_id"]
             isOneToOne: false
             referencedRelation: "ar_invoices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ar_receipt_allocations_pph_account_id_fkey"
+            columns: ["pph_account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
             referencedColumns: ["id"]
           },
           {
