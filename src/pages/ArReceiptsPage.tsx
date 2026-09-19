@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { Wallet, Search, Eye, Download } from 'lucide-react';
@@ -125,6 +126,15 @@ export default function ArReceiptsPage() {
       receipt.notes?.toLowerCase().includes(search)
     );
   });
+
+  const {
+    paginatedItems: paginatedReceipts,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filteredReceipts, 25);
 
   const handleExport = (type: 'csv' | 'excel' | 'pdf') => {
     const exportData = filteredReceipts.map(r => ({
@@ -268,7 +278,7 @@ export default function ArReceiptsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredReceipts.map((receipt) => (
+                paginatedReceipts.map((receipt) => (
                   <TableRow key={receipt.id}>
                     <TableCell>{format(new Date(receipt.receipt_date), 'dd MMM yyyy')}</TableCell>
                     <TableCell>
@@ -300,6 +310,13 @@ export default function ArReceiptsPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 

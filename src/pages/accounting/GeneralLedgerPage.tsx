@@ -15,6 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { exportToExcel, ExportColumn, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -87,6 +88,15 @@ export default function GeneralLedgerPage() {
         };
       });
   }, [rawRows, accountMap, accountFilter, dateFrom, dateTo]);
+
+  const {
+    paginatedItems: paginatedRows,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(rows, 25);
 
   const getExportColumns = (): ExportColumn[] => [
     { key: 'posting_date', header: language === 'en' ? 'Date' : 'Tanggal', format: formatDateForExport },
@@ -169,7 +179,7 @@ export default function GeneralLedgerPage() {
               {rows.length === 0 ? (
                 <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">{language === 'en' ? 'No data found' : 'Data tidak ditemukan'}</TableCell></TableRow>
               ) : (
-                rows.map((row) => {
+                paginatedRows.map((row) => {
                   const link = sourceLink(row.source_type, row.source_id);
                   return (
                     <TableRow key={row.id}>
@@ -187,6 +197,13 @@ export default function GeneralLedgerPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
     </div>

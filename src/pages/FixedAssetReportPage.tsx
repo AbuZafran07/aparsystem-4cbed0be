@@ -13,6 +13,7 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { exportToExcel, exportToPDF, ExportColumn, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -55,6 +56,15 @@ export default function FixedAssetReportPage() {
     monthly_depreciation: monthlyDepreciation(a),
     status: a.status,
   })), [assets, language]);
+
+  const {
+    paginatedItems: paginatedAssetRows,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(assetRows, 25);
 
   const categoryRows = useMemo(() => {
     const map = new Map<string, { category: string; acquisition_cost: number; monthly_depreciation: number; accumulated_depreciation: number; book_value: number; count: number }>();
@@ -256,7 +266,7 @@ export default function FixedAssetReportPage() {
               {assetRows.length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{language === 'en' ? 'No data found' : 'Tidak ada data'}</TableCell></TableRow>
               ) : (
-                assetRows.map((r) => (
+                paginatedAssetRows.map((r) => (
                   <TableRow key={r.asset_code}>
                     <TableCell className="font-mono font-medium">{r.asset_code}</TableCell>
                     <TableCell>{r.name}</TableCell>
@@ -274,6 +284,13 @@ export default function FixedAssetReportPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
     </div>

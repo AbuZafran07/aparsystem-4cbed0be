@@ -8,6 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
 import {
@@ -69,6 +70,15 @@ export default function ImportExportPage() {
   useEffect(() => {
     fetchImportHistory();
   }, []);
+
+  const {
+    paginatedItems: paginatedImportHistory,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(importHistory, 10);
 
   const fetchImportHistory = async () => {
     setIsLoading(true);
@@ -678,7 +688,7 @@ export default function ImportExportPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {importHistory.map((batch) => (
+                      {paginatedImportHistory.map((batch) => (
                         <TableRow key={batch.id}>
                           <TableCell className="font-medium">{batch.file_name}</TableCell>
                           <TableCell><Badge variant="outline">{batch.entity}</Badge></TableCell>
@@ -696,6 +706,13 @@ export default function ImportExportPage() {
                       ))}
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    currentPage={currentPage}
+                    totalItems={totalItems}
+                    pageSize={pageSize}
+                    onPageChange={handlePageChange}
+                    onPageSizeChange={handlePageSizeChange}
+                  />
                 </div>
               )}
             </CardContent>

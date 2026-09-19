@@ -43,6 +43,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { toast } from 'sonner';
 import { 
   generateBillingLetterHTML, 
@@ -555,6 +556,15 @@ export default function BillingLettersPage() {
       letter.customer_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const {
+    paginatedItems: paginatedLetters,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filteredLetters, 25);
+
   const canDelete = (status: RecordStatus) => {
     return isSuperAdmin || (isFinance && status === 'DRAFT');
   };
@@ -631,7 +641,7 @@ export default function BillingLettersPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredLetters.map((letter) => (
+                paginatedLetters.map((letter) => (
                   <TableRow key={letter.id}>
                     <TableCell className="font-medium">{letter.letter_no}</TableCell>
                     <TableCell>{formatDate(letter.letter_date)}</TableCell>
@@ -686,6 +696,13 @@ export default function BillingLettersPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 

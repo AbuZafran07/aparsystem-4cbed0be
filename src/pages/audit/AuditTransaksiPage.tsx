@@ -23,6 +23,7 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { cn } from '@/lib/utils';
@@ -256,6 +257,15 @@ export default function AuditTransaksiPage() {
 
   const totalFiltered = filtered.reduce((s, t) => s + t.nominal, 0);
   const activeFilterCount = [filterDept !== 'all', filterBulan !== 'all', !!search].filter(Boolean).length;
+
+  const {
+    paginatedItems: paginatedTx,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filtered, 25);
 
   // ── Filter helpers ────────────────────────────────────────────────────────
   const updateFilter = (key: 'dept' | 'bulan', value: string) => {
@@ -512,7 +522,7 @@ export default function AuditTransaksiPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filtered.map(tx => {
+                paginatedTx.map(tx => {
                   const status = deptStatus[tx.department_id] ?? 'normal';
                   return (
                     <TableRow key={tx.id} className="group">
@@ -565,6 +575,13 @@ export default function AuditTransaksiPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 

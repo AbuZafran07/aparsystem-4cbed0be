@@ -24,6 +24,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -165,6 +166,15 @@ export default function GiroTransactionsPage({ giroType }: Props) {
       return true;
     });
   }, [giroRows, statusFilter, dueSoonOnly]);
+
+  const {
+    paginatedItems: paginatedRows,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filtered, 25);
 
   const openCreate = () => {
     setForm({
@@ -349,7 +359,7 @@ export default function GiroTransactionsPage({ giroType }: Props) {
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{language === 'en' ? 'No giro transactions found' : 'Tidak ada transaksi giro'}</TableCell></TableRow>
               ) : (
-                filtered.map((row) => {
+                paginatedRows.map((row) => {
                   const d = daysUntil(row.due_date);
                   const overdue = row.status === 'PENDING' && d < 0;
                   const soon = row.status === 'PENDING' && d >= 0 && d <= 7;
@@ -394,6 +404,13 @@ export default function GiroTransactionsPage({ giroType }: Props) {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 

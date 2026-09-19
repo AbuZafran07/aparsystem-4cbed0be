@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { CreditCard, Search, Eye, Download } from 'lucide-react';
@@ -125,6 +126,15 @@ export default function ApPaymentsPage() {
       payment.notes?.toLowerCase().includes(search)
     );
   });
+
+  const {
+    paginatedItems: paginatedPayments,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filteredPayments, 25);
 
   const handleExport = (type: 'csv' | 'excel' | 'pdf') => {
     const exportData = filteredPayments.map(p => ({
@@ -268,7 +278,7 @@ export default function ApPaymentsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredPayments.map((payment) => (
+                paginatedPayments.map((payment) => (
                   <TableRow key={payment.id}>
                     <TableCell>{format(new Date(payment.payment_date), 'dd MMM yyyy')}</TableCell>
                     <TableCell>
@@ -300,6 +310,13 @@ export default function ApPaymentsPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 

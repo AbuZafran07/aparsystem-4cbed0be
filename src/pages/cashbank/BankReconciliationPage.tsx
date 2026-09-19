@@ -18,6 +18,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { cn } from '@/lib/utils';
 import type { Tables } from '@/integrations/supabase/types';
 
@@ -129,6 +130,24 @@ export default function BankReconciliationPage() {
   );
   const outstandingEntries = useMemo(() => unclearedEntries.filter(g => !checkedIds.has(g.id)), [unclearedEntries, checkedIds]);
   const outstandingTotal = useMemo(() => outstandingEntries.reduce((s, g) => s + g.debit - g.credit, 0), [outstandingEntries]);
+
+  const {
+    paginatedItems: paginatedEntries,
+    currentPage: entriesPage,
+    pageSize: entriesPageSize,
+    totalItems: entriesTotal,
+    handlePageChange: handleEntriesPageChange,
+    handlePageSizeChange: handleEntriesPageSizeChange,
+  } = usePagination(unclearedEntries, 25);
+
+  const {
+    paginatedItems: paginatedHistory,
+    currentPage: historyPage,
+    pageSize: historyPageSize,
+    totalItems: historyTotal,
+    handlePageChange: handleHistoryPageChange,
+    handlePageSizeChange: handleHistoryPageSizeChange,
+  } = usePagination(history, 10);
 
   const enteredEndingBalance = parseFloat(statementEndingBalance) || 0;
   const difference = enteredEndingBalance - clearedBalance;
@@ -343,7 +362,7 @@ export default function BankReconciliationPage() {
                   ) : unclearedEntries.length === 0 ? (
                     <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{language === 'en' ? 'No uncleared entries' : 'Tidak ada entri yang belum di-clear'}</TableCell></TableRow>
                   ) : (
-                    unclearedEntries.map((g) => (
+                    paginatedEntries.map((g) => (
                       <TableRow key={g.id}>
                         <TableCell>
                           <Checkbox checked={checkedIds.has(g.id)} onCheckedChange={() => toggleChecked(g.id)} />
@@ -357,6 +376,13 @@ export default function BankReconciliationPage() {
                   )}
                 </TableBody>
               </Table>
+              <TablePagination
+                currentPage={entriesPage}
+                totalItems={entriesTotal}
+                pageSize={entriesPageSize}
+                onPageChange={handleEntriesPageChange}
+                onPageSizeChange={handleEntriesPageSizeChange}
+              />
             </CardContent>
           </Card>
         </>
@@ -385,7 +411,7 @@ export default function BankReconciliationPage() {
                 {history.length === 0 ? (
                   <TableRow><TableCell colSpan={5} className="text-center py-8 text-muted-foreground">{language === 'en' ? 'No history yet' : 'Belum ada riwayat'}</TableCell></TableRow>
                 ) : (
-                  history.map((h) => (
+                  paginatedHistory.map((h) => (
                     <TableRow key={h.id}>
                       <TableCell>{new Date(h.statement_date).toLocaleDateString('id-ID')}</TableCell>
                       <TableCell className="text-right">{formatCurrency(h.statement_ending_balance)}</TableCell>
@@ -405,6 +431,13 @@ export default function BankReconciliationPage() {
                 )}
               </TableBody>
             </Table>
+            <TablePagination
+              currentPage={historyPage}
+              totalItems={historyTotal}
+              pageSize={historyPageSize}
+              onPageChange={handleHistoryPageChange}
+              onPageSizeChange={handleHistoryPageSizeChange}
+            />
           </CardContent>
         </Card>
       )}

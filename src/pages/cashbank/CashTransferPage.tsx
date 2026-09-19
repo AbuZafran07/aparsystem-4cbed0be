@@ -20,6 +20,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import type { Tables } from '@/integrations/supabase/types';
 
 type CashBankTransaction = Tables<'cash_bank_transactions'>;
@@ -67,6 +68,15 @@ export default function CashTransferPage() {
       return data as CashBankTransaction[];
     },
   });
+
+  const {
+    paginatedItems: paginatedTransactions,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(transactions, 25);
 
   const { data: bankAccounts = [] } = useQuery({
     queryKey: ['bank_accounts', 'active'],
@@ -198,7 +208,7 @@ export default function CashTransferPage() {
               ) : transactions.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{language === 'en' ? 'No data found' : 'Tidak ada data'}</TableCell></TableRow>
               ) : (
-                transactions.map((tx) => (
+                paginatedTransactions.map((tx) => (
                   <TableRow key={tx.id}>
                     <TableCell className="font-mono text-xs">{tx.transaction_no}</TableCell>
                     <TableCell>{new Date(tx.transaction_date).toLocaleDateString('id-ID')}</TableCell>
@@ -227,6 +237,13 @@ export default function CashTransferPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 

@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import type { Database, Tables } from '@/integrations/supabase/types';
 
 type Account = Tables<'chart_of_accounts'>;
@@ -159,6 +160,15 @@ export default function ChartOfAccountsPage() {
     a.name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const {
+    paginatedItems: paginatedAccounts,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filtered, 50);
+
   const typeLabel = (t: AccountType) => {
     const map: Record<AccountType, { en: string; id: string }> = {
       ASSET: { en: 'Asset', id: 'Aset' },
@@ -223,7 +233,7 @@ export default function ChartOfAccountsPage() {
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{language === 'en' ? 'No accounts found' : 'Tidak ada akun'}</TableCell></TableRow>
               ) : (
-                filtered.map((account) => (
+                paginatedAccounts.map((account) => (
                   <TableRow key={account.id}>
                     <TableCell className="font-mono">{account.code}</TableCell>
                     <TableCell className="font-medium">{account.name}</TableCell>
@@ -259,6 +269,13 @@ export default function ChartOfAccountsPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 

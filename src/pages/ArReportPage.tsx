@@ -23,6 +23,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Download, Receipt, RefreshCw, Loader2, Search, FileText, FileSpreadsheet, CreditCard, Percent } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { toast } from 'sonner';
 import { exportToExcel, exportToPDF, ExportColumn, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -370,6 +371,33 @@ export default function ArReportPage() {
     toast.success(language === 'en' ? 'Report exported' : 'Laporan diekspor');
   };
 
+  const {
+    paginatedItems: paginatedInvoices,
+    currentPage: invPage,
+    pageSize: invPageSize,
+    totalItems: invTotal,
+    handlePageChange: handleInvPageChange,
+    handlePageSizeChange: handleInvPageSizeChange,
+  } = usePagination(filteredInvoices, 25);
+
+  const {
+    paginatedItems: paginatedCardRows,
+    currentPage: cardPage,
+    pageSize: cardPageSize,
+    totalItems: cardTotal,
+    handlePageChange: handleCardPageChange,
+    handlePageSizeChange: handleCardPageSizeChange,
+  } = usePagination(arCard?.rows ?? [], 25);
+
+  const {
+    paginatedItems: paginatedPpnRows,
+    currentPage: ppnPage,
+    pageSize: ppnPageSize,
+    totalItems: ppnTotal,
+    handlePageChange: handlePpnPageChange,
+    handlePageSizeChange: handlePpnPageSizeChange,
+  } = usePagination(ppnRows, 25);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -538,7 +566,7 @@ export default function ArReportPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    filteredInvoices.map((invoice) => (
+                    paginatedInvoices.map((invoice) => (
                       <TableRow key={invoice.id}>
                         <TableCell className="font-medium">
                           <div>
@@ -579,6 +607,13 @@ export default function ArReportPage() {
                   )}
                 </TableBody>
               </Table>
+              <TablePagination
+                currentPage={invPage}
+                totalItems={invTotal}
+                pageSize={invPageSize}
+                onPageChange={handleInvPageChange}
+                onPageSizeChange={handleInvPageSizeChange}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -686,7 +721,7 @@ export default function ArReportPage() {
                           </TableCell>
                         </TableRow>
                       ) : (
-                        arCard.rows.map((r, idx) => (
+                        paginatedCardRows.map((r, idx) => (
                           <TableRow key={idx}>
                             <TableCell className="whitespace-nowrap">{formatDate(r.date)}</TableCell>
                             <TableCell>{r.docNo}</TableCell>
@@ -703,6 +738,13 @@ export default function ArReportPage() {
                       </TableRow>
                     </TableBody>
                   </Table>
+                  <TablePagination
+                    currentPage={cardPage}
+                    totalItems={cardTotal}
+                    pageSize={cardPageSize}
+                    onPageChange={handleCardPageChange}
+                    onPageSizeChange={handleCardPageSizeChange}
+                  />
                 </CardContent>
               </Card>
             </>
@@ -777,7 +819,7 @@ export default function ArReportPage() {
                     </TableRow>
                   ) : (
                     <>
-                      {ppnRows.map((r, idx) => (
+                      {paginatedPpnRows.map((r, idx) => (
                         <TableRow key={idx}>
                           <TableCell className="whitespace-nowrap">{formatDate(r.date)}</TableCell>
                           <TableCell>{r.invoiceNumber}</TableCell>
@@ -799,6 +841,13 @@ export default function ArReportPage() {
                   )}
                 </TableBody>
               </Table>
+              <TablePagination
+                currentPage={ppnPage}
+                totalItems={ppnTotal}
+                pageSize={ppnPageSize}
+                onPageChange={handlePpnPageChange}
+                onPageSizeChange={handlePpnPageSizeChange}
+              />
             </CardContent>
           </Card>
         </TabsContent>

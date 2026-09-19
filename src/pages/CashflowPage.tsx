@@ -15,6 +15,7 @@ import {
 import { Download, TrendingUp, TrendingDown, DollarSign, RefreshCw, Loader2, ArrowUpRight, ArrowDownRight, FileText, FileSpreadsheet } from 'lucide-react';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { toast } from 'sonner';
 import { exportToExcel, exportToPDF, ExportColumn, formatCurrencyForExport, formatDateForExport } from '@/lib/exportUtils';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -176,6 +177,15 @@ export default function CashflowPage() {
     }
     toast.success(language === 'en' ? 'Report exported' : 'Laporan diekspor');
   };
+
+  const {
+    paginatedItems: paginatedEntries,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(entries, 25);
 
   if (loading) {
     return (
@@ -390,7 +400,7 @@ export default function CashflowPage() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    entries.map((entry) => (
+                    paginatedEntries.map((entry) => (
                       <TableRow key={entry.id}>
                         <TableCell>{formatDate(entry.date)}</TableCell>
                         <TableCell>
@@ -410,6 +420,13 @@ export default function CashflowPage() {
                   )}
                 </TableBody>
               </Table>
+              <TablePagination
+                currentPage={currentPage}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
             </CardContent>
           </Card>
         </TabsContent>

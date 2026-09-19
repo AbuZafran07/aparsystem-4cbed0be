@@ -21,6 +21,7 @@ import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import type { Database } from '@/integrations/supabase/types';
 
 type UserRole = Database['public']['Enums']['user_role'];
@@ -218,6 +219,15 @@ export default function UserManagementPage() {
     user.full_name.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const {
+    paginatedItems: paginatedUsers,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filteredUsers, 25);
+
   const roleLabels: Record<UserRole, { en: string; id: string }> = {
     PURCHASING: { en: 'Purchasing', id: 'Purchasing' },
     FINANCE: { en: 'Finance', id: 'Finance' },
@@ -287,7 +297,7 @@ export default function UserManagementPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredUsers.map((user) => (
+                paginatedUsers.map((user) => (
                   <TableRow key={user.id}>
                     <TableCell className="font-medium">{user.full_name}</TableCell>
                     <TableCell>{user.email}</TableCell>
@@ -349,6 +359,13 @@ export default function UserManagementPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 

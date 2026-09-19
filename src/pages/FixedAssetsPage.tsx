@@ -22,6 +22,7 @@ import { Label } from '@/components/ui/label';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import type { Tables } from '@/integrations/supabase/types';
 
 type FixedAsset = Tables<'fixed_assets'>;
@@ -242,6 +243,15 @@ export default function FixedAssetsPage() {
     (a.category || '').toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const {
+    paginatedItems: paginatedAssets,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filtered, 25);
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -301,7 +311,7 @@ export default function FixedAssetsPage() {
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={9} className="text-center py-8 text-muted-foreground">{language === 'en' ? 'No assets found' : 'Tidak ada aset'}</TableCell></TableRow>
               ) : (
-                filtered.map((asset) => (
+                paginatedAssets.map((asset) => (
                   <TableRow key={asset.id}>
                     <TableCell className="font-mono font-medium">{asset.asset_code}</TableCell>
                     <TableCell>{asset.name}</TableCell>
@@ -335,6 +345,13 @@ export default function FixedAssetsPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 

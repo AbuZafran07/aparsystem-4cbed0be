@@ -22,6 +22,7 @@ import {
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { toast } from 'sonner';
 import type { Database } from '@/integrations/supabase/types';
 
@@ -130,6 +131,15 @@ export default function BillingEmailLogsPage() {
       log.subject.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
+  const {
+    paginatedItems: paginatedLogs,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filteredLogs, 25);
+
   const successCount = logs.filter(l => l.status === 'SENT').length;
   const failedCount = logs.filter(l => l.status === 'FAILED').length;
 
@@ -210,7 +220,7 @@ export default function BillingEmailLogsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredLogs.map((log) => (
+                paginatedLogs.map((log) => (
                   <TableRow key={log.id}>
                     <TableCell className="whitespace-nowrap">
                       <div className="flex items-center gap-2">
@@ -260,6 +270,13 @@ export default function BillingEmailLogsPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 

@@ -20,6 +20,7 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useAuth, useRoleAccess } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import type { Tables } from '@/integrations/supabase/types';
 import { cn } from '@/lib/utils';
 
@@ -73,6 +74,15 @@ export default function JournalEntriesPage() {
       return data;
     },
   });
+
+  const {
+    paginatedItems: paginatedEntries,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(entries, 25);
 
   const { data: accounts = [] } = useQuery({
     queryKey: ['chart_of_accounts', 'active'],
@@ -238,7 +248,7 @@ export default function JournalEntriesPage() {
               ) : entries.length === 0 ? (
                 <TableRow><TableCell colSpan={7} className="text-center py-8 text-muted-foreground">{language === 'en' ? 'No journal entries found' : 'Tidak ada jurnal'}</TableCell></TableRow>
               ) : (
-                entries.map((entry) => {
+                paginatedEntries.map((entry) => {
                   const entryLines = linesByJournal[entry.id] || [];
                   const amount = entryLines.reduce((sum, l) => sum + l.debit, 0);
                   const canPost = entry.status === 'DRAFT' && (isSuperAdmin || entry.created_by !== user?.id);
@@ -277,6 +287,13 @@ export default function JournalEntriesPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 

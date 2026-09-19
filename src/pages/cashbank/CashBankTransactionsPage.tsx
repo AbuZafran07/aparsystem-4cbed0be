@@ -14,6 +14,7 @@ import {
 import { useLanguage } from '@/contexts/LanguageContext';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import type { Tables } from '@/integrations/supabase/types';
 
 type CashBankTransaction = Tables<'cash_bank_transactions'>;
@@ -123,6 +124,15 @@ export default function CashBankTransactionsPage() {
     return matchesSearch && matchesType && matchesAccount && matchesStatus && matchesDate;
   });
 
+  const {
+    paginatedItems: paginatedTransactions,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filtered, 25);
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -204,7 +214,7 @@ export default function CashBankTransactionsPage() {
               ) : filtered.length === 0 ? (
                 <TableRow><TableCell colSpan={8} className="text-center py-8 text-muted-foreground">{language === 'en' ? 'No data found' : 'Tidak ada data'}</TableCell></TableRow>
               ) : (
-                filtered.map((tx) => (
+                paginatedTransactions.map((tx) => (
                   <TableRow key={tx.id}>
                     <TableCell className="font-mono text-xs">{tx.transaction_no}</TableCell>
                     <TableCell>
@@ -239,6 +249,13 @@ export default function CashBankTransactionsPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
     </div>

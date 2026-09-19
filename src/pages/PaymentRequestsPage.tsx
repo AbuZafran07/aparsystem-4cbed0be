@@ -38,6 +38,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { cn } from '@/lib/utils';
 import { supabase } from '@/integrations/supabase/client';
+import { TablePagination, usePagination } from '@/components/TablePagination';
 import { toast } from 'sonner';
 import { generatePaymentRequestHTML, printPaymentRequest, previewPaymentRequest, downloadPaymentRequestPDF, PaymentRequestData } from '@/lib/paymentRequestUtils';
 import { exportToCSV, exportToExcel, formatDateForExport, formatCurrencyForExport, ExportColumn } from '@/lib/exportUtils';
@@ -477,6 +478,15 @@ export default function PaymentRequestsPage() {
     return matchesSearch && matchesStatus;
   });
 
+  const {
+    paginatedItems: paginatedRequests,
+    currentPage,
+    pageSize,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = usePagination(filteredRequests, 25);
+
   const getTabCount = (statuses: string[]) => {
     return requests.filter(req => statuses.includes(req.status)).length;
   };
@@ -586,7 +596,7 @@ export default function PaymentRequestsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredRequests.map((request) => (
+                paginatedRequests.map((request) => (
                   <TableRow key={request.id}>
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
@@ -698,6 +708,13 @@ export default function PaymentRequestsPage() {
               )}
             </TableBody>
           </Table>
+          <TablePagination
+            currentPage={currentPage}
+            totalItems={totalItems}
+            pageSize={pageSize}
+            onPageChange={handlePageChange}
+            onPageSizeChange={handlePageSizeChange}
+          />
         </CardContent>
       </Card>
 
