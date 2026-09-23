@@ -215,13 +215,21 @@ Deno.serve(async (req) => {
     const url = new URL(req.url)
     const action = url.searchParams.get('action')
 
-    // Auto backup: triggered by cron, uses anon key auth (no user session)
+    // Auto backup: triggered by the scheduler only, authenticated with a shared secret.
     if (action === 'auto-backup') {
+      const expected = Deno.env.get('BACKUP_CRON_SECRET') ?? ''
+      const provided = req.headers.get('x-cron-secret') ?? ''
+      if (!expected || !timingSafeEqual(provided, expected)) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
       const result = await performAutoBackup()
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+
 
     // All other actions require SUPER_ADMIN auth
     const authHeader = req.headers.get('Authorization')
