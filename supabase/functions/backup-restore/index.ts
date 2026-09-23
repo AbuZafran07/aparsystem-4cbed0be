@@ -34,6 +34,21 @@ const BACKUP_TABLES = [
 
 const MAX_AUTO_BACKUPS = 4
 
+function timingSafeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder()
+  const ab = enc.encode(a)
+  const bb = enc.encode(b)
+  if (ab.length !== bb.length) return false
+  let diff = 0
+  for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i]
+  return diff === 0
+}
+
+// Columns that a restore payload must never be able to set directly.
+const RESTORE_FORBIDDEN_COLUMNS = new Set(['created_at', 'updated_at'])
+
+
+
 function getAdminClient() {
   return createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -215,13 +230,21 @@ Deno.serve(async (req) => {
     const url = new URL(req.url)
     const action = url.searchParams.get('action')
 
-    // Auto backup: triggered by cron, uses anon key auth (no user session)
+    // Auto backup: triggered by the scheduler only, authenticated with a shared secret.
     if (action === 'auto-backup') {
+      const expected = Deno.env.get('BACKUP_CRON_SECRET') ?? ''
+      const provided = req.headers.get('x-cron-secret') ?? ''
+      if (!expected || !timingSafeEqual(provided, expected)) {
+        return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+          status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+        })
+      }
       const result = await performAutoBackup()
       return new Response(JSON.stringify(result), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       })
     }
+
 
     // All other actions require SUPER_ADMIN auth
     const authHeader = req.headers.get('Authorization')
@@ -343,12 +366,30 @@ Deno.serve(async (req) => {
         if (!tables[table] || !Array.isArray(tables[table]) || tables[table].length === 0) continue
 
         try {
+          // Whitelist the columns that may be written for this table, so a crafted
+          // backup file cannot set unexpected or system-managed fields.
+          const { data: cols } = await adminClient.rpc('get_restorable_columns', { _table: table })
+          const allowed = new Set<string>(
+            ((cols as string[]) || []).filter((c) => !RESTORE_FORBIDDEN_COLUMNS.has(c))
+          )
+
+          if (allowed.size === 0) {
+            results[table] = { success: 0, failed: tables[table].length, error: 'Unknown table' }
+            continue
+          }
+
+          const sanitized = tables[table]
+            .filter((row: any) => row && typeof row === 'object' && !Array.isArray(row) && row.id)
+            .map((row: any) =>
+              Object.fromEntries(Object.entries(row).filter(([k]) => allowed.has(k)))
+            )
+
           const batchSize = 500
           let success = 0
-          let failed = 0
+          let failed = tables[table].length - sanitized.length
 
-          for (let i = 0; i < tables[table].length; i += batchSize) {
-            const batch = tables[table].slice(i, i + batchSize)
+          for (let i = 0; i < sanitized.length; i += batchSize) {
+            const batch = sanitized.slice(i, i + batchSize)
             const { error } = await adminClient
               .from(table)
               .upsert(batch, { onConflict: 'id', ignoreDuplicates: false })
@@ -366,6 +407,7 @@ Deno.serve(async (req) => {
           results[table] = { success: 0, failed: tables[table].length, error: 'An internal error occurred' }
         }
       }
+
 
       return new Response(JSON.stringify({ message: 'Restore completed', results }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

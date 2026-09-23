@@ -104,7 +104,8 @@ Deno.serve(async (req) => {
     }
 
     const { action, ...payload } = await req.json();
-    console.log('Action:', action, 'Payload:', payload);
+    // Never log the request payload: it can contain plaintext passwords.
+    console.log('Action:', action);
 
     switch (action) {
       case 'create': {

@@ -42,6 +42,19 @@ export const escapeHtml = (str: string | undefined | null): string => {
     .replace(/'/g, '&#39;');
 };
 
+// Only allow safe image URLs (http/https/relative/data:image) and escape the result,
+// so a stored logo URL can never break out of the img attribute or inject markup.
+export const sanitizeImageUrl = (url: string | undefined | null): string => {
+  if (!url) return '';
+  const trimmed = String(url).trim();
+  if (/[\s"'<>]/.test(trimmed)) return '';
+  const isSafe =
+    /^https?:\/\//i.test(trimmed) ||
+    /^\/[^/]/.test(trimmed) ||
+    /^data:image\/(png|jpe?g|gif|webp|svg\+xml);base64,[A-Za-z0-9+/=]+$/i.test(trimmed);
+  return isSafe ? escapeHtml(trimmed) : '';
+};
+
 export const generatePaymentRequestNumber = (): string => {
   const now = new Date();
   const year = now.getFullYear();
@@ -89,7 +102,7 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
     companyAddress: escapeHtml(data.companyAddress),
     companyPhone: escapeHtml(data.companyPhone),
     companyEmail: escapeHtml(data.companyEmail),
-    companyLogoUrl: data.companyLogoUrl,
+    companyLogoUrl: sanitizeImageUrl(data.companyLogoUrl),
     requestedBy: escapeHtml(data.requestedBy),
     status: escapeHtml(data.status),
     paymentMethod: data.paymentMethod || 'transfer',

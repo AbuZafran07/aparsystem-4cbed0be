@@ -8,6 +8,13 @@
       "when": 1790148579365,
       "tag": "0000_tighten_log_insert_policies",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1790152029321,
+      "tag": "0001_restore_columns_helper_and_cron_secrets",
+      "breakpoints": true
     }
   ]
 }

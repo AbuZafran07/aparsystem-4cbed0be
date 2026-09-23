@@ -161,12 +161,52 @@ const handler = async (req: Request): Promise<Response> => {
       );
     }
 
+    // Bind the message to an invoice the caller is allowed to see (RLS applies
+    // because we use the caller's token) and to that invoice's own customer.
+    const { data: invoice, error: invoiceError } = await supabase
+      .from("ar_invoices")
+      .select("id, customer_id, customers!inner(billing_email)")
+      .eq("id", requestData.ar_invoice_id)
+      .maybeSingle();
+
+    if (invoiceError || !invoice) {
+      return new Response(
+        JSON.stringify({ error: "Invoice not found or not accessible" }),
+        { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     // Fetch company profile for sender info
     const { data: companyProfile } = await supabase
       .from("company_profile")
       .select("company_name, email")
       .limit(1)
       .single();
+
+    const customerEmail = (invoice as any)?.customers?.billing_email as string | null;
+    const normalize = (v?: string | null) => (v || "").trim().toLowerCase();
+
+    if (!customerEmail) {
+      return new Response(
+        JSON.stringify({ error: "Customer has no billing email on record" }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (normalize(requestData.to_email) !== normalize(customerEmail)) {
+      return new Response(
+        JSON.stringify({ error: "Recipient must match the customer billing email on record" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    const allowedCc = [customerEmail, companyProfile?.email, user.email].map(normalize).filter(Boolean);
+    if (requestData.cc_email && !allowedCc.includes(normalize(requestData.cc_email))) {
+      return new Response(
+        JSON.stringify({ error: "CC address not allowed" }),
+        { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const senderName = companyProfile?.company_name || "AP/AR HUB";
     const fromEmail = "onboarding@resend.dev";

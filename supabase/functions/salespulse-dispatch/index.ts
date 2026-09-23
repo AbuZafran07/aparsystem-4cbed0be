@@ -57,6 +57,18 @@ Deno.serve(async (req) => {
     }
     const userId = userData.user.id;
 
+    // Only roles that can actually change AR invoices may emit AR events.
+    const { data: roleRow } = await userClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .in("role", ["FINANCE", "ADMIN", "SUPER_ADMIN", "PURCHASING"])
+      .maybeSingle();
+
+    if (!roleRow) {
+      return jsonResponse(403, { error: "Forbidden" });
+    }
+
     const body = await req.json().catch(() => null);
     const parsed = RequestSchema.safeParse(body);
     if (!parsed.success) {
@@ -68,20 +80,22 @@ Deno.serve(async (req) => {
 
     const { event_type, ar_invoice_id, reason } = parsed.data;
 
-    // Use service role to read invoice (bypass RLS for system operation)
+    // Read the invoice AS THE CALLER so RLS decides what they may dispatch.
+    // The service-role client is used only for the internal log insert.
     const admin = createClient(supabaseUrl, serviceRoleKey);
 
-    const { data: invoice, error: invErr } = await admin
+    const { data: invoice, error: invErr } = await userClient
       .from("ar_invoices")
       .select(
         "id, invoice_number, invoice_date, due_date, invoice_amount, paid_amount, paid_date, status, wms_so_number, order_number",
       )
       .eq("id", ar_invoice_id)
-      .single();
+      .maybeSingle();
 
     if (invErr || !invoice) {
       return jsonResponse(404, { error: "Invoice not found" });
     }
+
 
     // so_number resolution: prefer wms_so_number, fallback to order_number
     const soNumber = invoice.wms_so_number || invoice.order_number;
