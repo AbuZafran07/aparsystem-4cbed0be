@@ -2178,7 +2178,11 @@ export type Database = {
         Returns: Json
       }
       clear_giro_transaction: {
-        Args: { _bank_account_id: string; _clear_date: string; _giro_id: string }
+        Args: {
+          _bank_account_id: string
+          _clear_date: string
+          _giro_id: string
+        }
         Returns: Json
       }
       close_fiscal_period: {
