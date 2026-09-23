@@ -57,6 +57,18 @@ Deno.serve(async (req) => {
     }
     const userId = userData.user.id;
 
+    // Only roles that can actually change AR invoices may emit AR events.
+    const { data: roleRow } = await userClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", userId)
+      .in("role", ["FINANCE", "ADMIN", "SUPER_ADMIN", "PURCHASING"])
+      .maybeSingle();
+
+    if (!roleRow) {
+      return jsonResponse(403, { error: "Forbidden" });
+    }
+
     const body = await req.json().catch(() => null);
     const parsed = RequestSchema.safeParse(body);
     if (!parsed.success) {
