@@ -68,20 +68,22 @@ Deno.serve(async (req) => {
 
     const { event_type, ar_invoice_id, reason } = parsed.data;
 
-    // Use service role to read invoice (bypass RLS for system operation)
+    // Read the invoice AS THE CALLER so RLS decides what they may dispatch.
+    // The service-role client is used only for the internal log insert.
     const admin = createClient(supabaseUrl, serviceRoleKey);
 
-    const { data: invoice, error: invErr } = await admin
+    const { data: invoice, error: invErr } = await userClient
       .from("ar_invoices")
       .select(
         "id, invoice_number, invoice_date, due_date, invoice_amount, paid_amount, paid_date, status, wms_so_number, order_number",
       )
       .eq("id", ar_invoice_id)
-      .single();
+      .maybeSingle();
 
     if (invErr || !invoice) {
       return jsonResponse(404, { error: "Invoice not found" });
     }
+
 
     // so_number resolution: prefer wms_so_number, fallback to order_number
     const soNumber = invoice.wms_so_number || invoice.order_number;
