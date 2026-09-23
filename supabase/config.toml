@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.salespulse-overdue-cron]
 verify_jwt = false
+
+[functions.kemi-export]
+verify_jwt = false
