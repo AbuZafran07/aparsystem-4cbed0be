@@ -102,7 +102,7 @@ export const generatePaymentRequestHTML = (data: PaymentRequestData): string => 
     companyAddress: escapeHtml(data.companyAddress),
     companyPhone: escapeHtml(data.companyPhone),
     companyEmail: escapeHtml(data.companyEmail),
-    companyLogoUrl: data.companyLogoUrl,
+    companyLogoUrl: sanitizeImageUrl(data.companyLogoUrl),
     requestedBy: escapeHtml(data.requestedBy),
     status: escapeHtml(data.status),
     paymentMethod: data.paymentMethod || 'transfer',
