@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
       { auth: { persistSession: false } },
     );
 
-    const [arRes, apRes, custRes, vendRes] = await Promise.all([
+    const [arRes, apRes, custRes, vendRes, bankRes] = await Promise.all([
       supabase
         .from("ar_invoices")
         .select(
@@ -80,9 +80,14 @@ Deno.serve(async (req) => {
         .from("vendors")
         .select("id, vendor_name, is_active")
         .order("vendor_name"),
+      supabase
+        .from("bank_accounts")
+        .select("id, bank_name, account_name, account_no, is_active, gl_account_id")
+        .eq("is_active", true)
+        .order("bank_name"),
     ]);
 
-    for (const r of [arRes, apRes, custRes, vendRes]) {
+    for (const r of [arRes, apRes, custRes, vendRes, bankRes]) {
       if (r.error) throw r.error;
     }
 
@@ -90,6 +95,51 @@ Deno.serve(async (req) => {
     const ap = apRes.data ?? [];
     const customers = custRes.data ?? [];
     const vendors = vendRes.data ?? [];
+    const banks = bankRes.data ?? [];
+
+    // Current cash/bank balances from the general ledger (debit - credit, up to today)
+    const asOf = new Date().toISOString().slice(0, 10);
+    const glAccountIds = banks
+      .map((b) => b.gl_account_id)
+      .filter((id): id is string => Boolean(id));
+
+    const balanceByAccount = new Map<string, number>();
+    if (glAccountIds.length > 0) {
+      const pageSize = 1000;
+      for (let from = 0; ; from += pageSize) {
+        const { data: glRows, error: glError } = await supabase
+          .from("general_ledger")
+          .select("account_id, debit, credit")
+          .in("account_id", glAccountIds)
+          .lte("posting_date", asOf)
+          .range(from, from + pageSize - 1);
+        if (glError) throw glError;
+        for (const row of glRows ?? []) {
+          const prev = balanceByAccount.get(row.account_id) ?? 0;
+          balanceByAccount.set(
+            row.account_id,
+            prev + Number(row.debit ?? 0) - Number(row.credit ?? 0),
+          );
+        }
+        if (!glRows || glRows.length < pageSize) break;
+      }
+    }
+
+    const cashPositions = banks.map((b) => ({
+      id: b.id,
+      as_of_date: asOf,
+      bank_name: b.bank_name,
+      account_name: b.account_name,
+      account_no_masked: b.account_no
+        ? `****${String(b.account_no).slice(-4)}`
+        : null,
+      gl_account_id: b.gl_account_id,
+      balance: b.gl_account_id
+        ? (balanceByAccount.get(b.gl_account_id) ?? 0)
+        : 0,
+      has_gl_mapping: Boolean(b.gl_account_id),
+    }));
+
 
     const customerMap = new Map(customers.map((c) => [c.id, c.customer_name]));
     const vendorMap = new Map(vendors.map((v) => [v.id, v.vendor_name]));
@@ -174,7 +224,9 @@ Deno.serve(async (req) => {
         ap: summarize(ap as Array<Record<string, unknown>>),
         customer_count: customers.length,
         vendor_count: vendors.length,
+        cash_total: cashPositions.reduce((t, c) => t + c.balance, 0),
       },
+      cash_positions: cashPositions,
       customers: customerList,
       vendors: vendorList,
       ar_invoices: arInvoices,
