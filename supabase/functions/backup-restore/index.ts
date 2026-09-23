@@ -366,12 +366,30 @@ Deno.serve(async (req) => {
         if (!tables[table] || !Array.isArray(tables[table]) || tables[table].length === 0) continue
 
         try {
+          // Whitelist the columns that may be written for this table, so a crafted
+          // backup file cannot set unexpected or system-managed fields.
+          const { data: cols } = await adminClient.rpc('get_restorable_columns', { _table: table })
+          const allowed = new Set<string>(
+            ((cols as string[]) || []).filter((c) => !RESTORE_FORBIDDEN_COLUMNS.has(c))
+          )
+
+          if (allowed.size === 0) {
+            results[table] = { success: 0, failed: tables[table].length, error: 'Unknown table' }
+            continue
+          }
+
+          const sanitized = tables[table]
+            .filter((row: any) => row && typeof row === 'object' && !Array.isArray(row) && row.id)
+            .map((row: any) =>
+              Object.fromEntries(Object.entries(row).filter(([k]) => allowed.has(k)))
+            )
+
           const batchSize = 500
           let success = 0
-          let failed = 0
+          let failed = tables[table].length - sanitized.length
 
-          for (let i = 0; i < tables[table].length; i += batchSize) {
-            const batch = tables[table].slice(i, i + batchSize)
+          for (let i = 0; i < sanitized.length; i += batchSize) {
+            const batch = sanitized.slice(i, i + batchSize)
             const { error } = await adminClient
               .from(table)
               .upsert(batch, { onConflict: 'id', ignoreDuplicates: false })
@@ -389,6 +407,7 @@ Deno.serve(async (req) => {
           results[table] = { success: 0, failed: tables[table].length, error: 'An internal error occurred' }
         }
       }
+
 
       return new Response(JSON.stringify({ message: 'Restore completed', results }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
