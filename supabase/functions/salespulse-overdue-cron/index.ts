@@ -19,14 +19,70 @@ const corsHeaders = {
 const APP_BASE_URL =
   Deno.env.get("APP_BASE_URL") ?? "https://aparsystem.lovable.app";
 
+// Shared secret used by the scheduler (pg_cron) to prove it is the real invoker.
+const CRON_SECRET =
+  Deno.env.get("SALESPULSE_CRON_SECRET") ??
+  Deno.env.get("SALESPULSE_WEBHOOK_KEY") ??
+  "";
+
+function timingSafeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder();
+  const ab = enc.encode(a);
+  const bb = enc.encode(b);
+  if (ab.length !== bb.length) return false;
+  let diff = 0;
+  for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i];
+  return diff === 0;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
-    return new Response(null, { headers: corsHeaders });
+    return new Response(null, {
+      headers: {
+        ...corsHeaders,
+        "Access-Control-Allow-Headers":
+          "authorization, x-client-info, apikey, content-type, x-cron-secret",
+      },
+    });
   }
 
   try {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+    // Authenticate the invoker: either the scheduler shared secret, or a
+    // signed-in SUPER_ADMIN triggering the job manually.
+    const provided = req.headers.get("x-cron-secret") ?? "";
+    let authorized = CRON_SECRET.length > 0 && timingSafeEqual(provided, CRON_SECRET);
+
+    if (!authorized) {
+      const authHeader = req.headers.get("Authorization") ?? "";
+      if (authHeader.startsWith("Bearer ")) {
+        const anonKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+        const userClient = createClient(supabaseUrl, anonKey, {
+          global: { headers: { Authorization: authHeader } },
+        });
+        const { data: userData } = await userClient.auth.getUser();
+        if (userData?.user) {
+          const probe = createClient(supabaseUrl, serviceRoleKey);
+          const { data: roleRow } = await probe
+            .from("user_roles")
+            .select("role")
+            .eq("user_id", userData.user.id)
+            .eq("role", "SUPER_ADMIN")
+            .maybeSingle();
+          authorized = !!roleRow;
+        }
+      }
+    }
+
+    if (!authorized) {
+      return new Response(JSON.stringify({ ok: false, error: "Unauthorized" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const admin = createClient(supabaseUrl, serviceRoleKey);
 
     const today = new Date().toISOString().slice(0, 10);
