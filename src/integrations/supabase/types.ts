@@ -2219,6 +2219,7 @@ export type Database = {
       generate_journal_no: { Args: never; Returns: string }
       generate_payment_request_no: { Args: never; Returns: string }
       get_or_create_fiscal_period: { Args: { _date: string }; Returns: string }
+      get_restorable_columns: { Args: { _table: string }; Returns: string[] }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["user_role"]
