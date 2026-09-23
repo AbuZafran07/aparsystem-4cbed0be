@@ -34,6 +34,21 @@ const BACKUP_TABLES = [
 
 const MAX_AUTO_BACKUPS = 4
 
+function timingSafeEqual(a: string, b: string): boolean {
+  const enc = new TextEncoder()
+  const ab = enc.encode(a)
+  const bb = enc.encode(b)
+  if (ab.length !== bb.length) return false
+  let diff = 0
+  for (let i = 0; i < ab.length; i++) diff |= ab[i] ^ bb[i]
+  return diff === 0
+}
+
+// Columns that a restore payload must never be able to set directly.
+const RESTORE_FORBIDDEN_COLUMNS = new Set(['created_at', 'updated_at'])
+
+
+
 function getAdminClient() {
   return createClient(
     Deno.env.get('SUPABASE_URL')!,
