@@ -273,7 +273,8 @@ export default function ArReceiptsPage() {
               <TableRow>
                 <TableHead>{language === 'en' ? 'Receipt Date' : 'Tanggal Penerimaan'}</TableHead>
                 <TableHead>{language === 'en' ? 'Reference No' : 'No Referensi'}</TableHead>
-                <TableHead>{language === 'en' ? 'Bank Account / Customer' : 'Rekening Bank / Customer'}</TableHead>
+                <TableHead>{language === 'en' ? 'Bank Account' : 'Rekening Bank'}</TableHead>
+                <TableHead>{language === 'en' ? 'Customer Company' : 'Nama Perusahaan Customer'}</TableHead>
                 <TableHead className="text-right">{language === 'en' ? 'Amount' : 'Jumlah'}</TableHead>
                 <TableHead>{language === 'en' ? 'Notes' : 'Catatan'}</TableHead>
                 <TableHead className="text-center">{language === 'en' ? 'Actions' : 'Aksi'}</TableHead>
@@ -282,7 +283,7 @@ export default function ArReceiptsPage() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <div className="flex items-center justify-center">
                       <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                     </div>
@@ -290,7 +291,7 @@ export default function ArReceiptsPage() {
                 </TableRow>
               ) : filteredReceipts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     {language === 'en' ? 'No receipts found' : 'Tidak ada penerimaan ditemukan'}
                   </TableCell>
                 </TableRow>
@@ -305,10 +306,10 @@ export default function ArReceiptsPage() {
                       <div className="space-y-1">
                         <p className="font-medium">{receipt.bank_accounts?.bank_name}</p>
                         <p className="text-sm text-muted-foreground">{receipt.bank_accounts?.account_no}</p>
-                        <p className="text-sm font-medium text-foreground">
-                          {receipt.customer_names.join(', ') || '-'}
-                        </p>
                       </div>
+                    </TableCell>
+                    <TableCell>
+                      <p className="font-medium text-foreground">{receipt.customer_names.join(', ') || '-'}</p>
                     </TableCell>
                     <TableCell className="text-right font-medium text-primary">
                       {formatCurrency(receipt.total_amount)}
