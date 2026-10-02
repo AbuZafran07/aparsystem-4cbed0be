@@ -42,6 +42,7 @@ interface Receipt {
     account_no: string;
     account_name: string;
   } | null;
+  customer_names: string[];
   allocations?: ReceiptAllocation[];
 }
 
@@ -65,12 +66,25 @@ export default function ArReceiptsPage() {
         .from('ar_receipts')
         .select(`
           *,
-          bank_accounts(bank_name, account_no, account_name)
+          bank_accounts(bank_name, account_no, account_name),
+          ar_receipt_allocations(
+            ar_invoices(
+              customers(customer_name)
+            )
+          )
         `)
         .order('receipt_date', { ascending: false });
 
       if (error) throw error;
-      setReceipts(data || []);
+      const receiptsWithCustomers = (data || []).map((receipt: any) => ({
+        ...receipt,
+        customer_names: Array.from(new Set(
+          (receipt.ar_receipt_allocations || [])
+            .map((allocation: any) => allocation.ar_invoices?.customers?.customer_name)
+            .filter((name: unknown): name is string => typeof name === 'string' && name.length > 0)
+        )),
+      }));
+      setReceipts(receiptsWithCustomers);
     } catch (error: any) {
       console.error('Error fetching receipts:', error);
       toast.error(language === 'en' ? 'Failed to load receipts' : 'Gagal memuat penerimaan');
@@ -123,6 +137,7 @@ export default function ArReceiptsPage() {
       receipt.reference_no?.toLowerCase().includes(search) ||
       receipt.bank_accounts?.bank_name.toLowerCase().includes(search) ||
       receipt.bank_accounts?.account_no.includes(search) ||
+      receipt.customer_names.some(name => name.toLowerCase().includes(search)) ||
       receipt.notes?.toLowerCase().includes(search)
     );
   });
@@ -142,6 +157,7 @@ export default function ArReceiptsPage() {
       reference_no: r.reference_no || '-',
       bank_name: r.bank_accounts?.bank_name || '-',
       account_no: r.bank_accounts?.account_no || '-',
+      customer_names: r.customer_names.join(', ') || '-',
       total_amount: r.total_amount,
       notes: r.notes || '-',
     }));
@@ -151,6 +167,7 @@ export default function ArReceiptsPage() {
       { key: 'reference_no', header: language === 'en' ? 'Reference No' : 'No Referensi' },
       { key: 'bank_name', header: language === 'en' ? 'Bank' : 'Bank' },
       { key: 'account_no', header: language === 'en' ? 'Account No' : 'No Rekening' },
+      { key: 'customer_names', header: language === 'en' ? 'Customer Company' : 'Nama Perusahaan Customer' },
       { key: 'total_amount', header: language === 'en' ? 'Amount' : 'Jumlah', format: (v: number) => formatCurrencyForExport(v) },
       { key: 'notes', header: language === 'en' ? 'Notes' : 'Catatan' },
     ];
@@ -241,7 +258,7 @@ export default function ArReceiptsPage() {
       <div className="relative max-w-md">
         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
         <Input
-          placeholder={language === 'en' ? 'Search by reference, bank...' : 'Cari berdasarkan referensi, bank...'}
+          placeholder={language === 'en' ? 'Search by reference, bank, customer...' : 'Cari berdasarkan referensi, bank, customer...'}
           value={searchTerm}
           onChange={(e) => setSearchTerm(e.target.value)}
           className="pl-10"
@@ -256,7 +273,7 @@ export default function ArReceiptsPage() {
               <TableRow>
                 <TableHead>{language === 'en' ? 'Receipt Date' : 'Tanggal Penerimaan'}</TableHead>
                 <TableHead>{language === 'en' ? 'Reference No' : 'No Referensi'}</TableHead>
-                <TableHead>{language === 'en' ? 'Bank Account' : 'Rekening Bank'}</TableHead>
+                <TableHead>{language === 'en' ? 'Bank Account / Customer' : 'Rekening Bank / Customer'}</TableHead>
                 <TableHead className="text-right">{language === 'en' ? 'Amount' : 'Jumlah'}</TableHead>
                 <TableHead>{language === 'en' ? 'Notes' : 'Catatan'}</TableHead>
                 <TableHead className="text-center">{language === 'en' ? 'Actions' : 'Aksi'}</TableHead>
@@ -285,9 +302,12 @@ export default function ArReceiptsPage() {
                       <Badge variant="outline">{receipt.reference_no || '-'}</Badge>
                     </TableCell>
                     <TableCell>
-                      <div>
+                      <div className="space-y-1">
                         <p className="font-medium">{receipt.bank_accounts?.bank_name}</p>
                         <p className="text-sm text-muted-foreground">{receipt.bank_accounts?.account_no}</p>
+                        <p className="text-sm font-medium text-foreground">
+                          {receipt.customer_names.join(', ') || '-'}
+                        </p>
                       </div>
                     </TableCell>
                     <TableCell className="text-right font-medium text-primary">
